@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { decomposeGoal } from "@/lib/ai/decompose-goal";
+import { AIProvider } from "@/lib/generated/prisma";
+
+export const maxDuration = 30;
 
 // GET /api/goals - Get all goals with their events and infoTags
 export async function GET() {
@@ -68,74 +72,103 @@ export async function POST(req: Request) {
       },
     });
 
-    // Generate placeholder CalendarEvents if dueDate exists
-    if (dueDate) {
-      console.log(
-        "[Goal API] Creating placeholder events for goal:",
-        title,
-        "with dueDate:",
-        dueDate
-      );
-      const goalDueDate = new Date(dueDate);
-      const now = new Date();
-
-      // Calculate time from now to due date
-      const totalHours = Math.max(
-        1,
-        Math.floor((goalDueDate.getTime() - now.getTime()) / (1000 * 60 * 60))
-      );
-
-      console.log("[Goal API] totalHours:", totalHours);
-
-      // Generate 3 placeholder calendar events spread over the time period
-      const eventDuration = 2; // 2 hours per event
-      const numEvents = 3;
-
-      for (let i = 0; i < numEvents; i++) {
-        // Space events evenly before the due date
-        const hoursBeforeDue =
-          totalHours - i * Math.floor(totalHours / (numEvents + 1));
-        const eventStart = new Date(
-          goalDueDate.getTime() - hoursBeforeDue * 60 * 60 * 1000
-        );
-        const eventEnd = new Date(
-          eventStart.getTime() + eventDuration * 60 * 60 * 1000
-        );
-
-        console.log(`[Goal API] Creating calendar event ${i + 1}:`, {
-          title: `Work on: ${title} (Part ${i + 1})`,
-          start: eventStart.toISOString(),
-          end: eventEnd.toISOString(),
-        });
-
-        // Create CalendarEvent with goalId in metadata
-        const createdEvent = await prisma.calendarEvent.create({
-          data: {
+    // AI-powered goal decomposition
+    // If this fails (no API key, bad key, rate limit), the goal is still
+    // returned successfully — just without AI-generated tasks.
+    try {
+      const apiKeyRecord = await prisma.aIAgentApiKey.findUnique({
+        where: {
+          userId_provider: {
             userId,
-            title: `Work on: ${title} (Part ${i + 1})`,
-            start: eventStart.toISOString(),
-            end: eventEnd.toISOString(),
-            kind: "task",
-            metadata: JSON.stringify({
-              goalId: goal.id,
-              goalTitle: title,
-              partNumber: i + 1,
-            }),
+            provider: AIProvider.ANTHROPIC,
           },
+        },
+      });
+
+      if (apiKeyRecord) {
+        console.log("[Goal API] Decomposing goal with AI:", title);
+
+        const tasks = await decomposeGoal({
+          apiKey: apiKeyRecord.apiKey,
+          goalTitle: title,
+          goalDescription: description ?? "",
+          dueDate: dueDate ?? null,
         });
+
+        console.log("[Goal API] AI generated", tasks.length, "tasks");
+
+        // Save tasks as Event records linked to the goal
+        for (let i = 0; i < tasks.length; i++) {
+          await prisma.event.create({
+            data: {
+              goalId: goal.id,
+              title: tasks[i].title,
+              minutesEstimate: tasks[i].minutesEstimate,
+              order: i,
+              completed: false,
+            },
+          });
+        }
+
+        // Create CalendarEvents from the tasks, spread before due date
+        if (dueDate) {
+          const goalDueDate = new Date(dueDate);
+          const now = new Date();
+          const totalMs = Math.max(
+            60 * 60 * 1000,
+            goalDueDate.getTime() - now.getTime()
+          );
+
+          for (let i = 0; i < tasks.length; i++) {
+            const taskDurationMs = tasks[i].minutesEstimate * 60 * 1000;
+            const fraction = (i + 1) / (tasks.length + 1);
+            const eventStart = new Date(now.getTime() + fraction * totalMs);
+            const eventEnd = new Date(eventStart.getTime() + taskDurationMs);
+
+            await prisma.calendarEvent.create({
+              data: {
+                userId,
+                title: tasks[i].title,
+                start: eventStart.toISOString(),
+                end: eventEnd.toISOString(),
+                kind: "task",
+                metadata: JSON.stringify({
+                  goalId: goal.id,
+                  goalTitle: title,
+                  taskIndex: i,
+                  minutesEstimate: tasks[i].minutesEstimate,
+                }),
+              },
+            });
+          }
+          console.log(
+            "[Goal API] Created",
+            tasks.length,
+            "calendar events from AI tasks"
+          );
+        }
+      } else {
         console.log(
-          "[Goal API] Created calendar event with id:",
-          createdEvent.id
+          "[Goal API] No Anthropic API key found, skipping AI decomposition"
         );
       }
-      console.log("[Goal API] Finished creating", numEvents, "calendar events");
-    } else {
-      console.log(
-        "[Goal API] No dueDate provided, skipping calendar event creation"
+    } catch (aiError) {
+      console.error(
+        "[Goal API] AI decomposition failed, goal created without tasks:",
+        aiError
       );
     }
 
-    return NextResponse.json(goal, { status: 201 });
+    // Re-fetch the goal to include any AI-generated events
+    const goalWithEvents = await prisma.goal.findUnique({
+      where: { id: goal.id },
+      include: {
+        events: { orderBy: { order: "asc" } },
+        infoTags: true,
+      },
+    });
+
+    return NextResponse.json(goalWithEvents, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
