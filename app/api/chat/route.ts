@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       ? {
           saveTasks: tool({
             description:
-              "Save the proposed tasks for the goal. Call this when the user approves the task breakdown or asks you to save.",
+              "Save the proposed tasks for the goal as calendar events. Each task must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",
             inputSchema: z.object({
               tasks: z
                 .array(
@@ -79,11 +79,12 @@ export async function POST(req: Request) {
                     title: z
                       .string()
                       .describe("Short, actionable task title"),
-                    minutesEstimate: z
-                      .number()
-                      .int()
-                      .positive()
-                      .describe("Estimated minutes to complete"),
+                    start: z
+                      .string()
+                      .describe("ISO 8601 start datetime for this task"),
+                    end: z
+                      .string()
+                      .describe("ISO 8601 end datetime for this task"),
                   })
                 )
                 .min(1)
@@ -99,77 +100,71 @@ export async function POST(req: Request) {
               // Delete any existing events for this goal (idempotent)
               await prisma.event.deleteMany({ where: { goalId } });
 
-              // Create Event records (goal subtasks)
+              // Delete old AI-generated calendar events for this goal
+              const existingCalEvents =
+                await prisma.calendarEvent.findMany({
+                  where: { userId: goal.userId },
+                });
+              for (const ce of existingCalEvents) {
+                if (ce.metadata) {
+                  const meta = JSON.parse(ce.metadata);
+                  if (meta.goalId === goalId) {
+                    await prisma.calendarEvent.delete({
+                      where: { id: ce.id },
+                    });
+                  }
+                }
+              }
+
+              const savedEvents = [];
+
               for (let i = 0; i < tasks.length; i++) {
+                const taskStart = new Date(tasks[i].start);
+                const taskEnd = new Date(tasks[i].end);
+                const minutesEstimate = Math.round(
+                  (taskEnd.getTime() - taskStart.getTime()) / 60000
+                );
+
+                // Create Event record (goal subtask)
                 await prisma.event.create({
                   data: {
                     goalId,
                     title: tasks[i].title,
-                    minutesEstimate: tasks[i].minutesEstimate,
+                    minutesEstimate,
                     order: i,
                     completed: false,
                   },
                 });
-              }
 
-              // Create CalendarEvents if the goal has a due date
-              if (goal.dueDate) {
-                // Delete old AI-generated calendar events for this goal
-                const existingCalEvents =
-                  await prisma.calendarEvent.findMany({
-                    where: { userId: goal.userId },
-                  });
-                for (const ce of existingCalEvents) {
-                  if (ce.metadata) {
-                    const meta = JSON.parse(ce.metadata);
-                    if (meta.goalId === goalId) {
-                      await prisma.calendarEvent.delete({
-                        where: { id: ce.id },
-                      });
-                    }
-                  }
-                }
+                // Create CalendarEvent
+                await prisma.calendarEvent.create({
+                  data: {
+                    userId: goal.userId,
+                    title: tasks[i].title,
+                    start: taskStart.toISOString(),
+                    end: taskEnd.toISOString(),
+                    kind: "task",
+                    metadata: JSON.stringify({
+                      goalId,
+                      goalTitle: goal.title,
+                      taskIndex: i,
+                      minutesEstimate,
+                    }),
+                  },
+                });
 
-                const goalDueDate = new Date(goal.dueDate);
-                const now = new Date();
-                const totalMs = Math.max(
-                  60 * 60 * 1000,
-                  goalDueDate.getTime() - now.getTime()
-                );
-
-                for (let i = 0; i < tasks.length; i++) {
-                  const taskDurationMs =
-                    tasks[i].minutesEstimate * 60 * 1000;
-                  const fraction = (i + 1) / (tasks.length + 1);
-                  const eventStart = new Date(
-                    now.getTime() + fraction * totalMs
-                  );
-                  const eventEnd = new Date(
-                    eventStart.getTime() + taskDurationMs
-                  );
-
-                  await prisma.calendarEvent.create({
-                    data: {
-                      userId: goal.userId,
-                      title: tasks[i].title,
-                      start: eventStart.toISOString(),
-                      end: eventEnd.toISOString(),
-                      kind: "task",
-                      metadata: JSON.stringify({
-                        goalId,
-                        goalTitle: goal.title,
-                        taskIndex: i,
-                        minutesEstimate: tasks[i].minutesEstimate,
-                      }),
-                    },
-                  });
-                }
+                savedEvents.push({
+                  title: tasks[i].title,
+                  start: taskStart.toISOString(),
+                  end: taskEnd.toISOString(),
+                  minutesEstimate,
+                });
               }
 
               return {
                 success: true,
                 taskCount: tasks.length,
-                calendarEventsCreated: !!goal.dueDate,
+                savedEvents,
               };
             },
           }),
@@ -186,23 +181,28 @@ export async function POST(req: Request) {
         const dueDateContext = goal.dueDate
           ? `The goal is due on ${new Date(goal.dueDate).toLocaleString()}.`
           : "There is no specific due date.";
-        system = `You are an AI assistant helping the user break down a goal into actionable tasks.
+        const nowContext = `The current date/time is ${new Date().toLocaleString()}.`;
+        system = `You are an AI assistant helping the user break down a goal into scheduled calendar events.
 
 The user just created a goal:
 - Title: ${goal.title}
 - Description: ${goal.description}
 - ${dueDateContext}
+- ${nowContext}
 
 Your job:
-1. Immediately propose 3-7 concrete, actionable tasks to accomplish this goal. Each task should be a single work session with a time estimate in minutes.
-2. Call the saveTasks tool right away to save the tasks so they appear on the calendar immediately.
-3. After saving, present what you saved and let the user know they can adjust — if they request changes, update the tasks and call saveTasks again.
+1. Immediately propose 3-7 concrete, actionable tasks. For each task, assign a specific scheduled time period (start and end) spread across the days between now and the due date.
+2. Present the tasks in a clear list showing: task title, scheduled date, time range, and duration.
+3. Call the saveTasks tool right away with the scheduled times so they appear on the calendar immediately.
+4. After saving, show the user what was saved with times, and let them know they can adjust — if they request changes, update the tasks and call saveTasks again.
 
 Guidelines:
 - Keep task titles short and actionable.
-- Estimate realistic time per task (typically 15-120 minutes).
+- Schedule tasks during reasonable working hours (9am-6pm).
+- Spread tasks across available days before the due date.
+- Each task should be 15-120 minutes.
 - Order tasks in the sequence they should be done.
-- Be conversational and helpful. If the user wants to add, remove, or modify tasks, accommodate them and call saveTasks again with the updated list.
+- Be conversational and helpful. If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call saveTasks again with the updated list.
 - Always call saveTasks proactively — do not wait for explicit user approval on the first proposal.`;
       }
     }

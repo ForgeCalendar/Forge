@@ -66,7 +66,7 @@ export default function GoalDecomposeDialog({
               <Text mb={3} color={subtitleColor} fontSize="sm" flexShrink={0}>
                 Chat with AI to break down your goal into actionable tasks.
               </Text>
-              <Box flex={1} overflow="auto" minH={0}>
+              <Box flex={1} overflow="hidden" minH={0}>
                 <ChatboxComponent
                   name={`decompose-${goalId}`}
                   systemPrompt={systemPrompt}
