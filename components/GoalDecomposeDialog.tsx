@@ -72,7 +72,7 @@ export default function GoalDecomposeDialog({
                   systemPrompt={systemPrompt}
                   summaryPrompt="Summarize the tasks we agreed on for this goal."
                   extraParams={extraParams}
-                  initialMessage="Please break down this goal into tasks."
+                  initialMessage="Break down this goal into tasks and save them to my calendar."
                 />
               </Box>
             </Dialog.Body>
