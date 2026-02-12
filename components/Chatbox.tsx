@@ -38,10 +38,7 @@ const AutoSendMessage: FC<{ message: string }> = ({ message }) => {
   useEffect(() => {
     if (isEmpty && !isRunning && !sent.current) {
       sent.current = true;
-      const threadApi = api.thread();
-      const composerApi = threadApi.composer;
-      composerApi.setText(message);
-      composerApi.send();
+      api.thread().append(message);
     }
   }, [api, isEmpty, isRunning, message]);
 
@@ -78,7 +75,7 @@ export function ChatboxComponent({
 
   return (
     <div
-      className="flex h-full w-full"
+      className="flex flex-1 min-h-0 w-full flex-col"
       aria-label={`Chat with ${name}`}
     >
       <AssistantRuntimeProvider key={providerKey} runtime={runtime}>

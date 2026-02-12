@@ -77,7 +77,7 @@ function InfoTagSettingsPane() {
                 <Text color={infoTextColor} mt={2}>
                   {selectedTag.info}
                 </Text>
-                <Box mt={4} flex={1} minH="0">
+                <Box mt={4} flex={1} minH="0" display="flex" flexDirection="column">
                   <ChatboxComponent
                     name={selectedTag.title}
                     systemPrompt={tagEditorPrompt(selectedTag.title)}
