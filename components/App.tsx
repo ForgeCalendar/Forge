@@ -17,6 +17,7 @@ import SettingsDialog from "@/components/SettingsDialog";
 import LoginDialog from "@/components/LoginDialog";
 import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
+import GoalDecomposeDialog from "@/components/GoalDecomposeDialog";
 import { useState, useRef, useEffect } from "react";
 import { ColorModeButton, useColorModeValue } from "@/components/ui/color-mode";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,7 +101,7 @@ const viewOptions = createListCollection({
 function CalendarView() {
   const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
   const calendarRef = useRef<FullCalendar>(null);
-  const { events: calendarEvents, isLoading } = useCalendarEvents();
+  const { events: calendarEvents, isLoading, update: updateCalendarEvent } = useCalendarEvents();
 
   useEffect(() => {
     if (calendarRef.current && currentView.length > 0) {
@@ -164,18 +165,20 @@ function CalendarView() {
               alert(`[${kind}] ${info.event.title}`);
             }}
             eventDrop={(info) => {
-              console.log("eventDrop:", {
-                id: info.event.id,
-                start: info.event.start,
-                end: info.event.end,
-              });
+              if (info.event.start && info.event.end) {
+                updateCalendarEvent(info.event.id, {
+                  start: info.event.start,
+                  end: info.event.end,
+                });
+              }
             }}
             eventResize={(info) => {
-              console.log("eventResize:", {
-                id: info.event.id,
-                start: info.event.start,
-                end: info.event.end,
-              });
+              if (info.event.start && info.event.end) {
+                updateCalendarEvent(info.event.id, {
+                  start: info.event.start,
+                  end: info.event.end,
+                });
+              }
             }}
           />
         </Box>
@@ -195,6 +198,12 @@ export default function App() {
   } = useGoals();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [decomposeGoal, setDecomposeGoal] = useState<{
+    id: string;
+    title: string;
+    description: string;
+    dueDate: string | null;
+  } | null>(null);
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -225,7 +234,13 @@ export default function App() {
 
   const handleAddGoal = async (goal: CreateGoalInput) => {
     try {
-      await create(goal);
+      const created = await create(goal);
+      setDecomposeGoal({
+        id: created.id,
+        title: created.title,
+        description: created.description,
+        dueDate: created.dueDate,
+      });
     } catch (error) {
       console.error("Failed to create goal:", error);
     }
@@ -260,6 +275,17 @@ export default function App() {
         />
         <CalendarView />
       </Flex>
+
+      {decomposeGoal && (
+        <GoalDecomposeDialog
+          goalId={decomposeGoal.id}
+          goalTitle={decomposeGoal.title}
+          goalDescription={decomposeGoal.description}
+          dueDate={decomposeGoal.dueDate}
+          open={true}
+          onClose={() => setDecomposeGoal(null)}
+        />
+      )}
     </Box>
   );
 }

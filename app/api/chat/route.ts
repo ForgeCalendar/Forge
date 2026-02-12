@@ -1,5 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { convertToModelMessages, streamText } from "ai";
+import { convertToModelMessages, streamText, tool } from "ai";
+import { z } from "zod";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
@@ -54,6 +55,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check for optional goalId (enables goal decomposition tools)
+    const goalId = url.searchParams.get("goalId");
+
     // Parse request body
     const { messages } = await req.json();
 
@@ -62,9 +66,120 @@ export async function POST(req: Request) {
       apiKey: apiKeyRecord.apiKey,
     });
 
+    // Define tools conditionally when decomposing a goal
+    const tools = goalId
+      ? {
+          saveTasks: tool({
+            description:
+              "Save the proposed tasks for the goal. Call this when the user approves the task breakdown or asks you to save.",
+            inputSchema: z.object({
+              tasks: z
+                .array(
+                  z.object({
+                    title: z
+                      .string()
+                      .describe("Short, actionable task title"),
+                    minutesEstimate: z
+                      .number()
+                      .int()
+                      .positive()
+                      .describe("Estimated minutes to complete"),
+                  })
+                )
+                .min(1)
+                .max(10),
+            }),
+            execute: async ({ tasks }) => {
+              const goal = await prisma.goal.findUnique({
+                where: { id: goalId },
+              });
+              if (!goal)
+                return { success: false, error: "Goal not found" };
+
+              // Delete any existing events for this goal (idempotent)
+              await prisma.event.deleteMany({ where: { goalId } });
+
+              // Create Event records (goal subtasks)
+              for (let i = 0; i < tasks.length; i++) {
+                await prisma.event.create({
+                  data: {
+                    goalId,
+                    title: tasks[i].title,
+                    minutesEstimate: tasks[i].minutesEstimate,
+                    order: i,
+                    completed: false,
+                  },
+                });
+              }
+
+              // Create CalendarEvents if the goal has a due date
+              if (goal.dueDate) {
+                // Delete old AI-generated calendar events for this goal
+                const existingCalEvents =
+                  await prisma.calendarEvent.findMany({
+                    where: { userId: goal.userId },
+                  });
+                for (const ce of existingCalEvents) {
+                  if (ce.metadata) {
+                    const meta = JSON.parse(ce.metadata);
+                    if (meta.goalId === goalId) {
+                      await prisma.calendarEvent.delete({
+                        where: { id: ce.id },
+                      });
+                    }
+                  }
+                }
+
+                const goalDueDate = new Date(goal.dueDate);
+                const now = new Date();
+                const totalMs = Math.max(
+                  60 * 60 * 1000,
+                  goalDueDate.getTime() - now.getTime()
+                );
+
+                for (let i = 0; i < tasks.length; i++) {
+                  const taskDurationMs =
+                    tasks[i].minutesEstimate * 60 * 1000;
+                  const fraction = (i + 1) / (tasks.length + 1);
+                  const eventStart = new Date(
+                    now.getTime() + fraction * totalMs
+                  );
+                  const eventEnd = new Date(
+                    eventStart.getTime() + taskDurationMs
+                  );
+
+                  await prisma.calendarEvent.create({
+                    data: {
+                      userId: goal.userId,
+                      title: tasks[i].title,
+                      start: eventStart.toISOString(),
+                      end: eventEnd.toISOString(),
+                      kind: "task",
+                      metadata: JSON.stringify({
+                        goalId,
+                        goalTitle: goal.title,
+                        taskIndex: i,
+                        minutesEstimate: tasks[i].minutesEstimate,
+                      }),
+                    },
+                  });
+                }
+              }
+
+              return {
+                success: true,
+                taskCount: tasks.length,
+                calendarEventsCreated: !!goal.dueDate,
+              };
+            },
+          }),
+        }
+      : undefined;
+
     const result = streamText({
       model: anthropic("claude-sonnet-4-5-20250929"),
       messages: await convertToModelMessages(messages),
+      ...(tools ? { tools, maxSteps: 3 } : {}),
     });
 
     return result.toUIMessageStreamResponse();
