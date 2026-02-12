@@ -1,6 +1,17 @@
-import { Box, Button, Dialog, Portal, Heading, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Dialog,
+  Portal,
+  Heading,
+  Text,
+  Input,
+  Select,
+  createListCollection,
+  Flex,
+} from "@chakra-ui/react";
 import SettingsButton from "./SettingsButton";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { sampleInfoTags } from "../states/InfoTag";
 import { InfoTagComponent } from "./InfoTagComponent";
 import { ChatboxComponent } from "@/components/Chatbox";
@@ -97,6 +108,286 @@ function InfoTagSettingsPane() {
   );
 }
 
+type ApiKeyRecord = {
+  id: string;
+  provider: string;
+  apiKey: string;
+  name: string | null;
+};
+
+const providerOptions = createListCollection({
+  items: [
+    { label: "Anthropic", value: "ANTHROPIC" },
+    { label: "OpenAI", value: "OPENAI" },
+    { label: "Google", value: "GOOGLE" },
+    { label: "Mistral", value: "MISTRAL" },
+    { label: "Cohere", value: "COHERE" },
+  ],
+});
+
+function AccountSettingsPane() {
+  const subtitleColor = useColorModeValue("gray.600", "gray.300");
+  const cardBorder = useColorModeValue("gray.200", "gray.700");
+  const cardBg = useColorModeValue("gray.50", "gray.800");
+
+  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Form state for adding a new key
+  const [newProvider, setNewProvider] = useState<string[]>([]);
+  const [newApiKey, setNewApiKey] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editApiKey, setEditApiKey] = useState("");
+
+  const fetchKeys = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/ai-agent-api-keys");
+      if (!res.ok) throw new Error("Failed to fetch API keys");
+      const data = await res.json();
+      setApiKeys(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load API keys");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchKeys();
+  }, [fetchKeys]);
+
+  async function handleAdd() {
+    if (!newProvider[0] || !newApiKey.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/ai-agent-api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: newProvider[0], apiKey: newApiKey.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save API key");
+      }
+      setNewProvider([]);
+      setNewApiKey("");
+      await fetchKeys();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleUpdate(id: string) {
+    if (!editApiKey.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/ai-agent-api-keys/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: editApiKey.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update API key");
+      }
+      setEditingId(null);
+      setEditApiKey("");
+      await fetchKeys();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/ai-agent-api-keys/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete API key");
+      await fetchKeys();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  }
+
+  function maskKey(key: string) {
+    if (key.length <= 8) return "****";
+    return key.slice(0, 4) + "..." + key.slice(-4);
+  }
+
+  return (
+    <Box>
+      <Text fontWeight="semibold">Account</Text>
+      <Text color={subtitleColor} mt={2}>
+        Manage your AI provider API keys.
+      </Text>
+
+      {error && (
+        <Text color="red.500" mt={2} fontSize="sm">
+          {error}
+        </Text>
+      )}
+
+      {/* Existing keys */}
+      <Box mt={4}>
+        {loading ? (
+          <Text color={subtitleColor} fontSize="sm">Loading...</Text>
+        ) : apiKeys.length === 0 ? (
+          <Text color={subtitleColor} fontSize="sm">
+            No API keys configured. Add one below.
+          </Text>
+        ) : (
+          apiKeys.map((key) => (
+            <Box
+              key={key.id}
+              p={3}
+              mb={2}
+              bg={cardBg}
+              borderWidth="1px"
+              borderColor={cardBorder}
+              borderRadius="md"
+            >
+              <Flex justify="space-between" align="center">
+                <Box>
+                  <Text fontWeight="medium" fontSize="sm">
+                    {key.provider}
+                  </Text>
+                  <Text fontSize="xs" color={subtitleColor}>
+                    {maskKey(key.apiKey)}
+                  </Text>
+                </Box>
+                <Flex gap={2}>
+                  {editingId === key.id ? (
+                    <>
+                      <Input
+                        size="sm"
+                        width="200px"
+                        type="password"
+                        placeholder="New API key"
+                        value={editApiKey}
+                        onChange={(e) => setEditApiKey(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleUpdate(key.id)}
+                        disabled={saving}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditApiKey("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingId(key.id);
+                          setEditApiKey("");
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        colorPalette="red"
+                        onClick={() => handleDelete(key.id)}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </Flex>
+              </Flex>
+            </Box>
+          ))
+        )}
+      </Box>
+
+      {/* Add new key form */}
+      <Box
+        mt={4}
+        p={3}
+        borderWidth="1px"
+        borderColor={cardBorder}
+        borderRadius="md"
+      >
+        <Text fontWeight="medium" fontSize="sm" mb={2}>
+          Add API Key
+        </Text>
+        <Flex gap={2} align="flex-end">
+          <Box flex={1}>
+            <Text fontSize="xs" mb={1}>
+              Provider
+            </Text>
+            <Select.Root
+              collection={providerOptions}
+              value={newProvider}
+              onValueChange={(e) => setNewProvider(e.value)}
+              size="sm"
+            >
+              <Select.Trigger>
+                <Select.ValueText placeholder="Select provider" />
+              </Select.Trigger>
+              <Select.Positioner>
+                <Select.Content>
+                  {providerOptions.items.map((opt) => (
+                    <Select.Item item={opt} key={opt.value}>
+                      {opt.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Positioner>
+            </Select.Root>
+          </Box>
+          <Box flex={2}>
+            <Text fontSize="xs" mb={1}>
+              API Key
+            </Text>
+            <Input
+              size="sm"
+              type="password"
+              placeholder="sk-..."
+              value={newApiKey}
+              onChange={(e) => setNewApiKey(e.target.value)}
+            />
+          </Box>
+          <Button
+            size="sm"
+            onClick={handleAdd}
+            disabled={saving || !newProvider[0] || !newApiKey.trim()}
+          >
+            Add
+          </Button>
+        </Flex>
+      </Box>
+    </Box>
+  );
+}
+
 export default function SettingsDialog() {
   const bodyBg = useColorModeValue("white", "gray.900");
   const subtitleColor = useColorModeValue("gray.600", "gray.300");
@@ -129,14 +420,7 @@ export default function SettingsDialog() {
         </Text>
       </Box>
     ),
-    Account: (
-      <Box>
-        <Text fontWeight="semibold">Account</Text>
-        <Text color={subtitleColor} mt={2}>
-          Manage account settings and connected services.
-        </Text>
-      </Box>
-    ),
+    Account: <AccountSettingsPane />,
   };
 
   const [selected, setSelected] = useState("General" as keyof typeof panes);
