@@ -55,7 +55,7 @@ export function ChatboxComponent({
 
   return (
     <div
-      className="flex h-full w-full min-h-[60vh]"
+      className="flex h-full w-full"
       aria-label={`Chat with ${name}`}
     >
       <AssistantRuntimeProvider key={providerKey} runtime={runtime}>
