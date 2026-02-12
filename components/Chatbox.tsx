@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import {
   AssistantRuntimeProvider,
   useAssistantInstructions,
+  useAssistantApi,
+  useAssistantState,
 } from "@assistant-ui/react";
 import {
   AssistantChatTransport,
@@ -17,6 +19,7 @@ type ChatboxProps = {
   systemPrompt?: string;
   summaryPrompt?: string;
   extraParams?: Record<string, string>;
+  initialMessage?: string;
 };
 
 const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
@@ -26,11 +29,31 @@ const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
   return null;
 };
 
+const AutoSendMessage: FC<{ message: string }> = ({ message }) => {
+  const api = useAssistantApi();
+  const isEmpty = useAssistantState((state) => state.thread.isEmpty);
+  const isRunning = useAssistantState((state) => state.thread.isRunning);
+  const sent = useRef(false);
+
+  useEffect(() => {
+    if (isEmpty && !isRunning && !sent.current) {
+      sent.current = true;
+      const threadApi = api.thread();
+      const composerApi = threadApi.composer;
+      composerApi.setText(message);
+      composerApi.send();
+    }
+  }, [api, isEmpty, isRunning, message]);
+
+  return null;
+};
+
 export function ChatboxComponent({
   name,
   systemPrompt,
   summaryPrompt = DEFAULT_SUMMARY_PROMPT,
   extraParams,
+  initialMessage,
 }: ChatboxProps) {
   const extraParamsKey = extraParams
     ? JSON.stringify(extraParams)
@@ -60,6 +83,7 @@ export function ChatboxComponent({
     >
       <AssistantRuntimeProvider key={providerKey} runtime={runtime}>
         <SystemPromptRegistrar prompt={systemPrompt} />
+        {initialMessage && <AutoSendMessage message={initialMessage} />}
         <SummaryPromptContext.Provider value={summaryPrompt}>
           <Thread />
         </SummaryPromptContext.Provider>
