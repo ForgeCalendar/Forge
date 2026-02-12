@@ -176,9 +176,42 @@ export async function POST(req: Request) {
         }
       : undefined;
 
+    // Build system prompt for goal decomposition if goalId is present
+    let system: string | undefined;
+    if (goalId) {
+      const goal = await prisma.goal.findUnique({
+        where: { id: goalId },
+      });
+      if (goal) {
+        const dueDateContext = goal.dueDate
+          ? `The goal is due on ${new Date(goal.dueDate).toLocaleString()}.`
+          : "There is no specific due date.";
+        system = `You are an AI assistant helping the user break down a goal into actionable tasks.
+
+The user just created a goal:
+- Title: ${goal.title}
+- Description: ${goal.description}
+- ${dueDateContext}
+
+Your job:
+1. Start by proposing 3-7 concrete, actionable tasks to accomplish this goal. Each task should be a single work session with a time estimate in minutes.
+2. Present the tasks clearly and ask the user if they want to adjust anything.
+3. When the user is satisfied with the task breakdown, use the saveTasks tool to persist the tasks.
+4. After saving, confirm what was saved and let the user know they can close the dialog.
+
+Guidelines:
+- Keep task titles short and actionable.
+- Estimate realistic time per task (typically 15-120 minutes).
+- Order tasks in the sequence they should be done.
+- Be conversational and helpful. If the user wants to add, remove, or modify tasks, accommodate them.
+- Only call saveTasks when the user explicitly approves or asks you to save.`;
+      }
+    }
+
     const result = streamText({
       model: anthropic("claude-sonnet-4-5-20250929"),
       messages: await convertToModelMessages(messages),
+      ...(system ? { system } : {}),
       ...(tools ? { tools, maxSteps: 3 } : {}),
     });
 
