@@ -23,13 +23,36 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGoals, useCalendarEvents } from "@/storage/hooks";
 import type { CreateGoalInput } from "@/storage/types";
 
-function Header() {
+function Header({
+  calendarRef,
+  currentView,
+  setCurrentView,
+}: {
+  calendarRef: React.RefObject<FullCalendar | null>;
+  currentView: string[];
+  setCurrentView: (v: string[]) => void;
+}) {
   const headerBg = useColorModeValue("white", "gray.900");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const headingColor = useColorModeValue("gray.900", "gray.50");
   const subheadingColor = useColorModeValue("gray.600", "gray.300");
   const { user, logout, login } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [title, setTitle] = useState("");
+
+  useEffect(() => {
+    const updateTitle = () => {
+      const api = calendarRef.current?.getApi();
+      if (api) setTitle(api.view.title);
+    };
+    updateTitle();
+    const interval = setInterval(updateTitle, 200);
+    return () => clearInterval(interval);
+  }, [calendarRef, currentView]);
+
+  const goToday = () => calendarRef.current?.getApi().today();
+  const goPrev = () => calendarRef.current?.getApi().prev();
+  const goNext = () => calendarRef.current?.getApi().next();
 
   return (
     <>
@@ -39,15 +62,54 @@ function Header() {
         borderBottomWidth="1px"
         borderBottomColor={borderColor}
         px={4}
-        py={3}
+        py={2}
       >
-        <Flex align="baseline" gap={3}>
+        <Flex align="center" gap={3}>
           <Heading as="h1" size="xl" m={0} color={headingColor}>
             Forge
           </Heading>
           <Text opacity={0.7} color={subheadingColor}>
             Calendar
           </Text>
+
+          <Flex align="center" gap={1} ml={4}>
+            <Button size="xs" variant="outline" onClick={goPrev} aria-label="Previous">
+              &lt;
+            </Button>
+            <Button size="xs" variant="outline" onClick={goToday}>
+              Today
+            </Button>
+            <Button size="xs" variant="outline" onClick={goNext} aria-label="Next">
+              &gt;
+            </Button>
+          </Flex>
+
+          <Text fontWeight="bold" fontSize="md" color={headingColor} minW="150px">
+            {title}
+          </Text>
+
+          <Select.Root
+            collection={viewOptions}
+            value={currentView}
+            onValueChange={(e) => setCurrentView(e.value)}
+            width="130px"
+            size="sm"
+            positioning={{ sameWidth: true }}
+          >
+            <Select.Trigger>
+              <Select.ValueText placeholder="Select view" />
+            </Select.Trigger>
+            <Select.Positioner>
+              <Select.Content>
+                {viewOptions.items.map((option) => (
+                  <Select.Item item={option} key={option.value}>
+                    {option.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+
           <Flex ml="auto" align="center" gap={2}>
             {user ? (
               <>
@@ -97,9 +159,15 @@ const viewOptions = createListCollection({
   ],
 });
 
-function CalendarView() {
-  const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
-  const calendarRef = useRef<FullCalendar>(null);
+function CalendarView({
+  calendarRef,
+  currentView,
+  setCurrentView,
+}: {
+  calendarRef: React.RefObject<FullCalendar | null>;
+  currentView: string[];
+  setCurrentView: (v: string[]) => void;
+}) {
   const {
     events: calendarEvents,
     isLoading,
@@ -111,47 +179,21 @@ function CalendarView() {
       const calendarApi = calendarRef.current.getApi();
       calendarApi.changeView(currentView[0]);
     }
-  }, [currentView]);
+  }, [calendarRef, currentView]);
 
   return (
-    <Box flex={1} p={4} height="100%" minHeight={0} overflow="hidden">
-      <Flex justify="flex-end" mb={3}>
-        <Select.Root
-          collection={viewOptions}
-          value={currentView}
-          onValueChange={(e) => setCurrentView(e.value)}
-          width="200px"
-          positioning={{ sameWidth: true }}
-        >
-          <Select.Trigger>
-            <Select.ValueText placeholder="Select view" />
-          </Select.Trigger>
-          <Select.Positioner>
-            <Select.Content>
-              {viewOptions.items.map((option) => (
-                <Select.Item item={option} key={option.value}>
-                  {option.label}
-                </Select.Item>
-              ))}
-            </Select.Content>
-          </Select.Positioner>
-        </Select.Root>
-      </Flex>
+    <Box flex={1} p={2} height="100%" minHeight={0} overflow="hidden">
       {isLoading ? (
-        <Box mt={3} p={4}>
+        <Box p={4}>
           <Text>Loading events...</Text>
         </Box>
       ) : (
-        <Box mt={3} minHeight={0} height="calc(100% - 60px)">
+        <Box minHeight={0} height="100%">
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="timeGridDay"
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "",
-            }}
+            headerToolbar={false}
             nowIndicator={true}
             height="100%"
             allDaySlot={false}
@@ -214,6 +256,8 @@ export default function App() {
   } = useGoals();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
+  const calendarRef = useRef<FullCalendar>(null);
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -264,20 +308,28 @@ export default function App() {
   // Show full app if logged in
   return (
     <Box minH="100vh" bg={appBg}>
-      <Header />
+      <Header
+        calendarRef={calendarRef}
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+      />
 
       <Flex
         direction={{ base: "column", md: "row" }}
         mx="auto"
         gap={0}
-        height="calc(100vh - 73px)"
+        height="calc(100vh - 53px)"
       >
         <Sidebar
           goals={goals}
           onAddGoal={handleAddGoal}
           onRemoveGoal={handleRemoveGoal}
         />
-        <CalendarView />
+        <CalendarView
+          calendarRef={calendarRef}
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+        />
       </Flex>
     </Box>
   );

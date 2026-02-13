@@ -123,3 +123,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Force FullCalendar time grid to fit on screen without scrolling */
+.fc .fc-scroller-liquid-absolute {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.fc .fc-timegrid-body {
+  overflow: hidden !important;
+}
+
+.fc .fc-scroller {
+  overflow: hidden !important;
+}
