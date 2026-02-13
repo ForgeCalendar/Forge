@@ -248,19 +248,25 @@ function CalendarView({
                 end: info.event.end,
               });
             }}
-            eventDrop={(info) => {
-              console.log("eventDrop:", {
-                id: info.event.id,
-                start: info.event.start,
-                end: info.event.end,
-              });
+            eventDrop={async (info) => {
+              try {
+                await update(info.event.id, {
+                  start: info.event.start!,
+                  end: info.event.end!,
+                });
+              } catch {
+                info.revert();
+              }
             }}
-            eventResize={(info) => {
-              console.log("eventResize:", {
-                id: info.event.id,
-                start: info.event.start,
-                end: info.event.end,
-              });
+            eventResize={async (info) => {
+              try {
+                await update(info.event.id, {
+                  start: info.event.start!,
+                  end: info.event.end!,
+                });
+              } catch {
+                info.revert();
+              }
             }}
           />
         </Box>
