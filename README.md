@@ -96,7 +96,17 @@ Reusable AI assistant component with:
 ## Getting Started
 
 ```bash
+# install dependence
 npm install
+```
+
+```bash
+# Initialize database
+npm run db:init
+npm run db:seed
+```
+
+```bash
 npm run dev
 ```
 
