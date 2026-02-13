@@ -100,7 +100,11 @@ const viewOptions = createListCollection({
 function CalendarView() {
   const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
   const calendarRef = useRef<FullCalendar>(null);
-  const { events: calendarEvents, isLoading } = useCalendarEvents();
+  const {
+    events: calendarEvents,
+    isLoading,
+    delete: deleteEvent,
+  } = useCalendarEvents();
 
   useEffect(() => {
     if (calendarRef.current && currentView.length > 0) {
@@ -110,7 +114,7 @@ function CalendarView() {
   }, [currentView]);
 
   return (
-    <Box flex={1} p={4} height="100%" minHeight={0} overflowY="auto">
+    <Box flex={1} p={4} height="100%" minHeight={0} overflow="hidden">
       <Flex justify="flex-end" mb={3}>
         <Select.Root
           collection={viewOptions}
@@ -138,7 +142,7 @@ function CalendarView() {
           <Text>Loading events...</Text>
         </Box>
       ) : (
-        <Box mt={3} minHeight={0}>
+        <Box mt={3} minHeight={0} height="calc(100% - 60px)">
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -149,9 +153,9 @@ function CalendarView() {
               right: "",
             }}
             nowIndicator={true}
-            height="auto"
+            height="100%"
             allDaySlot={false}
-            slotDuration="00:10:00"
+            slotDuration="00:30:00"
             slotLabelInterval="01:00"
             expandRows={true}
             weekends={true}
@@ -159,9 +163,24 @@ function CalendarView() {
             eventStartEditable={true}
             eventDurationEditable={true}
             events={calendarEvents}
+            dateClick={(info) => {
+              if (currentView[0] === "dayGridMonth") {
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.gotoDate(info.dateStr);
+                  calendarApi.changeView("timeGridDay");
+                  setCurrentView(["timeGridDay"]);
+                }
+              }
+            }}
             eventClick={(info) => {
               const kind = info.event.extendedProps?.kind ?? "task";
-              alert(`[${kind}] ${info.event.title}`);
+              const confirmed = window.confirm(
+                `[${kind}] ${info.event.title}\n\nDo you want to delete this event?`
+              );
+              if (confirmed && info.event.id) {
+                deleteEvent(info.event.id);
+              }
             }}
             eventDrop={(info) => {
               console.log("eventDrop:", {
