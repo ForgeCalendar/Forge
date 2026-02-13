@@ -39,7 +39,7 @@ import { useSummaryPrompt } from "./summary-context";
 export const Thread: FC = () => {
   return (
     <ThreadPrimitive.Root
-      className="aui-root aui-thread-root @container flex h-full w-full flex-col bg-background"
+      className="aui-root aui-thread-root @container flex flex-1 min-h-0 w-full flex-col bg-background"
       style={{
         ["--thread-max-width" as string]: "100%",
       }}
@@ -60,7 +60,7 @@ export const Thread: FC = () => {
           }}
         />
       </ThreadPrimitive.Viewport>
-      <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer relative border-t border-border bg-background px-4 pb-4 pt-4 md:pb-6">
+      <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer shrink-0 border-t border-border bg-background px-4 pb-4 pt-4 md:pb-6">
         <div className="mx-auto flex w-full max-w-(--thread-max-width) flex-col gap-4">
           <ThreadScrollToBottom />
           <Composer />

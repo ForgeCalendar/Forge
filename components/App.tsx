@@ -20,6 +20,7 @@ import SettingsDialog from "@/components/SettingsDialog";
 import LoginDialog from "@/components/LoginDialog";
 import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
+import GoalDecomposeDialog from "@/components/GoalDecomposeDialog";
 import { useState, useRef, useEffect } from "react";
 import { ColorModeButton, useColorModeValue } from "@/components/ui/color-mode";
 import { useAuth } from "@/hooks/useAuth";
@@ -189,7 +190,7 @@ function CalendarView({
   const {
     events: calendarEvents,
     isLoading,
-    update,
+    update: updateCalendarEvent,
     delete: deleteEvent,
   } = useCalendarEvents();
   const [selectedEvent, setSelectedEvent] = useState<{
@@ -266,7 +267,7 @@ function CalendarView({
             }}
             eventDrop={async (info) => {
               try {
-                await update(info.event.id, {
+                await updateCalendarEvent(info.event.id, {
                   start: info.event.start!,
                   end: info.event.end!,
                 });
@@ -276,7 +277,7 @@ function CalendarView({
             }}
             eventResize={async (info) => {
               try {
-                await update(info.event.id, {
+                await updateCalendarEvent(info.event.id, {
                   start: info.event.start!,
                   end: info.event.end!,
                 });
@@ -373,6 +374,12 @@ export default function App() {
   } = useGoals();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [decomposeGoal, setDecomposeGoal] = useState<{
+    id: string;
+    title: string;
+    description: string;
+    dueDate: string | null;
+  } | null>(null);
   const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
   const calendarRef = useRef<FullCalendar>(null);
 
@@ -405,7 +412,13 @@ export default function App() {
 
   const handleAddGoal = async (goal: CreateGoalInput) => {
     try {
-      await create(goal);
+      const created = await create(goal);
+      setDecomposeGoal({
+        id: created.id,
+        title: created.title,
+        description: created.description,
+        dueDate: created.dueDate,
+      });
     } catch (error) {
       console.error("Failed to create goal:", error);
     }
@@ -448,6 +461,17 @@ export default function App() {
           setCurrentView={setCurrentView}
         />
       </Flex>
+
+      {decomposeGoal && (
+        <GoalDecomposeDialog
+          goalId={decomposeGoal.id}
+          goalTitle={decomposeGoal.title}
+          goalDescription={decomposeGoal.description}
+          dueDate={decomposeGoal.dueDate}
+          open={true}
+          onClose={() => setDecomposeGoal(null)}
+        />
+      )}
     </Box>
   );
 }

@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import {
   AssistantRuntimeProvider,
   useAssistantInstructions,
+  useAssistantApi,
+  useAssistantState,
 } from "@assistant-ui/react";
 import {
   AssistantChatTransport,
@@ -16,6 +18,8 @@ type ChatboxProps = {
   name: string;
   systemPrompt?: string;
   summaryPrompt?: string;
+  extraParams?: Record<string, string>;
+  initialMessage?: string;
 };
 
 const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
@@ -25,31 +29,56 @@ const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
   return null;
 };
 
+const AutoSendMessage: FC<{ message: string }> = ({ message }) => {
+  const api = useAssistantApi();
+  const isEmpty = useAssistantState((state) => state.thread.isEmpty);
+  const isRunning = useAssistantState((state) => state.thread.isRunning);
+  const sent = useRef(false);
+
+  useEffect(() => {
+    if (isEmpty && !isRunning && !sent.current) {
+      sent.current = true;
+      api.thread().append(message);
+    }
+  }, [api, isEmpty, isRunning, message]);
+
+  return null;
+};
+
 export function ChatboxComponent({
   name,
   systemPrompt,
   summaryPrompt = DEFAULT_SUMMARY_PROMPT,
+  extraParams,
+  initialMessage,
 }: ChatboxProps) {
+  const extraParamsKey = extraParams ? JSON.stringify(extraParams) : "";
   const transport = useMemo(() => {
     const params = new URLSearchParams();
     if (summaryPrompt) params.set("summaryPrompt", summaryPrompt);
     // For now, always use Claude (Anthropic provider)
     params.set("provider", "ANTHROPIC");
+    if (extraParams) {
+      for (const [key, value] of Object.entries(extraParams)) {
+        params.set(key, value);
+      }
+    }
 
     return new AssistantChatTransport({
       api: `/api/chat?${params.toString()}`,
     });
-  }, [name, systemPrompt, summaryPrompt]);
+  }, [name, systemPrompt, summaryPrompt, extraParamsKey]);
   const runtime = useChatRuntime({ transport });
-  const providerKey = `${name}-${systemPrompt ?? "default"}`;
+  const providerKey = `${name}-${systemPrompt ?? "default"}-${extraParamsKey}`;
 
   return (
     <div
-      className="flex h-full w-full min-h-[60vh]"
+      className="flex flex-1 min-h-0 w-full flex-col"
       aria-label={`Chat with ${name}`}
     >
       <AssistantRuntimeProvider key={providerKey} runtime={runtime}>
         <SystemPromptRegistrar prompt={systemPrompt} />
+        {initialMessage && <AutoSendMessage message={initialMessage} />}
         <SummaryPromptContext.Provider value={summaryPrompt}>
           <Thread />
         </SummaryPromptContext.Provider>

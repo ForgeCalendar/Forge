@@ -35,3 +35,40 @@ Think of yourself as a **careful fact investigator**: your job is to discover th
 Continue until the information about "${tag}" is sufficiently clear and consistent to be useful long-term. When instructed, you will generate a concise summary of what you learned about "${tag}".
 `.trim();
 }
+
+export function goalDecomposePrompt(
+  goalTitle: string,
+  goalDescription: string,
+  dueDate: string | null
+): string {
+  const dueDateContext = dueDate
+    ? `The goal is due on ${new Date(dueDate).toLocaleString()}.`
+    : "There is no specific due date.";
+
+  const nowContext = `The current date/time is ${new Date().toLocaleString()}.`;
+
+  return `
+You are an AI assistant helping the user break down a goal into scheduled calendar events.
+
+The user just created a goal:
+- Title: ${goalTitle}
+- Description: ${goalDescription}
+- ${dueDateContext}
+- ${nowContext}
+
+Your job:
+1. Immediately propose 3-7 concrete, actionable tasks. For each task, assign a specific scheduled time period (start and end) spread across the days between now and the due date.
+2. Present the tasks in a clear list showing: task title, scheduled date, time range, and duration.
+3. Call the saveTasks tool right away with the scheduled times so they appear on the calendar immediately.
+4. After saving, show the user what was saved with times, and let them know they can adjust — if they request changes, update the tasks and call saveTasks again.
+
+Guidelines:
+- Keep task titles short and actionable.
+- Schedule tasks during reasonable working hours (9am-6pm).
+- Spread tasks across available days before the due date.
+- Each task should be 15-120 minutes.
+- Order tasks in the sequence they should be done.
+- Be conversational and helpful. If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call saveTasks again with the updated list.
+- Always call saveTasks proactively — do not wait for explicit user approval on the first proposal.
+`.trim();
+}
