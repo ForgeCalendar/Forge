@@ -189,6 +189,7 @@ function CalendarView({
   const {
     events: calendarEvents,
     isLoading,
+    update,
     delete: deleteEvent,
   } = useCalendarEvents();
   const [selectedEvent, setSelectedEvent] = useState<{
