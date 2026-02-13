@@ -76,9 +76,7 @@ export async function POST(req: Request) {
               tasks: z
                 .array(
                   z.object({
-                    title: z
-                      .string()
-                      .describe("Short, actionable task title"),
+                    title: z.string().describe("Short, actionable task title"),
                     start: z
                       .string()
                       .describe("ISO 8601 start datetime for this task"),
@@ -94,17 +92,15 @@ export async function POST(req: Request) {
               const goal = await prisma.goal.findUnique({
                 where: { id: goalId },
               });
-              if (!goal)
-                return { success: false, error: "Goal not found" };
+              if (!goal) return { success: false, error: "Goal not found" };
 
               // Delete any existing events for this goal (idempotent)
               await prisma.event.deleteMany({ where: { goalId } });
 
               // Delete old AI-generated calendar events for this goal
-              const existingCalEvents =
-                await prisma.calendarEvent.findMany({
-                  where: { userId: goal.userId },
-                });
+              const existingCalEvents = await prisma.calendarEvent.findMany({
+                where: { userId: goal.userId },
+              });
               for (const ce of existingCalEvents) {
                 if (ce.metadata) {
                   const meta = JSON.parse(ce.metadata);

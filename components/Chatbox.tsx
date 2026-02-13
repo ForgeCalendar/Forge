@@ -52,9 +52,7 @@ export function ChatboxComponent({
   extraParams,
   initialMessage,
 }: ChatboxProps) {
-  const extraParamsKey = extraParams
-    ? JSON.stringify(extraParams)
-    : "";
+  const extraParamsKey = extraParams ? JSON.stringify(extraParams) : "";
   const transport = useMemo(() => {
     const params = new URLSearchParams();
     if (summaryPrompt) params.set("summaryPrompt", summaryPrompt);

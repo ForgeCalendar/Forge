@@ -77,7 +77,13 @@ function InfoTagSettingsPane() {
                 <Text color={infoTextColor} mt={2}>
                   {selectedTag.info}
                 </Text>
-                <Box mt={4} flex={1} minH="0" display="flex" flexDirection="column">
+                <Box
+                  mt={4}
+                  flex={1}
+                  minH="0"
+                  display="flex"
+                  flexDirection="column"
+                >
                   <ChatboxComponent
                     name={selectedTag.title}
                     systemPrompt={tagEditorPrompt(selectedTag.title)}
@@ -170,7 +176,10 @@ function AccountSettingsPane() {
       const res = await fetch("/api/ai-agent-api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: newProvider[0], apiKey: newApiKey.trim() }),
+        body: JSON.stringify({
+          provider: newProvider[0],
+          apiKey: newApiKey.trim(),
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -244,7 +253,9 @@ function AccountSettingsPane() {
       {/* Existing keys */}
       <Box mt={4}>
         {loading ? (
-          <Text color={subtitleColor} fontSize="sm">Loading...</Text>
+          <Text color={subtitleColor} fontSize="sm">
+            Loading...
+          </Text>
         ) : apiKeys.length === 0 ? (
           <Text color={subtitleColor} fontSize="sm">
             No API keys configured. Add one below.
