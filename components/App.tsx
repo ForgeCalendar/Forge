@@ -76,18 +76,33 @@ function Header({
           </Text>
 
           <Flex align="center" gap={1} ml={4}>
-            <Button size="xs" variant="outline" onClick={goPrev} aria-label="Previous">
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={goPrev}
+              aria-label="Previous"
+            >
               &lt;
             </Button>
             <Button size="xs" variant="outline" onClick={goToday}>
               Today
             </Button>
-            <Button size="xs" variant="outline" onClick={goNext} aria-label="Next">
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={goNext}
+              aria-label="Next"
+            >
               &gt;
             </Button>
           </Flex>
 
-          <Text fontWeight="bold" fontSize="md" color={headingColor} minW="150px">
+          <Text
+            fontWeight="bold"
+            fontSize="md"
+            color={headingColor}
+            minW="150px"
+          >
             {title}
           </Text>
 
@@ -285,22 +300,37 @@ function CalendarView({
               <Dialog.Header>
                 <Dialog.Title>{selectedEvent?.title}</Dialog.Title>
                 <Dialog.CloseTrigger asChild>
-                  <CloseButton size="sm" position="absolute" top={3} right={3} />
+                  <CloseButton
+                    size="sm"
+                    position="absolute"
+                    top={3}
+                    right={3}
+                  />
                 </Dialog.CloseTrigger>
               </Dialog.Header>
               <Dialog.Body>
                 <Flex direction="column" gap={2}>
                   <Flex gap={2}>
-                    <Text fontWeight="bold" color={headingColor}>Type:</Text>
+                    <Text fontWeight="bold" color={headingColor}>
+                      Type:
+                    </Text>
                     <Text color={subColor}>{selectedEvent?.kind}</Text>
                   </Flex>
                   <Flex gap={2}>
-                    <Text fontWeight="bold" color={headingColor}>Start:</Text>
-                    <Text color={subColor}>{formatTime(selectedEvent?.start ?? null)}</Text>
+                    <Text fontWeight="bold" color={headingColor}>
+                      Start:
+                    </Text>
+                    <Text color={subColor}>
+                      {formatTime(selectedEvent?.start ?? null)}
+                    </Text>
                   </Flex>
                   <Flex gap={2}>
-                    <Text fontWeight="bold" color={headingColor}>End:</Text>
-                    <Text color={subColor}>{formatTime(selectedEvent?.end ?? null)}</Text>
+                    <Text fontWeight="bold" color={headingColor}>
+                      End:
+                    </Text>
+                    <Text color={subColor}>
+                      {formatTime(selectedEvent?.end ?? null)}
+                    </Text>
                   </Flex>
                 </Flex>
               </Dialog.Body>
