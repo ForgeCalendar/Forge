@@ -7,6 +7,9 @@ import {
   Button,
   Select,
   createListCollection,
+  Dialog,
+  Portal,
+  CloseButton,
 } from "@chakra-ui/react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -173,6 +176,16 @@ function CalendarView({
     isLoading,
     delete: deleteEvent,
   } = useCalendarEvents();
+  const [selectedEvent, setSelectedEvent] = useState<{
+    id: string;
+    title: string;
+    kind: string;
+    start: Date | null;
+    end: Date | null;
+  } | null>(null);
+
+  const headingColor = useColorModeValue("gray.900", "gray.50");
+  const subColor = useColorModeValue("gray.600", "gray.300");
 
   useEffect(() => {
     if (calendarRef.current && currentView.length > 0) {
@@ -180,6 +193,17 @@ function CalendarView({
       calendarApi.changeView(currentView[0]);
     }
   }, [calendarRef, currentView]);
+
+  const formatTime = (date: Date | null) => {
+    if (!date) return "—";
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <Box flex={1} p={2} height="100%" minHeight={0} overflow="hidden">
@@ -216,13 +240,13 @@ function CalendarView({
               }
             }}
             eventClick={(info) => {
-              const kind = info.event.extendedProps?.kind ?? "task";
-              const confirmed = window.confirm(
-                `[${kind}] ${info.event.title}\n\nDo you want to delete this event?`
-              );
-              if (confirmed && info.event.id) {
-                deleteEvent(info.event.id);
-              }
+              setSelectedEvent({
+                id: info.event.id,
+                title: info.event.title,
+                kind: info.event.extendedProps?.kind ?? "task",
+                start: info.event.start,
+                end: info.event.end,
+              });
             }}
             eventDrop={(info) => {
               console.log("eventDrop:", {
@@ -241,6 +265,62 @@ function CalendarView({
           />
         </Box>
       )}
+
+      <Dialog.Root
+        open={!!selectedEvent}
+        onOpenChange={(e) => {
+          if (!e.open) setSelectedEvent(null);
+        }}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>{selectedEvent?.title}</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" position="absolute" top={3} right={3} />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Flex direction="column" gap={2}>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>Type:</Text>
+                    <Text color={subColor}>{selectedEvent?.kind}</Text>
+                  </Flex>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>Start:</Text>
+                    <Text color={subColor}>{formatTime(selectedEvent?.start ?? null)}</Text>
+                  </Flex>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>End:</Text>
+                    <Text color={subColor}>{formatTime(selectedEvent?.end ?? null)}</Text>
+                  </Flex>
+                </Flex>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Close
+                  </Button>
+                </Dialog.ActionTrigger>
+                <Button
+                  colorPalette="red"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedEvent?.id) {
+                      deleteEvent(selectedEvent.id);
+                      setSelectedEvent(null);
+                    }
+                  }}
+                >
+                  Delete Event
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Box>
   );
 }

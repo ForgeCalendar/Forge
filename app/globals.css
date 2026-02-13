@@ -125,15 +125,24 @@
 }
 
 /* Force FullCalendar time grid to fit on screen without scrolling */
+.fc .fc-scroller,
 .fc .fc-scroller-liquid-absolute {
   position: relative !important;
   overflow: hidden !important;
 }
 
-.fc .fc-timegrid-body {
-  overflow: hidden !important;
+.fc .fc-timegrid-body,
+.fc .fc-timegrid-body > table {
+  height: 100% !important;
+  min-height: 0 !important;
 }
 
-.fc .fc-scroller {
-  overflow: hidden !important;
+.fc .fc-timegrid-slots,
+.fc .fc-timegrid-slots > table {
+  height: 100% !important;
+}
+
+.fc .fc-timegrid-slot {
+  height: auto !important;
+  min-height: 0 !important;
 }
