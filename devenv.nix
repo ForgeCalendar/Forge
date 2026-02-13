@@ -32,7 +32,6 @@ in
   # Make sure Prisma CLI uses Nix-provided engines instead of trying to download
   env = {
     PRISMA_SCHEMA_ENGINE_BINARY        = schemaEngine;
-    PRISMA_MIGRATION_ENGINE_BINARY     = migrationEngine;
     PRISMA_INTROSPECTION_ENGINE_BINARY = introspectionEngine;
     PRISMA_FMT_BINARY                  = prismaFmt;
     PRISMA_QUERY_ENGINE_LIBRARY        = queryEngineLib;
