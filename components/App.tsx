@@ -7,6 +7,9 @@ import {
   Button,
   Select,
   createListCollection,
+  Dialog,
+  Portal,
+  CloseButton,
 } from "@chakra-ui/react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -24,13 +27,36 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGoals, useCalendarEvents } from "@/storage/hooks";
 import type { CreateGoalInput } from "@/storage/types";
 
-function Header() {
+function Header({
+  calendarRef,
+  currentView,
+  setCurrentView,
+}: {
+  calendarRef: React.RefObject<FullCalendar | null>;
+  currentView: string[];
+  setCurrentView: (v: string[]) => void;
+}) {
   const headerBg = useColorModeValue("white", "gray.900");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const headingColor = useColorModeValue("gray.900", "gray.50");
   const subheadingColor = useColorModeValue("gray.600", "gray.300");
   const { user, logout, login } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [title, setTitle] = useState("");
+
+  useEffect(() => {
+    const updateTitle = () => {
+      const api = calendarRef.current?.getApi();
+      if (api) setTitle(api.view.title);
+    };
+    updateTitle();
+    const interval = setInterval(updateTitle, 200);
+    return () => clearInterval(interval);
+  }, [calendarRef, currentView]);
+
+  const goToday = () => calendarRef.current?.getApi().today();
+  const goPrev = () => calendarRef.current?.getApi().prev();
+  const goNext = () => calendarRef.current?.getApi().next();
 
   return (
     <>
@@ -40,15 +66,69 @@ function Header() {
         borderBottomWidth="1px"
         borderBottomColor={borderColor}
         px={4}
-        py={3}
+        py={2}
       >
-        <Flex align="baseline" gap={3}>
+        <Flex align="center" gap={3}>
           <Heading as="h1" size="xl" m={0} color={headingColor}>
             Forge
           </Heading>
           <Text opacity={0.7} color={subheadingColor}>
             Calendar
           </Text>
+
+          <Flex align="center" gap={1} ml={4}>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={goPrev}
+              aria-label="Previous"
+            >
+              &lt;
+            </Button>
+            <Button size="xs" variant="outline" onClick={goToday}>
+              Today
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={goNext}
+              aria-label="Next"
+            >
+              &gt;
+            </Button>
+          </Flex>
+
+          <Text
+            fontWeight="bold"
+            fontSize="md"
+            color={headingColor}
+            minW="150px"
+          >
+            {title}
+          </Text>
+
+          <Select.Root
+            collection={viewOptions}
+            value={currentView}
+            onValueChange={(e) => setCurrentView(e.value)}
+            width="130px"
+            size="sm"
+            positioning={{ sameWidth: true }}
+          >
+            <Select.Trigger>
+              <Select.ValueText placeholder="Select view" />
+            </Select.Trigger>
+            <Select.Positioner>
+              <Select.Content>
+                {viewOptions.items.map((option) => (
+                  <Select.Item item={option} key={option.value}>
+                    {option.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+
           <Flex ml="auto" align="center" gap={2}>
             {user ? (
               <>
@@ -98,61 +178,67 @@ const viewOptions = createListCollection({
   ],
 });
 
-function CalendarView() {
-  const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
-  const calendarRef = useRef<FullCalendar>(null);
-  const { events: calendarEvents, isLoading, update: updateCalendarEvent } = useCalendarEvents();
+function CalendarView({
+  calendarRef,
+  currentView,
+  setCurrentView,
+}: {
+  calendarRef: React.RefObject<FullCalendar | null>;
+  currentView: string[];
+  setCurrentView: (v: string[]) => void;
+}) {
+  const {
+    events: calendarEvents,
+    isLoading,
+    update: updateCalendarEvent,
+    delete: deleteEvent,
+  } = useCalendarEvents();
+  const [selectedEvent, setSelectedEvent] = useState<{
+    id: string;
+    title: string;
+    kind: string;
+    start: Date | null;
+    end: Date | null;
+  } | null>(null);
+
+  const headingColor = useColorModeValue("gray.900", "gray.50");
+  const subColor = useColorModeValue("gray.600", "gray.300");
 
   useEffect(() => {
     if (calendarRef.current && currentView.length > 0) {
       const calendarApi = calendarRef.current.getApi();
       calendarApi.changeView(currentView[0]);
     }
-  }, [currentView]);
+  }, [calendarRef, currentView]);
+
+  const formatTime = (date: Date | null) => {
+    if (!date) return "—";
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
-    <Box flex={1} p={4} height="100%" minHeight={0} overflowY="auto">
-      <Flex justify="flex-end" mb={3}>
-        <Select.Root
-          collection={viewOptions}
-          value={currentView}
-          onValueChange={(e) => setCurrentView(e.value)}
-          width="200px"
-          positioning={{ sameWidth: true }}
-        >
-          <Select.Trigger>
-            <Select.ValueText placeholder="Select view" />
-          </Select.Trigger>
-          <Select.Positioner>
-            <Select.Content>
-              {viewOptions.items.map((option) => (
-                <Select.Item item={option} key={option.value}>
-                  {option.label}
-                </Select.Item>
-              ))}
-            </Select.Content>
-          </Select.Positioner>
-        </Select.Root>
-      </Flex>
+    <Box flex={1} p={2} height="100%" minHeight={0} overflow="hidden">
       {isLoading ? (
-        <Box mt={3} p={4}>
+        <Box p={4}>
           <Text>Loading events...</Text>
         </Box>
       ) : (
-        <Box mt={3} minHeight={0}>
+        <Box minHeight={0} height="100%">
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="timeGridDay"
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "",
-            }}
+            headerToolbar={false}
             nowIndicator={true}
-            height="auto"
+            height="100%"
             allDaySlot={false}
-            slotDuration="00:10:00"
+            slotDuration="00:30:00"
             slotLabelInterval="01:00"
             expandRows={true}
             weekends={true}
@@ -160,29 +246,119 @@ function CalendarView() {
             eventStartEditable={true}
             eventDurationEditable={true}
             events={calendarEvents}
-            eventClick={(info) => {
-              const kind = info.event.extendedProps?.kind ?? "task";
-              alert(`[${kind}] ${info.event.title}`);
-            }}
-            eventDrop={(info) => {
-              if (info.event.start && info.event.end) {
-                updateCalendarEvent(info.event.id, {
-                  start: info.event.start,
-                  end: info.event.end,
-                });
+            dateClick={(info) => {
+              if (currentView[0] === "dayGridMonth") {
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.gotoDate(info.dateStr);
+                  calendarApi.changeView("timeGridDay");
+                  setCurrentView(["timeGridDay"]);
+                }
               }
             }}
-            eventResize={(info) => {
-              if (info.event.start && info.event.end) {
-                updateCalendarEvent(info.event.id, {
-                  start: info.event.start,
-                  end: info.event.end,
+            eventClick={(info) => {
+              setSelectedEvent({
+                id: info.event.id,
+                title: info.event.title,
+                kind: info.event.extendedProps?.kind ?? "task",
+                start: info.event.start,
+                end: info.event.end,
+              });
+            }}
+            eventDrop={async (info) => {
+              try {
+                await updateCalendarEvent(info.event.id, {
+                  start: info.event.start!,
+                  end: info.event.end!,
                 });
+              } catch {
+                info.revert();
+              }
+            }}
+            eventResize={async (info) => {
+              try {
+                await updateCalendarEvent(info.event.id, {
+                  start: info.event.start!,
+                  end: info.event.end!,
+                });
+              } catch {
+                info.revert();
               }
             }}
           />
         </Box>
       )}
+
+      <Dialog.Root
+        open={!!selectedEvent}
+        onOpenChange={(e) => {
+          if (!e.open) setSelectedEvent(null);
+        }}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>{selectedEvent?.title}</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton
+                    size="sm"
+                    position="absolute"
+                    top={3}
+                    right={3}
+                  />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Flex direction="column" gap={2}>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>
+                      Type:
+                    </Text>
+                    <Text color={subColor}>{selectedEvent?.kind}</Text>
+                  </Flex>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>
+                      Start:
+                    </Text>
+                    <Text color={subColor}>
+                      {formatTime(selectedEvent?.start ?? null)}
+                    </Text>
+                  </Flex>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>
+                      End:
+                    </Text>
+                    <Text color={subColor}>
+                      {formatTime(selectedEvent?.end ?? null)}
+                    </Text>
+                  </Flex>
+                </Flex>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Close
+                  </Button>
+                </Dialog.ActionTrigger>
+                <Button
+                  colorPalette="red"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedEvent?.id) {
+                      deleteEvent(selectedEvent.id);
+                      setSelectedEvent(null);
+                    }
+                  }}
+                >
+                  Delete Event
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Box>
   );
 }
@@ -204,6 +380,8 @@ export default function App() {
     description: string;
     dueDate: string | null;
   } | null>(null);
+  const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
+  const calendarRef = useRef<FullCalendar>(null);
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -260,20 +438,28 @@ export default function App() {
   // Show full app if logged in
   return (
     <Box minH="100vh" bg={appBg}>
-      <Header />
+      <Header
+        calendarRef={calendarRef}
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+      />
 
       <Flex
         direction={{ base: "column", md: "row" }}
         mx="auto"
         gap={0}
-        height="calc(100vh - 73px)"
+        height="calc(100vh - 53px)"
       >
         <Sidebar
           goals={goals}
           onAddGoal={handleAddGoal}
           onRemoveGoal={handleRemoveGoal}
         />
-        <CalendarView />
+        <CalendarView
+          calendarRef={calendarRef}
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+        />
       </Flex>
 
       {decomposeGoal && (
