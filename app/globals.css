@@ -123,3 +123,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Compact time slots so most of the day fits on screen */
+.fc .fc-timegrid-slot {
+  height: 1.2em !important;
+}
