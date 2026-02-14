@@ -11,7 +11,6 @@ let
   # prisma-engines provides multiple executables; getExe can't pick among them,
   # so we reference their known paths under the package output.
   schemaEngine        = "${engines}/bin/schema-engine";
-  migrationEngine     = "${engines}/bin/migration-engine";
   introspectionEngine = "${engines}/bin/introspection-engine";
   prismaFmt           = "${engines}/bin/prisma-fmt";
 
@@ -63,7 +62,6 @@ in
   enterShell = ''
     echo "Prisma engines:"
     echo "  schema:        $PRISMA_SCHEMA_ENGINE_BINARY"
-    echo "  migration:     $PRISMA_MIGRATION_ENGINE_BINARY"
     echo "  introspection: $PRISMA_INTROSPECTION_ENGINE_BINARY"
     echo "  fmt:           $PRISMA_FMT_BINARY"
     echo "  query lib:     $PRISMA_QUERY_ENGINE_LIBRARY"
