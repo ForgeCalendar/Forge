@@ -8,15 +8,80 @@ import {
   HStack,
   RadioCard,
 } from "@chakra-ui/react";
-import type { Goal } from "../states/goals";
+import type { GoalWithId } from "@/storage/types";
 import { useState } from "react";
+import { useCalendarEvents } from "@/storage/hooks";
+import { toaster } from "@/components/ui/toaster";
 
-export function WorkDialog({ goal }: { goal: Goal }) {
+export function WorkDialog({ goal }: { goal: GoalWithId }) {
   const defaultVal = goal.events && goal.events.length > 0 ? "0" : "";
   const [selected, setSelected] = useState<string>(defaultVal);
+  const [isOpen, setIsOpen] = useState(false);
+  const { create: createCalendarEvent } = useCalendarEvents();
+
+  const handleStartWork = async () => {
+    if (!goal.events || goal.events.length === 0) {
+      toaster.create({
+        title: "No events available",
+        description: "Please add events to this goal first.",
+        type: "error",
+      });
+      return;
+    }
+
+    const selectedIndex = parseInt(selected, 10);
+    const selectedEvent = goal.events[selectedIndex];
+
+    if (!selectedEvent) {
+      toaster.create({
+        title: "Please select an event",
+        description: "Choose an event to start working on.",
+        type: "warning",
+      });
+      return;
+    }
+
+    // Calculate start and end times
+    const startTime = new Date();
+    const durationMinutes = selectedEvent.minutesEstimate || 25; // Default 25 min if not set
+    const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
+
+    try {
+      await createCalendarEvent({
+        title: selectedEvent.title,
+        start: startTime,
+        end: endTime,
+        extendedProps: {
+          kind: "task",
+          goalId: goal.id,
+          goalTitle: goal.title,
+        },
+      });
+
+      toaster.create({
+        title: "Work session started! 🎯",
+        description: `${selectedEvent.title} (${durationMinutes} min)`,
+        type: "success",
+      });
+
+      // Close the dialog
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Failed to create calendar event:", error);
+      toaster.create({
+        title: "Failed to start work session",
+        description: "Please try again.",
+        type: "error",
+      });
+    }
+  };
 
   return (
-    <Dialog.Root size="lg">
+    <Dialog.Root
+      size="lg"
+      open={isOpen}
+      onOpenChange={(e) => setIsOpen(e.open)}
+    >
       <Dialog.Trigger asChild>
         <Button size="sm" colorScheme="blue">
           Work!
@@ -42,8 +107,8 @@ export function WorkDialog({ goal }: { goal: Goal }) {
                   <Box mt={3}>
                     <RadioCard.Root
                       defaultValue={defaultVal}
-                      onValueChange={(v: any) =>
-                        setSelected(String((v && (v as any).value) ?? v))
+                      onValueChange={(details) =>
+                        setSelected(String(details.value ?? ""))
                       }
                       variant="solid"
                     >
@@ -82,17 +147,13 @@ export function WorkDialog({ goal }: { goal: Goal }) {
               <Dialog.ActionTrigger asChild>
                 <Button variant="ghost">Cancel</Button>
               </Dialog.ActionTrigger>
-              <Dialog.ActionTrigger asChild>
-                <Button
-                  onClick={() => {
-                    // eslint-disable-next-line no-console
-                    console.log("Start work on", goal.title, "event", selected);
-                  }}
-                >
-                  Start
-                </Button>
-              </Dialog.ActionTrigger>
-              <Dialog.CloseTrigger asChild></Dialog.CloseTrigger>
+              <Button
+                colorScheme="blue"
+                onClick={handleStartWork}
+                disabled={!goal.events || goal.events.length === 0}
+              >
+                Start
+              </Button>
             </Dialog.Footer>
 
             <Dialog.CloseTrigger asChild>

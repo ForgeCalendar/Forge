@@ -63,7 +63,13 @@ export type CreateCalendarEventInput = {
   title: string;
   start: Date;
   end: Date;
-  extendedProps?: { kind?: string };
+  extendedProps?: {
+    kind?: string;
+    goalId?: string;
+    goalTitle?: string;
+    completed?: boolean;
+    minutesEstimate?: number;
+  };
 };
 
 export type UpdateCalendarEventInput = Partial<CreateCalendarEventInput>;
