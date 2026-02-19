@@ -10,10 +10,10 @@ let
 
   # prisma-engines provides multiple executables; getExe can't pick among them,
   # so we reference their known paths under the package output.
-  schemaEngine        = "${engines}/bin/schema-engine";
-  migrationEngine     = "${engines}/bin/migration-engine";
+  schemaEngine = "${engines}/bin/schema-engine";
+  migrationEngine = "${engines}/bin/migration-engine";
   introspectionEngine = "${engines}/bin/introspection-engine";
-  prismaFmt           = "${engines}/bin/prisma-fmt";
+  prismaFmt = "${engines}/bin/prisma-fmt";
 
   # The query engine "library" is a .node file. Different nixpkgs revisions may
   # place it under /lib or /libexec. We export the common /lib path; if your
@@ -27,14 +27,15 @@ in
     pkgs.sqlite
     prisma
     engines
+    pkgs.pre-commit
   ];
 
   # Make sure Prisma CLI uses Nix-provided engines instead of trying to download
   env = {
-    PRISMA_SCHEMA_ENGINE_BINARY        = schemaEngine;
+    PRISMA_SCHEMA_ENGINE_BINARY = schemaEngine;
     PRISMA_INTROSPECTION_ENGINE_BINARY = introspectionEngine;
-    PRISMA_FMT_BINARY                  = prismaFmt;
-    PRISMA_QUERY_ENGINE_LIBRARY        = queryEngineLib;
+    PRISMA_FMT_BINARY = prismaFmt;
+    PRISMA_QUERY_ENGINE_LIBRARY = queryEngineLib;
 
     # Optional: keep Prisma from trying to be clever about engine downloads
     PRISMA_CLI_QUERY_ENGINE_TYPE = "library";
@@ -71,6 +72,12 @@ in
       echo "NOTE: libquery_engine.node not found at:"
       echo "  $PRISMA_QUERY_ENGINE_LIBRARY"
       echo "Run: ls ${engines}/lib and update queryEngineLib in devenv.nix if needed."
+    fi
+
+    # Install pre-commit hooks
+    if [ -f .pre-commit-config.yaml ]; then
+      echo "Installing pre-commit hooks..."
+      pre-commit install --install-hooks
     fi
   '';
 }
