@@ -207,14 +207,14 @@ async function main() {
         today.getMonth(),
         today.getDate(),
         9,
-        0
+        0,
       ).toISOString(),
       end: new Date(
         today.getFullYear(),
         today.getMonth(),
         today.getDate(),
         9,
-        30
+        30,
       ).toISOString(),
       kind: "break",
     },
@@ -229,14 +229,14 @@ async function main() {
         today.getMonth(),
         today.getDate(),
         14,
-        0
+        0,
       ).toISOString(),
       end: new Date(
         today.getFullYear(),
         today.getMonth(),
         today.getDate(),
         15,
-        0
+        0,
       ).toISOString(),
       kind: "task",
     },
@@ -251,14 +251,14 @@ async function main() {
         tomorrow.getMonth(),
         tomorrow.getDate(),
         10,
-        0
+        0,
       ).toISOString(),
       end: new Date(
         tomorrow.getFullYear(),
         tomorrow.getMonth(),
         tomorrow.getDate(),
         11,
-        30
+        30,
       ).toISOString(),
       kind: "task",
     },

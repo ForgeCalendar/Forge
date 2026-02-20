@@ -45,7 +45,7 @@ export function useGoals() {
         });
       });
     },
-    [createMutation]
+    [createMutation],
   );
 
   const update = useCallback(
@@ -56,11 +56,11 @@ export function useGoals() {
           {
             onSuccess: (data) => resolve(data),
             onError: (error) => reject(error),
-          }
+          },
         );
       });
     },
-    [updateMutation]
+    [updateMutation],
   );
 
   const deleteGoal = useCallback(
@@ -72,7 +72,7 @@ export function useGoals() {
         });
       });
     },
-    [deleteMutation]
+    [deleteMutation],
   );
 
   return {
@@ -101,13 +101,13 @@ export function useCalendarEvents() {
         });
       });
     },
-    [createMutation]
+    [createMutation],
   );
 
   const update = useCallback(
     async (
       id: string,
-      input: UpdateCalendarEventInput
+      input: UpdateCalendarEventInput,
     ): Promise<EventWithId | null> => {
       return new Promise((resolve, reject) => {
         updateMutation.mutate(
@@ -115,11 +115,11 @@ export function useCalendarEvents() {
           {
             onSuccess: (data) => resolve(data),
             onError: (error) => reject(error),
-          }
+          },
         );
       });
     },
-    [updateMutation]
+    [updateMutation],
   );
 
   const deleteEvent = useCallback(
@@ -131,7 +131,7 @@ export function useCalendarEvents() {
         });
       });
     },
-    [deleteMutation]
+    [deleteMutation],
   );
 
   return {
@@ -160,13 +160,13 @@ export function useInfoTags() {
         });
       });
     },
-    [createMutation]
+    [createMutation],
   );
 
   const update = useCallback(
     async (
       id: string,
-      input: UpdateInfoTagInput
+      input: UpdateInfoTagInput,
     ): Promise<InfoTagWithId | null> => {
       return new Promise((resolve, reject) => {
         updateMutation.mutate(
@@ -174,11 +174,11 @@ export function useInfoTags() {
           {
             onSuccess: (data) => resolve(data),
             onError: (error) => reject(error),
-          }
+          },
         );
       });
     },
-    [updateMutation]
+    [updateMutation],
   );
 
   const deleteInfoTag = useCallback(
@@ -190,7 +190,7 @@ export function useInfoTags() {
         });
       });
     },
-    [deleteMutation]
+    [deleteMutation],
   );
 
   return {

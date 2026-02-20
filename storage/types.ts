@@ -5,8 +5,10 @@ import { Event } from "../states/goals";
 import { InfoTag } from "../states/InfoTag";
 
 // API response types with IDs for database records
-export interface GoalWithId
-  extends Omit<import("../states/goals").Goal, "events" | "infoTags"> {
+export interface GoalWithId extends Omit<
+  import("../states/goals").Goal,
+  "events" | "infoTags"
+> {
   id: string;
   events: EventWithId[];
   infoTags: InfoTagWithId[];

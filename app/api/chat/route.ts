@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     if (!provider) {
       return NextResponse.json(
         { error: "Provider parameter is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -29,10 +29,10 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: `Invalid provider. Must be one of: ${Object.values(
-            AIProvider
+            AIProvider,
           ).join(", ")}`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         {
           error: `No API key found for provider '${provider}'. Please add one in settings.`,
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
                     end: z
                       .string()
                       .describe("ISO 8601 end datetime for this task"),
-                  })
+                  }),
                 )
                 .min(1)
                 .max(10),
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
                 const taskStart = new Date(tasks[i].start);
                 const taskEnd = new Date(tasks[i].end);
                 const minutesEstimate = Math.round(
-                  (taskEnd.getTime() - taskStart.getTime()) / 60000
+                  (taskEnd.getTime() - taskStart.getTime()) / 60000,
                 );
 
                 await prisma.event.create({
@@ -186,13 +186,13 @@ Guidelines:
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
     console.error("Error in chat endpoint:", error);
     return NextResponse.json(
       { error: "Failed to process chat request" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

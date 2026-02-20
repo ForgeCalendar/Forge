@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 // GET /api/goals/:id - Get a specific goal
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const userId = await requireAuth();
@@ -35,13 +35,13 @@ export async function GET(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
     console.error("Error fetching goal:", error);
     return NextResponse.json(
       { error: "Failed to fetch goal" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -49,7 +49,7 @@ export async function GET(
 // PUT /api/goals/:id - Update a goal
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const userId = await requireAuth();
@@ -120,13 +120,13 @@ export async function PUT(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
     console.error("Error updating goal:", error);
     return NextResponse.json(
       { error: "Failed to update goal" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -134,7 +134,7 @@ export async function PUT(
 // DELETE /api/goals/:id - Delete a goal
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const userId = await requireAuth();
@@ -159,13 +159,13 @@ export async function DELETE(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
     console.error("Error deleting goal:", error);
     return NextResponse.json(
       { error: "Failed to delete goal" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

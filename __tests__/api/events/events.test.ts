@@ -55,7 +55,7 @@ describe("GET /api/events", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized")
+      new Error("Unauthorized"),
     );
 
     const response = await GET();
@@ -67,9 +67,7 @@ describe("GET /api/events", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.event.findMany.mockRejectedValue(
-      new Error("Database error")
-    );
+    prismaMock.event.findMany.mockRejectedValue(new Error("Database error"));
 
     const response = await GET();
     const data = await response.json();
@@ -155,7 +153,7 @@ describe("POST /api/events", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized")
+      new Error("Unauthorized"),
     );
 
     const request = createMockRequest({
@@ -177,9 +175,7 @@ describe("POST /api/events", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.event.create.mockRejectedValue(
-      new Error("Database error")
-    );
+    prismaMock.event.create.mockRejectedValue(new Error("Database error"));
 
     const request = createMockRequest({
       method: "POST",
