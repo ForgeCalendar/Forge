@@ -17,42 +17,25 @@ model User {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  goals         Goal[]
-  calendarEvents CalendarEvent[]
+  goals          Goal[]
+  events         Event[]
   aiAgentApiKeys AIAgentApiKey[]
 }
 
 model Goal {
-  id           String        @id @default(uuid())
+  id           String          @id @default(uuid())
   userId       String
   title        String
   description  String
-  dueDate      String?       // ISO datetime string or null
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  dueDate      String?         // ISO datetime string or null
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   events       Event[]
   infoTags     InfoTag[]
 
   @@index([userId])
-}
-
-model Event {
-  id              String   @id @default(uuid())
-  goalId          String
-  title           String
-  start           String?  // ISO datetime string
-  end             String?  // ISO datetime string
-  completed       Boolean  @default(false)
-  minutesEstimate Int?
-  order           Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  goal            Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-
-  @@index([goalId])
 }
 
 model InfoTag {
@@ -68,20 +51,26 @@ model InfoTag {
   @@index([goalId])
 }
 
-model CalendarEvent {
-  id        String   @id @default(uuid())
-  userId    String
-  title     String
-  start     String   // ISO datetime string
-  end       String   // ISO datetime string
-  kind      String?  // 'task', 'break', etc.
-  metadata  String?  // JSON string for extensibility
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Event {
+  id              String   @id @default(uuid())
+  userId          String
+  goalId          String?  // nullable — links to Goal if it's a goal task
+  title           String
+  start           String   // ISO datetime string
+  end             String   // ISO datetime string
+  kind            String?  // 'task', 'break', etc.
+  completed       Boolean  @default(false)
+  minutesEstimate Int?
+  order           Int      @default(0)
+  metadata        String?  // JSON string for extensibility
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal            Goal?    @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([goalId])
 }
 
 enum AIProvider {

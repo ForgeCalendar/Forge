@@ -6,10 +6,6 @@ import {
   useDeleteGoalMutation,
 } from "./useGoalsQuery";
 import {
-  useUpdateEventMutation as useUpdateGoalEventMutation,
-  useDeleteEventMutation as useDeleteGoalEventMutation,
-} from "./useGoalEventsQuery";
-import {
   useEventsQuery,
   useCreateEventMutation,
   useUpdateEventMutation,
@@ -23,12 +19,10 @@ import {
 } from "./useInfoTagsQuery";
 import type {
   GoalWithId,
-  EventWithId as GoalEventWithId,
-  CalendarEventWithId,
+  EventWithId,
   InfoTagWithId,
   CreateGoalInput,
   UpdateGoalInput,
-  UpdateEventInput as UpdateGoalEventInput,
   CreateCalendarEventInput,
   UpdateCalendarEventInput,
   CreateInfoTagInput,
@@ -91,47 +85,6 @@ export function useGoals() {
   };
 }
 
-// Goal Events Hook
-export function useGoalEvents() {
-  const updateMutation = useUpdateGoalEventMutation();
-  const deleteMutation = useDeleteGoalEventMutation();
-
-  const update = useCallback(
-    async (
-      id: string,
-      input: UpdateGoalEventInput
-    ): Promise<GoalEventWithId | null> => {
-      return new Promise((resolve, reject) => {
-        updateMutation.mutate(
-          { id, input },
-          {
-            onSuccess: (data) => resolve(data),
-            onError: (error) => reject(error),
-          }
-        );
-      });
-    },
-    [updateMutation]
-  );
-
-  const deleteGoalEvent = useCallback(
-    async (id: string): Promise<boolean> => {
-      return new Promise((resolve, reject) => {
-        deleteMutation.mutate(id, {
-          onSuccess: () => resolve(true),
-          onError: (error) => reject(error),
-        });
-      });
-    },
-    [deleteMutation]
-  );
-
-  return {
-    update,
-    delete: deleteGoalEvent,
-  };
-}
-
 // Calendar Events Hook
 export function useCalendarEvents() {
   const query = useEventsQuery();
@@ -140,7 +93,7 @@ export function useCalendarEvents() {
   const deleteMutation = useDeleteEventMutation();
 
   const create = useCallback(
-    async (input: CreateCalendarEventInput): Promise<CalendarEventWithId> => {
+    async (input: CreateCalendarEventInput): Promise<EventWithId> => {
       return new Promise((resolve, reject) => {
         createMutation.mutate(input, {
           onSuccess: (data) => resolve(data),
@@ -155,7 +108,7 @@ export function useCalendarEvents() {
     async (
       id: string,
       input: UpdateCalendarEventInput
-    ): Promise<CalendarEventWithId | null> => {
+    ): Promise<EventWithId | null> => {
       return new Promise((resolve, reject) => {
         updateMutation.mutate(
           { id, input },

@@ -1,10 +1,8 @@
 // Re-export types from states for consistency
 export type { Goal, Event } from "../states/goals";
 export type { InfoTag } from "../states/InfoTag";
-export type { CalendarEvent } from "../states/events";
 import { Event } from "../states/goals";
 import { InfoTag } from "../states/InfoTag";
-import { CalendarEvent } from "../states/events";
 
 // API response types with IDs for database records
 export interface GoalWithId
@@ -16,16 +14,18 @@ export interface GoalWithId
 
 export interface EventWithId extends Event {
   id: string;
-  goalId: string;
+  goalId: string | null;
+  userId: string;
+  kind: string | null;
+  order: number;
+  metadata: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InfoTagWithId extends InfoTag {
   id: string;
   goalId?: string; // Optional for user-level info tags
-}
-
-export interface CalendarEventWithId extends CalendarEvent {
-  id: string;
 }
 
 // Create/Update types (without IDs)
@@ -47,17 +47,6 @@ export type CreateGoalInput = {
 };
 
 export type UpdateGoalInput = Partial<CreateGoalInput>;
-
-export type CreateEventInput = {
-  title: string;
-  start?: string;
-  end?: string;
-  completed: boolean;
-  minutesEstimate?: number;
-  goalId: string;
-};
-
-export type UpdateEventInput = Partial<Omit<CreateEventInput, "goalId">>;
 
 export type CreateCalendarEventInput = {
   title: string;
