@@ -55,7 +55,7 @@ describe("GET /api/events", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const response = await GET();
@@ -153,7 +153,7 @@ describe("POST /api/events", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({

@@ -22,7 +22,7 @@ async function fetchEvents(): Promise<EventWithId[]> {
       ...event,
       start: new Date(event.start),
       end: new Date(event.end),
-    }),
+    })
   );
 }
 
@@ -38,7 +38,7 @@ async function fetchEvent(id: string): Promise<EventWithId> {
 }
 
 async function createEvent(
-  input: CreateCalendarEventInput,
+  input: CreateCalendarEventInput
 ): Promise<EventWithId> {
   const { extendedProps, ...rest } = input;
   const response = await fetch("/api/events", {
@@ -65,7 +65,7 @@ async function createEvent(
 
 async function updateEvent(
   id: string,
-  input: UpdateCalendarEventInput,
+  input: UpdateCalendarEventInput
 ): Promise<EventWithId> {
   const response = await fetch(`/api/events/${id}`, {
     method: "PATCH",

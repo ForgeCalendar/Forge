@@ -44,13 +44,13 @@ export async function GET() {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error fetching events:", error);
     return NextResponse.json(
       { error: "Failed to fetch events" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -99,19 +99,19 @@ export async function POST(req: Request) {
           ...(event.metadata ? JSON.parse(event.metadata) : {}),
         },
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error creating event:", error);
     return NextResponse.json(
       { error: "Failed to create event" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

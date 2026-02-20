@@ -33,7 +33,7 @@ async function createGoal(input: CreateGoalInput): Promise<GoalWithId> {
 
 async function updateGoal(
   id: string,
-  input: UpdateGoalInput,
+  input: UpdateGoalInput
 ): Promise<GoalWithId> {
   const response = await fetch(`/api/goals/${id}`, {
     method: "PUT",

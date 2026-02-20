@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 // GET /api/events/:id - Get a specific event
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await requireAuth();
@@ -39,13 +39,13 @@ export async function GET(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error fetching event:", error);
     return NextResponse.json(
       { error: "Failed to fetch event" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -53,7 +53,7 @@ export async function GET(
 // PATCH /api/events/:id - Update an event
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await requireAuth();
@@ -103,13 +103,13 @@ export async function PATCH(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error updating event:", error);
     return NextResponse.json(
       { error: "Failed to update event" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -117,7 +117,7 @@ export async function PATCH(
 // DELETE /api/events/:id - Delete an event
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await requireAuth();
@@ -141,13 +141,13 @@ export async function DELETE(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error deleting event:", error);
     return NextResponse.json(
       { error: "Failed to delete event" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
