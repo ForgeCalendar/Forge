@@ -56,8 +56,8 @@ function DeleteGoalDialog({
             </Dialog.Header>
             <Dialog.Body>
               <Text color={dialogTextColor}>
-                Are you sure you want to delete "{goalTitle}"? This action
-                cannot be undone.
+                Are you sure you want to delete &quot;{goalTitle}&quot;? This
+                action cannot be undone.
               </Text>
             </Dialog.Body>
             <Dialog.Footer>
@@ -99,7 +99,7 @@ function formatDue(d: string | null) {
       dateStyle: "medium",
       timeStyle: "short",
     });
-  } catch (e) {
+  } catch {
     // Fallback for environments that don't support dateStyle/timeStyle
     return dt.toLocaleString();
   }
@@ -107,16 +107,20 @@ function formatDue(d: string | null) {
 
 function GoalComponent({
   goal,
-  index,
   onRemove,
 }: {
-  goal: Goal;
+  goal: Goal | GoalWithId;
   index: number;
   onRemove?: () => void;
 }) {
   const goalCardBg = useColorModeValue("gray.50", "gray.800");
   const metaTextColor = useColorModeValue("gray.500", "gray.400");
   const bodyTextColor = useColorModeValue("gray.600", "gray.300");
+
+  // Type guard to check if goal has an id (is GoalWithId)
+  const isGoalWithId = (g: Goal | GoalWithId): g is GoalWithId => {
+    return "id" in g;
+  };
 
   return (
     <Box p={3} bg={goalCardBg} borderRadius="md" position="relative">
@@ -153,7 +157,13 @@ function GoalComponent({
         </Box>
       )}
       <Box mt={3}>
-        <WorkDialog goal={goal} />
+        {isGoalWithId(goal) ? (
+          <WorkDialog goal={goal} />
+        ) : (
+          <Button size="sm" colorScheme="blue" disabled>
+            Work! (Save goal first)
+          </Button>
+        )}
       </Box>
     </Box>
   );

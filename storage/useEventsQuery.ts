@@ -17,11 +17,13 @@ async function fetchEvents(): Promise<CalendarEventWithId[]> {
   if (!response.ok) throw new Error("Failed to fetch events");
   const data = await response.json();
   // Parse ISO date strings to Date objects
-  return data.map((event: any) => ({
-    ...event,
-    start: new Date(event.start),
-    end: new Date(event.end),
-  }));
+  return data.map(
+    (event: { start: string; end: string; [key: string]: unknown }) => ({
+      ...event,
+      start: new Date(event.start),
+      end: new Date(event.end),
+    })
+  );
 }
 
 async function fetchEvent(id: string): Promise<CalendarEventWithId> {
@@ -38,13 +40,23 @@ async function fetchEvent(id: string): Promise<CalendarEventWithId> {
 async function createEvent(
   input: CreateCalendarEventInput
 ): Promise<CalendarEventWithId> {
+  const { extendedProps, ...rest } = input;
   const response = await fetch("/api/events", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ...input,
-      start: input.start.toISOString(),
-      end: input.end.toISOString(),
+      title: rest.title,
+      start: rest.start.toISOString(),
+      end: rest.end.toISOString(),
+      kind: extendedProps?.kind || "task",
+      metadata: extendedProps
+        ? JSON.stringify({
+            goalId: extendedProps.goalId,
+            goalTitle: extendedProps.goalTitle,
+            completed: extendedProps.completed,
+            minutesEstimate: extendedProps.minutesEstimate,
+          })
+        : null,
     }),
   });
   if (!response.ok) throw new Error("Failed to create event");
