@@ -8,7 +8,6 @@ async function main() {
   await prisma.event.deleteMany();
   await prisma.infoTag.deleteMany();
   await prisma.goal.deleteMany();
-  await prisma.calendarEvent.deleteMany();
   await prisma.aIAgentApiKey.deleteMany();
   await prisma.user.deleteMany();
 
@@ -81,19 +80,28 @@ async function main() {
       events: {
         create: [
           {
+            userId: user.id,
             title: "Add .pre-commit-config.yaml",
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
             completed: true,
             minutesEstimate: 30,
             order: 0,
           },
           {
+            userId: user.id,
             title: "Run pre-commit install",
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
             completed: false,
             minutesEstimate: 15,
             order: 1,
           },
           {
+            userId: user.id,
             title: "Run pre-commit autoupdate",
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
             completed: false,
             minutesEstimate: 20,
             order: 2,
@@ -119,13 +127,19 @@ async function main() {
       events: {
         create: [
           {
+            userId: user.id,
             title: "Fix mobile header spacing",
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
             completed: true,
             minutesEstimate: 10,
             order: 0,
           },
           {
+            userId: user.id,
             title: "Adjust hero section spacing",
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
             completed: false,
             minutesEstimate: 25,
             order: 1,
@@ -151,13 +165,19 @@ async function main() {
       events: {
         create: [
           {
+            userId: user.id,
             title: "Test login flow",
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
             completed: false,
             minutesEstimate: 40,
             order: 0,
           },
           {
+            userId: user.id,
             title: "Test token refresh",
+            start: new Date().toISOString(),
+            end: new Date().toISOString(),
             completed: false,
             minutesEstimate: 35,
             order: 1,
@@ -178,7 +198,7 @@ async function main() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  await prisma.calendarEvent.create({
+  await prisma.event.create({
     data: {
       userId: user.id,
       title: "Morning standup",
@@ -200,7 +220,7 @@ async function main() {
     },
   });
 
-  await prisma.calendarEvent.create({
+  await prisma.event.create({
     data: {
       userId: user.id,
       title: "Code review session",
@@ -222,7 +242,7 @@ async function main() {
     },
   });
 
-  await prisma.calendarEvent.create({
+  await prisma.event.create({
     data: {
       userId: user.id,
       title: "Team planning",

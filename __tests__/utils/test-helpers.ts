@@ -59,25 +59,18 @@ export const mockGoal = {
   infoTags: [],
 };
 
-export const mockGoalEvent = {
-  id: "goal-event-1",
-  goalId: "goal-1",
-  title: "Test Goal Event",
-  completed: false,
-  minutesEstimate: 60,
-  order: 0,
-  createdAt: new Date("2024-01-01"),
-  updatedAt: new Date("2024-01-01"),
-};
-
 export const mockEvent = {
   id: "event-1",
   userId: "test@example.com",
+  goalId: null,
   title: "Test Event",
-  start: new Date("2024-06-01T10:00:00Z"),
-  end: new Date("2024-06-01T11:00:00Z"),
+  start: "2024-06-01T10:00:00.000Z",
+  end: "2024-06-01T11:00:00.000Z",
   kind: "meeting",
-  metadata: {},
+  completed: false,
+  minutesEstimate: null,
+  order: 0,
+  metadata: null,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
 };

@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const userId = await requireAuth();
 
-    const events = await prisma.calendarEvent.findMany({
+    const events = await prisma.event.findMany({
       where: {
         userId,
       },
@@ -18,7 +18,7 @@ export async function GET() {
 
     const transformedEvents = events.map((event) => {
       const parsedMeta = event.metadata ? JSON.parse(event.metadata) : {};
-      const isGoalEvent = !!parsedMeta.goalId;
+      const isGoalEvent = !!event.goalId;
 
       return {
         id: event.id,
@@ -30,6 +30,9 @@ export async function GET() {
           : {}),
         extendedProps: {
           kind: event.kind,
+          goalId: event.goalId,
+          completed: event.completed,
+          minutesEstimate: event.minutesEstimate,
           ...parsedMeta,
         },
       };
@@ -80,15 +83,27 @@ export async function POST(req: Request) {
   try {
     const userId = await requireAuth();
     const body = await req.json();
-    const { title, start, end, kind, metadata } = body;
+    const {
+      title,
+      start,
+      end,
+      kind,
+      metadata,
+      goalId,
+      completed,
+      minutesEstimate,
+    } = body;
 
-    const event = await prisma.calendarEvent.create({
+    const event = await prisma.event.create({
       data: {
         userId,
         title,
         start: new Date(start).toISOString(),
         end: new Date(end).toISOString(),
         kind,
+        goalId: goalId || null,
+        completed: completed ?? false,
+        minutesEstimate: minutesEstimate ?? null,
         metadata: metadata ? JSON.stringify(metadata) : null,
       },
     });
@@ -101,6 +116,9 @@ export async function POST(req: Request) {
         end: new Date(event.end),
         extendedProps: {
           kind: event.kind,
+          goalId: event.goalId,
+          completed: event.completed,
+          minutesEstimate: event.minutesEstimate,
           ...(event.metadata ? JSON.parse(event.metadata) : {}),
         },
       },

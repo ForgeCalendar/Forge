@@ -22,7 +22,7 @@ describe("GET /api/events", () => {
       },
     ];
 
-    prismaMock.calendarEvent.findMany.mockResolvedValue(mockEvents as any);
+    prismaMock.event.findMany.mockResolvedValue(mockEvents as any);
     prismaMock.icsEvent.findMany.mockResolvedValue([]);
 
     const response = await GET();
@@ -37,7 +37,7 @@ describe("GET /api/events", () => {
     expect(data[0]).toHaveProperty("extendedProps");
     expect(data[0].extendedProps.kind).toBe("meeting");
     expect(data[0].extendedProps.location).toBe("Office");
-    expect(prismaMock.calendarEvent.findMany).toHaveBeenCalledWith({
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith({
       where: { userId: "test@example.com" },
       orderBy: { start: "asc" },
     });
@@ -45,7 +45,7 @@ describe("GET /api/events", () => {
 
   it("should return empty array when user has no events", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.calendarEvent.findMany.mockResolvedValue([]);
+    prismaMock.event.findMany.mockResolvedValue([]);
     prismaMock.icsEvent.findMany.mockResolvedValue([]);
 
     const response = await GET();
@@ -69,9 +69,7 @@ describe("GET /api/events", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.calendarEvent.findMany.mockRejectedValue(
-      new Error("Database error"),
-    );
+    prismaMock.event.findMany.mockRejectedValue(new Error("Database error"));
 
     const response = await GET();
     const data = await response.json();
@@ -95,7 +93,7 @@ describe("POST /api/events", () => {
       metadata: JSON.stringify({ location: "Conference Room A" }),
     };
 
-    prismaMock.calendarEvent.create.mockResolvedValue(createdEvent as any);
+    prismaMock.event.create.mockResolvedValue(createdEvent as any);
 
     const request = createMockRequest({
       method: "POST",
@@ -115,13 +113,16 @@ describe("POST /api/events", () => {
     expect(data.title).toBe("Team Meeting");
     expect(data.extendedProps.kind).toBe("meeting");
     expect(data.extendedProps.location).toBe("Conference Room A");
-    expect(prismaMock.calendarEvent.create).toHaveBeenCalledWith({
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
       data: {
         userId: "test@example.com",
         title: "Team Meeting",
         start: new Date("2024-06-01T10:00:00Z").toISOString(),
         end: new Date("2024-06-01T11:00:00Z").toISOString(),
         kind: "meeting",
+        goalId: null,
+        completed: false,
+        minutesEstimate: null,
         metadata: JSON.stringify({ location: "Conference Room A" }),
       },
     });
@@ -136,7 +137,7 @@ describe("POST /api/events", () => {
       metadata: null,
     };
 
-    prismaMock.calendarEvent.create.mockResolvedValue(createdEvent as any);
+    prismaMock.event.create.mockResolvedValue(createdEvent as any);
 
     const request = createMockRequest({
       method: "POST",
@@ -179,9 +180,7 @@ describe("POST /api/events", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.calendarEvent.create.mockRejectedValue(
-      new Error("Database error"),
-    );
+    prismaMock.event.create.mockRejectedValue(new Error("Database error"));
 
     const request = createMockRequest({
       method: "POST",

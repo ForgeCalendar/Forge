@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
-  CalendarEventWithId,
+  EventWithId,
   CreateCalendarEventInput,
   UpdateCalendarEventInput,
 } from "./types";
@@ -12,7 +12,7 @@ export const eventKeys = {
 };
 
 // API functions
-async function fetchEvents(): Promise<CalendarEventWithId[]> {
+async function fetchEvents(): Promise<EventWithId[]> {
   const response = await fetch("/api/events");
   if (!response.ok) throw new Error("Failed to fetch events");
   const data = await response.json();
@@ -26,7 +26,7 @@ async function fetchEvents(): Promise<CalendarEventWithId[]> {
   );
 }
 
-async function fetchEvent(id: string): Promise<CalendarEventWithId> {
+async function fetchEvent(id: string): Promise<EventWithId> {
   const response = await fetch(`/api/events/${id}`);
   if (!response.ok) throw new Error("Failed to fetch event");
   const data = await response.json();
@@ -39,7 +39,7 @@ async function fetchEvent(id: string): Promise<CalendarEventWithId> {
 
 async function createEvent(
   input: CreateCalendarEventInput
-): Promise<CalendarEventWithId> {
+): Promise<EventWithId> {
   const { extendedProps, ...rest } = input;
   const response = await fetch("/api/events", {
     method: "POST",
@@ -49,14 +49,9 @@ async function createEvent(
       start: rest.start.toISOString(),
       end: rest.end.toISOString(),
       kind: extendedProps?.kind || "task",
-      metadata: extendedProps
-        ? JSON.stringify({
-            goalId: extendedProps.goalId,
-            goalTitle: extendedProps.goalTitle,
-            completed: extendedProps.completed,
-            minutesEstimate: extendedProps.minutesEstimate,
-          })
-        : null,
+      goalId: extendedProps?.goalId || null,
+      completed: extendedProps?.completed ?? false,
+      minutesEstimate: extendedProps?.minutesEstimate ?? null,
     }),
   });
   if (!response.ok) throw new Error("Failed to create event");
@@ -71,7 +66,7 @@ async function createEvent(
 async function updateEvent(
   id: string,
   input: UpdateCalendarEventInput
-): Promise<CalendarEventWithId> {
+): Promise<EventWithId> {
   const response = await fetch(`/api/events/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
