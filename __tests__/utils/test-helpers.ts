@@ -81,3 +81,36 @@ export const mockEvent = {
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
 };
+
+export const mockIcsSubscription = {
+  id: "ics-sub-1",
+  userId: "test@example.com",
+  name: "Work Calendar",
+  url: "https://calendar.google.com/calendar/ical/test/basic.ics",
+  lastSynced: null,
+  createdAt: new Date("2024-01-01"),
+  updatedAt: new Date("2024-01-01"),
+};
+
+export const mockIcsEvent = {
+  id: "ics-event-1",
+  subscriptionId: "ics-sub-1",
+  uid: "event-uid-123@google.com",
+  summary: "Team Standup",
+  description: "Daily standup meeting",
+  location: "Conference Room A",
+  start: "2024-06-01T10:00:00.000Z",
+  end: "2024-06-01T10:30:00.000Z",
+  startTimezone: "America/New_York",
+  endTimezone: "America/New_York",
+  isAllDay: false,
+  status: "CONFIRMED",
+  organizer: "mailto:organizer@example.com",
+  recurrenceRule: null,
+  transparency: "OPAQUE",
+  categories: null,
+  url: null,
+  rawData: "{}",
+  createdAt: new Date("2024-01-01"),
+  updatedAt: new Date("2024-01-01"),
+};

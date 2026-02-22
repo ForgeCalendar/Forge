@@ -41,6 +41,7 @@
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "next-themes": "^0.4.6",
+    "node-ical": "^0.25.3",
     "postcss": "^8.5.6",
     "prisma": "^6.19.2",
     "react": "19.2.3",

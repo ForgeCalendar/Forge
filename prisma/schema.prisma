@@ -17,9 +17,10 @@ model User {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  goals         Goal[]
-  calendarEvents CalendarEvent[]
-  aiAgentApiKeys AIAgentApiKey[]
+  goals            Goal[]
+  calendarEvents   CalendarEvent[]
+  aiAgentApiKeys   AIAgentApiKey[]
+  icsSubscriptions IcsSubscription[]
 }
 
 model Goal {
@@ -105,4 +106,47 @@ model AIAgentApiKey {
 
   @@index([userId])
   @@unique([userId, provider])
+}
+
+model IcsSubscription {
+  id          String     @id @default(uuid())
+  userId      String
+  name        String     // User-friendly label, e.g. "Work Calendar"
+  url         String     // The secret ICS URL
+  lastSynced  DateTime?  // When last successfully synced
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  icsEvents   IcsEvent[]
+
+  @@index([userId])
+}
+
+model IcsEvent {
+  id               String          @id @default(uuid())
+  subscriptionId   String
+  uid              String          // ICS UID field (unique per subscription)
+  summary          String?         // SUMMARY
+  description      String?         // DESCRIPTION
+  location         String?         // LOCATION
+  start            String          // DTSTART as ISO string
+  end              String?         // DTEND as ISO string
+  startTimezone    String?         // Timezone of DTSTART
+  endTimezone      String?         // Timezone of DTEND
+  isAllDay         Boolean         @default(false)
+  status           String?         // STATUS (CONFIRMED, TENTATIVE, CANCELLED)
+  organizer        String?         // ORGANIZER
+  recurrenceRule   String?         // RRULE as raw string
+  transparency     String?         // TRANSP (TRANSPARENT/OPAQUE)
+  categories       String?         // CATEGORIES as JSON array string
+  url              String?         // URL
+  rawData          String?         // Full raw ICS VEVENT data as JSON for extensibility
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  subscription     IcsSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, uid])
+  @@index([subscriptionId])
 }
