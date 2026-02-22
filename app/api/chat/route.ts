@@ -97,21 +97,6 @@ export async function POST(req: Request) {
               // Delete any existing events for this goal (idempotent)
               await prisma.event.deleteMany({ where: { goalId } });
 
-              // Delete old AI-generated calendar events for this goal
-              const existingCalEvents = await prisma.calendarEvent.findMany({
-                where: { userId: goal.userId },
-              });
-              for (const ce of existingCalEvents) {
-                if (ce.metadata) {
-                  const meta = JSON.parse(ce.metadata);
-                  if (meta.goalId === goalId) {
-                    await prisma.calendarEvent.delete({
-                      where: { id: ce.id },
-                    });
-                  }
-                }
-              }
-
               const savedEvents = [];
 
               for (let i = 0; i < tasks.length; i++) {
@@ -121,31 +106,17 @@ export async function POST(req: Request) {
                   (taskEnd.getTime() - taskStart.getTime()) / 60000
                 );
 
-                // Create Event record (goal subtask)
                 await prisma.event.create({
                   data: {
-                    goalId,
-                    title: tasks[i].title,
-                    minutesEstimate,
-                    order: i,
-                    completed: false,
-                  },
-                });
-
-                // Create CalendarEvent
-                await prisma.calendarEvent.create({
-                  data: {
                     userId: goal.userId,
+                    goalId,
                     title: tasks[i].title,
                     start: taskStart.toISOString(),
                     end: taskEnd.toISOString(),
                     kind: "task",
-                    metadata: JSON.stringify({
-                      goalId,
-                      goalTitle: goal.title,
-                      taskIndex: i,
-                      minutesEstimate,
-                    }),
+                    minutesEstimate,
+                    order: i,
+                    completed: false,
                   },
                 });
 

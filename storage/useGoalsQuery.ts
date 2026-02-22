@@ -74,7 +74,7 @@ export function useCreateGoalMutation() {
     mutationFn: createGoal,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: goalKeys.all });
-      // Also invalidate events since creating a goal creates CalendarEvents
+      // Also invalidate events since creating a goal creates events
       queryClient.invalidateQueries({ queryKey: eventKeys.all });
     },
   });
@@ -102,7 +102,7 @@ export function useDeleteGoalMutation() {
     mutationFn: deleteGoal,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: goalKeys.all });
-      // Also invalidate events since deleting a goal deletes CalendarEvents
+      // Also invalidate events since deleting a goal cascades to events
       queryClient.invalidateQueries({ queryKey: eventKeys.all });
     },
   });

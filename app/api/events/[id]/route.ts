@@ -11,7 +11,7 @@ export async function GET(
     const userId = await requireAuth();
     const { id } = await params;
 
-    const event = await prisma.calendarEvent.findFirst({
+    const event = await prisma.event.findFirst({
       where: {
         id,
         userId,
@@ -29,6 +29,9 @@ export async function GET(
       end: new Date(event.end),
       extendedProps: {
         kind: event.kind,
+        goalId: event.goalId,
+        completed: event.completed,
+        minutesEstimate: event.minutesEstimate,
         ...(event.metadata ? JSON.parse(event.metadata) : {}),
       },
     });
@@ -56,10 +59,11 @@ export async function PATCH(
     const userId = await requireAuth();
     const { id } = await params;
     const body = await req.json();
-    const { title, start, end, kind, metadata } = body;
+    const { title, start, end, kind, metadata, completed, minutesEstimate } =
+      body;
 
     // Verify event belongs to user
-    const existingEvent = await prisma.calendarEvent.findFirst({
+    const existingEvent = await prisma.event.findFirst({
       where: { id, userId },
     });
 
@@ -67,13 +71,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    const event = await prisma.calendarEvent.update({
+    const event = await prisma.event.update({
       where: { id },
       data: {
         ...(title !== undefined && { title }),
         ...(start !== undefined && { start: new Date(start).toISOString() }),
         ...(end !== undefined && { end: new Date(end).toISOString() }),
         ...(kind !== undefined && { kind }),
+        ...(completed !== undefined && { completed }),
+        ...(minutesEstimate !== undefined && { minutesEstimate }),
         ...(metadata !== undefined && {
           metadata: metadata ? JSON.stringify(metadata) : null,
         }),
@@ -87,6 +93,9 @@ export async function PATCH(
       end: new Date(event.end),
       extendedProps: {
         kind: event.kind,
+        goalId: event.goalId,
+        completed: event.completed,
+        minutesEstimate: event.minutesEstimate,
         ...(event.metadata ? JSON.parse(event.metadata) : {}),
       },
     });
@@ -115,7 +124,7 @@ export async function DELETE(
     const { id } = await params;
 
     // Verify event belongs to user
-    const existingEvent = await prisma.calendarEvent.findFirst({
+    const existingEvent = await prisma.event.findFirst({
       where: { id, userId },
     });
 
@@ -123,7 +132,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    await prisma.calendarEvent.delete({
+    await prisma.event.delete({
       where: { id },
     });
 
