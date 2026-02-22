@@ -12,7 +12,7 @@ function extractParameterValue(pv: ParameterValue | undefined): string | null {
 // POST /api/ics-subscriptions/:id/sync - Sync events from an ICS subscription
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await requireAuth();
@@ -25,7 +25,7 @@ export async function POST(
     if (!subscription) {
       return NextResponse.json(
         { error: "Subscription not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -36,15 +36,15 @@ export async function POST(
       console.error("Error fetching ICS data:", fetchError);
       return NextResponse.json(
         { error: "Failed to fetch ICS data from URL" },
-        { status: 502 },
+        { status: 502 }
       );
     }
 
     const events = Object.values(calendarData).filter(
       (
-        component: CalendarComponent | ical.VCalendar | undefined,
+        component: CalendarComponent | ical.VCalendar | undefined
       ): component is VEvent =>
-        component !== undefined && component.type === "VEVENT",
+        component !== undefined && component.type === "VEVENT"
     );
 
     let synced = 0;
@@ -120,13 +120,13 @@ export async function POST(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error syncing ICS subscription:", error);
     return NextResponse.json(
       { error: "Failed to sync ICS subscription" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

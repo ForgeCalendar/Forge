@@ -40,7 +40,7 @@ describe("GET /api/ics-subscriptions", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const response = await GET();
@@ -53,7 +53,7 @@ describe("GET /api/ics-subscriptions", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.icsSubscription.findMany.mockRejectedValue(
-      new Error("Database error"),
+      new Error("Database error")
     );
 
     const response = await GET();
@@ -73,7 +73,7 @@ describe("POST /api/ics-subscriptions", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.create.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     const request = createMockRequest({
@@ -153,7 +153,7 @@ describe("POST /api/ics-subscriptions", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({
@@ -174,7 +174,7 @@ describe("POST /api/ics-subscriptions", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.icsSubscription.create.mockRejectedValue(
-      new Error("Database error"),
+      new Error("Database error")
     );
 
     const request = createMockRequest({

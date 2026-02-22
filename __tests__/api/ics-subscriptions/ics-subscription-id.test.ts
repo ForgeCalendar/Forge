@@ -19,7 +19,7 @@ describe("GET /api/ics-subscriptions/:id", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     const request = createMockRequest({ method: "GET" });
@@ -56,7 +56,7 @@ describe("GET /api/ics-subscriptions/:id", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({ method: "GET" });
@@ -72,7 +72,7 @@ describe("GET /api/ics-subscriptions/:id", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.icsSubscription.findFirst.mockRejectedValue(
-      new Error("Database error"),
+      new Error("Database error")
     );
 
     const request = createMockRequest({ method: "GET" });
@@ -95,7 +95,7 @@ describe("PUT /api/ics-subscriptions/:id", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
     prismaMock.icsSubscription.update.mockResolvedValue({
       ...mockIcsSubscription,
@@ -123,7 +123,7 @@ describe("PUT /api/ics-subscriptions/:id", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
     prismaMock.icsSubscription.update.mockResolvedValue({
       ...mockIcsSubscription,
@@ -147,7 +147,7 @@ describe("PUT /api/ics-subscriptions/:id", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     const request = createMockRequest({
@@ -183,7 +183,7 @@ describe("PUT /api/ics-subscriptions/:id", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({
@@ -202,10 +202,10 @@ describe("PUT /api/ics-subscriptions/:id", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
     prismaMock.icsSubscription.update.mockRejectedValue(
-      new Error("Database error"),
+      new Error("Database error")
     );
 
     const request = createMockRequest({
@@ -231,10 +231,10 @@ describe("DELETE /api/ics-subscriptions/:id", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
     prismaMock.icsSubscription.delete.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     const request = createMockRequest({ method: "DELETE" });
@@ -267,7 +267,7 @@ describe("DELETE /api/ics-subscriptions/:id", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({ method: "DELETE" });
@@ -283,10 +283,10 @@ describe("DELETE /api/ics-subscriptions/:id", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
     prismaMock.icsSubscription.delete.mockRejectedValue(
-      new Error("Database error"),
+      new Error("Database error")
     );
 
     const request = createMockRequest({ method: "DELETE" });

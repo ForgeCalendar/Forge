@@ -51,7 +51,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     mockFromURL.mockResolvedValue({
@@ -110,7 +110,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     const allDayEvent: ical.VEvent = {
@@ -143,7 +143,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
         create: expect.objectContaining({
           isAllDay: true,
         }),
-      }),
+      })
     );
   });
 
@@ -151,7 +151,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     const eventWithParams: ical.VEvent = {
@@ -183,7 +183,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
           description: "Tägliches Meeting",
           location: "Raum A",
         }),
-      }),
+      })
     );
   });
 
@@ -191,7 +191,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     mockFromURL.mockResolvedValue({
@@ -233,7 +233,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     mockFromURL.mockRejectedValue(new Error("Network error"));
@@ -250,7 +250,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({ method: "POST" });
@@ -267,7 +267,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any,
+      mockIcsSubscription as any
     );
 
     mockFromURL.mockResolvedValue({
