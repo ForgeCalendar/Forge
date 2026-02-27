@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import * as ical from "node-ical";
 import type { VEvent, CalendarComponent, ParameterValue } from "node-ical";
+import {
+  parseIcsData,
+  formatParsedData,
+  type ParsedIcsData,
+  parseIcsDate,
+} from "@jalexw/calendar-ics-parser";
 
 function extractParameterValue(pv: ParameterValue | undefined): string | null {
   if (!pv) return null;
@@ -29,83 +34,82 @@ export async function POST(
       );
     }
 
-    let calendarData: ical.CalendarResponse;
-    try {
-      calendarData = await ical.async.fromURL(subscription.url);
-    } catch (fetchError) {
-      console.error("Error fetching ICS data:", fetchError);
+    let calendarData: ParsedIcsData;
+    let response = await fetch(subscription.url);
+    if (!response.ok) {
       return NextResponse.json(
         { error: "Failed to fetch ICS data from URL" },
         { status: 502 }
       );
     }
-
-    const events = Object.values(calendarData).filter(
-      (
-        component: CalendarComponent | ical.VCalendar | undefined
-      ): component is VEvent =>
-        component !== undefined && component.type === "VEVENT"
-    );
-
+    try {
+      let text: string = await response.text();
+      console.log(text);
+      calendarData = await parseIcsData(text);
+    } catch (parseError) {
+      console.error("Error parsing ICS data:", parseError);
+      return NextResponse.json(
+        { error: "ICS Parsing failed." },
+        { status: 500 }
+      );
+    }
+    console.log(calendarData);
+    calendarData.calendars;
     let synced = 0;
-    for (const event of events) {
-      const uid = event.uid;
-      if (!uid) continue;
+    calendarData.calendars.forEach((calendar) => {
+      calendar.events.forEach(async (event) => {
+        const uid = event.uid;
 
-      const startDate = event.start;
-      const endDate = event.end;
-      const isAllDay = event.datetype === "date";
+        const startDate = event.dtstart ?? "";
+        const endDate = event.dtend ?? "";
 
-      await prisma.icsEvent.upsert({
-        where: {
-          subscriptionId_uid: {
+        await prisma.icsEvent.upsert({
+          where: {
+            subscriptionId_uid: {
+              subscriptionId: subscription.id,
+              uid,
+            },
+          },
+          create: {
             subscriptionId: subscription.id,
             uid,
+            summary: extractParameterValue(event.summary) ?? null,
+            description: extractParameterValue(event.description) ?? null,
+            location: extractParameterValue(event.location) ?? null,
+            start: startDate,
+            end: endDate,
+            startTimezone: startDate ?? null,
+            endTimezone: endDate ?? null,
+            isAllDay: false,
+            status: event.status ?? null,
+            recurrenceRule: event.rrule ? event.rrule.toString() : null,
+            categories: event.categories
+              ? JSON.stringify(event.categories)
+              : null,
+            url: event.url ?? null,
+            rawData: JSON.stringify(event),
           },
-        },
-        create: {
-          subscriptionId: subscription.id,
-          uid,
-          summary: extractParameterValue(event.summary) ?? null,
-          description: extractParameterValue(event.description) ?? null,
-          location: extractParameterValue(event.location) ?? null,
-          start: startDate.toISOString(),
-          end: endDate ? endDate.toISOString() : null,
-          startTimezone: startDate.tz ?? null,
-          endTimezone: endDate?.tz ?? null,
-          isAllDay,
-          status: event.status ?? null,
-          organizer: extractParameterValue(event.organizer) ?? null,
-          recurrenceRule: event.rrule ? event.rrule.toString() : null,
-          transparency: event.transparency ?? null,
-          categories: event.categories
-            ? JSON.stringify(event.categories)
-            : null,
-          url: event.url ?? null,
-          rawData: JSON.stringify(event),
-        },
-        update: {
-          summary: extractParameterValue(event.summary) ?? null,
-          description: extractParameterValue(event.description) ?? null,
-          location: extractParameterValue(event.location) ?? null,
-          start: startDate.toISOString(),
-          end: endDate ? endDate.toISOString() : null,
-          startTimezone: startDate.tz ?? null,
-          endTimezone: endDate?.tz ?? null,
-          isAllDay,
-          status: event.status ?? null,
-          organizer: extractParameterValue(event.organizer) ?? null,
-          recurrenceRule: event.rrule ? event.rrule.toString() : null,
-          transparency: event.transparency ?? null,
-          categories: event.categories
-            ? JSON.stringify(event.categories)
-            : null,
-          url: event.url ?? null,
-          rawData: JSON.stringify(event),
-        },
+          update: {
+            summary: extractParameterValue(event.summary) ?? null,
+            description: extractParameterValue(event.description) ?? null,
+            location: extractParameterValue(event.location) ?? null,
+            start: startDate,
+            end: endDate ? endDate : null,
+            startTimezone: startDate ?? null,
+            endTimezone: endDate ?? null,
+            isAllDay: false,
+            status: event.status ?? null,
+            recurrenceRule: event.rrule ? event.rrule.toString() : null,
+            categories: event.categories
+              ? JSON.stringify(event.categories)
+              : null,
+            url: event.url ?? null,
+            rawData: JSON.stringify(event),
+          },
+        });
+        synced++;
       });
-      synced++;
-    }
+    });
 
     await prisma.icsSubscription.update({
       where: { id: subscription.id },
