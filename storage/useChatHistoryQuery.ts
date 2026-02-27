@@ -11,8 +11,11 @@ async function fetchChatHistory(goalId: string): Promise<ChatMessage[]> {
   const response = await fetch(`/api/goals/${goalId}/chat-history`);
   if (!response.ok) throw new Error("Failed to fetch chat history");
   const data = await response.json();
-  return (data.messages ?? []).map((msg: ChatMessage) => ({
+  return (data.messages ?? []).map((msg: ChatMessage, idx: number) => ({
     ...msg,
+    // Ensure every message has a non-empty id (assistant messages from
+    // toUIMessageStreamResponse can be saved with id:"")
+    id: msg.id || `history-${idx}-${Date.now()}`,
     createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
   }));
 }
