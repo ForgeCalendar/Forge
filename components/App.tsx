@@ -25,7 +25,7 @@ import { useState, useRef, useEffect } from "react";
 import { ColorModeButton, useColorModeValue } from "@/components/ui/color-mode";
 import { useAuth } from "@/hooks/useAuth";
 import { useGoals, useCalendarEvents } from "@/storage/hooks";
-import type { CreateGoalInput } from "@/storage/types";
+import type { CreateGoalInput, GoalWithId } from "@/storage/types";
 
 function Header({
   calendarRef,
@@ -379,6 +379,7 @@ export default function App() {
     title: string;
     description: string;
     dueDate: string | null;
+    mode: "create" | "update";
   } | null>(null);
   const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
   const calendarRef = useRef<FullCalendar>(null);
@@ -418,6 +419,7 @@ export default function App() {
         title: created.title,
         description: created.description,
         dueDate: created.dueDate,
+        mode: "create",
       });
     } catch (error) {
       console.error("Failed to create goal:", error);
@@ -433,6 +435,16 @@ export default function App() {
     } catch (error) {
       console.error("Failed to delete goal:", error);
     }
+  };
+
+  const handleUpdateGoal = (goal: GoalWithId) => {
+    setDecomposeGoal({
+      id: goal.id,
+      title: goal.title,
+      description: goal.description,
+      dueDate: goal.dueDate,
+      mode: "update",
+    });
   };
 
   // Show full app if logged in
@@ -454,6 +466,7 @@ export default function App() {
           goals={goals}
           onAddGoal={handleAddGoal}
           onRemoveGoal={handleRemoveGoal}
+          onUpdateGoal={handleUpdateGoal}
         />
         <CalendarView
           calendarRef={calendarRef}
@@ -470,6 +483,7 @@ export default function App() {
           dueDate={decomposeGoal.dueDate}
           open={true}
           onClose={() => setDecomposeGoal(null)}
+          mode={decomposeGoal.mode}
         />
       )}
     </Box>

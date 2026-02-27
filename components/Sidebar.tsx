@@ -21,6 +21,7 @@ type Props = {
   goals: (Goal | GoalWithId)[];
   onAddGoal?: (g: CreateGoalInput) => void;
   onRemoveGoal?: (index: number) => void;
+  onUpdateGoal?: (goal: GoalWithId) => void;
 };
 
 function DeleteGoalDialog({
@@ -108,10 +109,12 @@ function formatDue(d: string | null) {
 function GoalComponent({
   goal,
   onRemove,
+  onUpdate,
 }: {
   goal: Goal | GoalWithId;
   index: number;
   onRemove?: () => void;
+  onUpdate?: () => void;
 }) {
   const goalCardBg = useColorModeValue("gray.50", "gray.800");
   const metaTextColor = useColorModeValue("gray.500", "gray.400");
@@ -156,9 +159,14 @@ function GoalComponent({
           ))}
         </Box>
       )}
-      <Box mt={3}>
+      <Box mt={3} display="flex" gap={2}>
         {isGoalWithId(goal) ? (
-          <WorkDialog goal={goal} />
+          <>
+            <WorkDialog goal={goal} />
+            <Button size="sm" variant="outline" onClick={() => onUpdate?.()}>
+              Update
+            </Button>
+          </>
         ) : (
           <Button size="sm" colorScheme="blue" disabled>
             Work! (Save goal first)
@@ -169,7 +177,12 @@ function GoalComponent({
   );
 }
 
-export default function Sidebar({ goals, onAddGoal, onRemoveGoal }: Props) {
+export default function Sidebar({
+  goals,
+  onAddGoal,
+  onRemoveGoal,
+  onUpdateGoal,
+}: Props) {
   const initialRef = useRef<HTMLInputElement | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -228,6 +241,11 @@ export default function Sidebar({ goals, onAddGoal, onRemoveGoal }: Props) {
               index={i}
               onRemove={() => {
                 if (onRemoveGoal) onRemoveGoal(i);
+              }}
+              onUpdate={() => {
+                if (onUpdateGoal && "id" in g) {
+                  onUpdateGoal(g as GoalWithId);
+                }
               }}
             />
           ))
