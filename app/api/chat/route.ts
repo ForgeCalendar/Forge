@@ -178,10 +178,24 @@ Guidelines:
       model: anthropic("claude-sonnet-4-5-20250929"),
       messages: await convertToModelMessages(messages),
       ...(system ? { system } : {}),
-      ...(tools ? { tools, maxSteps: 3 } : {}),
+      ...(tools ? { tools, maxSteps: 10 } : {}),
     });
 
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+      onFinish: async ({ messages: allMessages }) => {
+        if (goalId) {
+          try {
+            await prisma.goal.update({
+              where: { id: goalId },
+              data: { chatHistory: JSON.stringify(allMessages) },
+            });
+          } catch (e) {
+            console.error("Failed to save chat history:", e);
+          }
+        }
+      },
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(

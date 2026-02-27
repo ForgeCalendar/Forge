@@ -28,6 +28,7 @@ model Goal {
   title        String
   description  String
   dueDate      String?         // ISO datetime string or null
+  chatHistory  String?         // JSON-serialized conversation messages
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 

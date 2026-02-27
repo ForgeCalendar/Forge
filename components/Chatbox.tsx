@@ -14,12 +14,16 @@ import { DEFAULT_SUMMARY_PROMPT } from "./prompts";
 import { SummaryPromptContext } from "./assistant-ui/summary-context";
 import type { FC } from "react";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ChatMessage = any;
+
 type ChatboxProps = {
   name: string;
   systemPrompt?: string;
   summaryPrompt?: string;
   extraParams?: Record<string, string>;
   initialMessage?: string;
+  initialMessages?: ChatMessage[];
 };
 
 const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
@@ -51,6 +55,7 @@ export function ChatboxComponent({
   summaryPrompt = DEFAULT_SUMMARY_PROMPT,
   extraParams,
   initialMessage,
+  initialMessages,
 }: ChatboxProps) {
   const extraParamsKey = extraParams ? JSON.stringify(extraParams) : "";
   const transport = useMemo(() => {
@@ -68,7 +73,12 @@ export function ChatboxComponent({
       api: `/api/chat?${params.toString()}`,
     });
   }, [name, systemPrompt, summaryPrompt, extraParamsKey]);
-  const runtime = useChatRuntime({ transport });
+
+  const hasHistory = initialMessages && initialMessages.length > 0;
+  const runtime = useChatRuntime({
+    transport,
+    ...(hasHistory ? { messages: initialMessages } : {}),
+  });
   const providerKey = `${name}-${systemPrompt ?? "default"}-${extraParamsKey}`;
 
   return (
