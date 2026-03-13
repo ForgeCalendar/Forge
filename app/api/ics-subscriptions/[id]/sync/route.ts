@@ -91,7 +91,6 @@ export async function POST(
         { status: 500 }
       );
     }
-    console.log(calendarData);
     calendarData.calendars;
     let synced = 0;
     calendarData.calendars.forEach((calendar) => {
