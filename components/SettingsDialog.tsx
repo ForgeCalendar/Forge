@@ -15,18 +15,20 @@ import { useState, useEffect, useCallback } from "react";
 import { sampleInfoTags } from "../states/InfoTag";
 import { InfoTagComponent } from "./InfoTagComponent";
 import { ChatboxComponent } from "@/components/Chatbox";
-import { useColorModeValue } from "@/components/ui/color-mode";
+import { useThemeTokens } from "@/lib/theme-tokens";
 import { tagEditorPrompt } from "@/components/prompts";
 
 function InfoTagSettingsPane() {
   const [selectedTag, setSelectedTag] = useState<
     typeof sampleInfoTags[number] | null
   >(null);
-  const subtitleColor = useColorModeValue("gray.600", "gray.300");
-  const cardBg = useColorModeValue("white", "gray.900");
-  const cardBorder = useColorModeValue("gray.200", "gray.700");
-  const infoTextColor = useColorModeValue("gray.600", "gray.300");
-  const placeholderColor = useColorModeValue("gray.500", "gray.400");
+  const {
+    textMuted: subtitleColor,
+    bgSurface: cardBg,
+    border: cardBorder,
+    textSecondary: placeholderColor,
+  } = useThemeTokens();
+  const infoTextColor = subtitleColor;
 
   return (
     <Box>
@@ -132,9 +134,11 @@ const providerOptions = createListCollection({
 });
 
 function AccountSettingsPane() {
-  const subtitleColor = useColorModeValue("gray.600", "gray.300");
-  const cardBorder = useColorModeValue("gray.200", "gray.700");
-  const cardBg = useColorModeValue("gray.50", "gray.800");
+  const {
+    textMuted: subtitleColor,
+    border: cardBorder,
+    bgCard: cardBg,
+  } = useThemeTokens();
 
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -400,9 +404,11 @@ function AccountSettingsPane() {
 }
 
 export default function SettingsDialog() {
-  const bodyBg = useColorModeValue("white", "gray.900");
-  const subtitleColor = useColorModeValue("gray.600", "gray.300");
-  const menuBgActive = useColorModeValue("gray.100", "gray.700");
+  const {
+    bgSurface: bodyBg,
+    textMuted: subtitleColor,
+    bgActiveMenu: menuBgActive,
+  } = useThemeTokens();
   const menuBg = "transparent";
 
   const panes = {

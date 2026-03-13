@@ -16,7 +16,7 @@ import {
   chatHistoryKeys,
 } from "@/storage/useChatHistoryQuery";
 import { useMemo } from "react";
-import { useColorModeValue } from "@/components/ui/color-mode";
+import { useThemeTokens } from "@/lib/theme-tokens";
 
 type Props = {
   goalId: string;
@@ -38,7 +38,7 @@ export default function GoalDecomposeDialog({
   mode = "create",
 }: Props) {
   const queryClient = useQueryClient();
-  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+  const { textSecondary: subtitleColor } = useThemeTokens();
 
   const isUpdate = mode === "update";
   const { data: chatHistory, isLoading: historyLoading } = useChatHistoryQuery(

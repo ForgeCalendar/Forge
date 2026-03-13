@@ -12,7 +12,7 @@ import {
   Field,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import { useColorModeValue } from "@/components/ui/color-mode";
+import { useThemeTokens } from "@/lib/theme-tokens";
 
 type LoginDialogProps = {
   open: boolean;
@@ -30,8 +30,8 @@ export default function LoginDialog({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const dialogTextColor = useColorModeValue("gray.600", "gray.300");
-  const errorColor = useColorModeValue("red.600", "red.400");
+  const { textMuted: dialogTextColor, textError: errorColor } =
+    useThemeTokens();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

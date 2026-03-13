@@ -9,6 +9,7 @@ import {
   HStack,
 } from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
+import { useThemeTokens } from "@/lib/theme-tokens";
 
 interface WelcomeScreenProps {
   onLoginClick: () => void;
@@ -19,13 +20,11 @@ export default function WelcomeScreen({
   onLoginClick,
   onRegisterClick,
 }: WelcomeScreenProps) {
+  const { textHeading: headingColor, textMuted: textColor } = useThemeTokens();
   const bgGradient = useColorModeValue(
     "linear(to-br, gray.50, white)",
     "linear(to-br, gray.900, gray.800)"
   );
-  const headingColor = useColorModeValue("gray.900", "gray.50");
-  const textColor = useColorModeValue("gray.600", "gray.400");
-  const accentColor = useColorModeValue("blue.600", "blue.400");
 
   return (
     <Flex
