@@ -186,10 +186,47 @@ Guidelines:
       onFinish: async ({ messages: allMessages }) => {
         if (goalId) {
           try {
-            await prisma.goal.update({
+            const goal = await prisma.goal.findUnique({
               where: { id: goalId },
-              data: { chatHistory: JSON.stringify(allMessages) },
+              select: { chatHistoryId: true, userId: true },
             });
+            if (!goal) return;
+
+            if (goal.chatHistoryId) {
+              await prisma.message.deleteMany({
+                where: { chatHistoryId: goal.chatHistoryId },
+              });
+
+              if (allMessages.length > 0) {
+                await prisma.message.createMany({
+                  data: allMessages.map((msg, idx) => ({
+                    chatHistoryId: goal.chatHistoryId!,
+                    role: msg.role ?? "user",
+                    content: JSON.stringify(msg),
+                    order: idx,
+                  })),
+                });
+              }
+            } else {
+              const chatHistory = await prisma.chatHistory.create({
+                data: {
+                  userId: goal.userId,
+                  apiKeyId: apiKeyRecord.id,
+                  messages: {
+                    create: allMessages.map((msg, idx) => ({
+                      role: msg.role ?? "user",
+                      content: JSON.stringify(msg),
+                      order: idx,
+                    })),
+                  },
+                },
+              });
+
+              await prisma.goal.update({
+                where: { id: goalId },
+                data: { chatHistoryId: chatHistory.id },
+              });
+            }
           } catch (e) {
             console.error("Failed to save chat history:", e);
           }
