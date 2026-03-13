@@ -12,14 +12,30 @@ export async function GET(
 
     const goal = await prisma.goal.findFirst({
       where: { id, userId },
-      select: { chatHistory: true },
+      select: {
+        chatHistoryId: true,
+        chatHistory: {
+          select: {
+            messages: {
+              orderBy: { order: "asc" },
+            },
+          },
+        },
+      },
     });
 
     if (!goal) {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });
     }
 
-    const messages = goal.chatHistory ? JSON.parse(goal.chatHistory) : [];
+    const messages = (goal.chatHistory?.messages ?? []).map((msg) => {
+      try {
+        return JSON.parse(msg.content);
+      } catch {
+        return { id: msg.id, role: msg.role, content: msg.content };
+      }
+    });
+
     return NextResponse.json({ messages });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
@@ -47,16 +63,73 @@ export async function PUT(
 
     const goal = await prisma.goal.findFirst({
       where: { id, userId },
+      select: { chatHistoryId: true },
     });
 
     if (!goal) {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });
     }
 
-    await prisma.goal.update({
-      where: { id },
-      data: { chatHistory: JSON.stringify(messages) },
-    });
+    if (goal.chatHistoryId) {
+      await prisma.$transaction(async (tx) => {
+        await tx.message.deleteMany({
+          where: { chatHistoryId: goal.chatHistoryId },
+        });
+
+        if (Array.isArray(messages) && messages.length > 0) {
+          await tx.message.createMany({
+            data: messages.map(
+              (
+                msg: { id?: string; role?: string; createdAt?: string },
+                idx: number
+              ) => ({
+                chatHistoryId: goal.chatHistoryId!,
+                role: msg.role ?? "user",
+                content: JSON.stringify(msg),
+                order: idx,
+                createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
+              })
+            ),
+          });
+        }
+      });
+    } else {
+      const apiKeyRecord = await prisma.aIAgentApiKey.findFirst({
+        where: { userId, provider: "ANTHROPIC" },
+        select: { id: true },
+      });
+
+      await prisma.$transaction(async (tx) => {
+        const chatHistory = await tx.chatHistory.create({
+          data: {
+            userId,
+            apiKeyId: apiKeyRecord?.id ?? null,
+            messages: {
+              create: Array.isArray(messages)
+                ? messages.map(
+                    (
+                      msg: { id?: string; role?: string; createdAt?: string },
+                      idx: number
+                    ) => ({
+                      role: msg.role ?? "user",
+                      content: JSON.stringify(msg),
+                      order: idx,
+                      createdAt: msg.createdAt
+                        ? new Date(msg.createdAt)
+                        : undefined,
+                    })
+                  )
+                : [],
+            },
+          },
+        });
+
+        await tx.goal.update({
+          where: { id },
+          data: { chatHistoryId: chatHistory.id },
+        });
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

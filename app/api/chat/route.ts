@@ -186,10 +186,60 @@ Guidelines:
       onFinish: async ({ messages: allMessages }) => {
         if (goalId) {
           try {
-            await prisma.goal.update({
+            const goal = await prisma.goal.findUnique({
               where: { id: goalId },
-              data: { chatHistory: JSON.stringify(allMessages) },
+              select: { chatHistoryId: true, userId: true },
             });
+            if (!goal) return;
+
+            // Ensure the goal belongs to the authenticated user before modifying chat history
+            if (goal.userId !== userId) {
+              console.warn("Unauthorized attempt to modify goal chat history", {
+                goalId,
+                userId,
+              });
+              return;
+            }
+
+            if (goal.chatHistoryId) {
+              await prisma.$transaction(async (tx) => {
+                await tx.message.deleteMany({
+                  where: { chatHistoryId: goal.chatHistoryId },
+                });
+
+                if (allMessages.length > 0) {
+                  await tx.message.createMany({
+                    data: allMessages.map((msg, idx) => ({
+                      chatHistoryId: goal.chatHistoryId!,
+                      role: msg.role ?? "user",
+                      content: JSON.stringify(msg),
+                      order: idx,
+                    })),
+                  });
+                }
+              });
+            } else {
+              await prisma.$transaction(async (tx) => {
+                const chatHistory = await tx.chatHistory.create({
+                  data: {
+                    userId: goal.userId,
+                    apiKeyId: apiKeyRecord.id,
+                    messages: {
+                      create: allMessages.map((msg, idx) => ({
+                        role: msg.role ?? "user",
+                        content: JSON.stringify(msg),
+                        order: idx,
+                      })),
+                    },
+                  },
+                });
+
+                await tx.goal.update({
+                  where: { id: goalId },
+                  data: { chatHistoryId: chatHistory.id },
+                });
+              });
+            }
           } catch (e) {
             console.error("Failed to save chat history:", e);
           }

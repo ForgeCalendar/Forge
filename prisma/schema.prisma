@@ -20,21 +20,23 @@ model User {
   goals          Goal[]
   events         Event[]
   aiAgentApiKeys AIAgentApiKey[]
+  chatHistories  ChatHistory[]
 }
 
 model Goal {
-  id           String          @id @default(uuid())
-  userId       String
-  title        String
-  description  String
-  dueDate      String?         // ISO datetime string or null
-  chatHistory  String?         // JSON-serialized conversation messages
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id            String          @id @default(uuid())
+  userId        String
+  title         String
+  description   String
+  dueDate       String?         // ISO datetime string or null
+  chatHistoryId String?         @unique // FK to ChatHistory (1:1)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events       Event[]
-  infoTags     InfoTag[]
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatHistory   ChatHistory?    @relation(fields: [chatHistoryId], references: [id], onDelete: SetNull)
+  events        Event[]
+  infoTags      InfoTag[]
 
   @@index([userId])
 }
@@ -91,8 +93,38 @@ model AIAgentApiKey {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatHistories ChatHistory[]
 
   @@index([userId])
   @@unique([userId, provider])
+}
+
+model ChatHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  apiKeyId  String?  // nullable FK — which API key/provider was used
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKey    AIAgentApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  messages  Message[]
+  goal      Goal?         // back-relation for 1:1
+
+  @@index([userId])
+  @@index([apiKeyId])
+}
+
+model Message {
+  id            String   @id @default(uuid())
+  chatHistoryId String
+  role          String   // 'user', 'assistant', 'system'
+  content       String   // JSON — full AI SDK message payload
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  chatHistory   ChatHistory @relation(fields: [chatHistoryId], references: [id], onDelete: Cascade)
+
+  @@index([chatHistoryId])
 }
