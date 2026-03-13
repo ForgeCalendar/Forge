@@ -14,6 +14,44 @@ function extractParameterValue(pv: ParameterValue | undefined): string | null {
   return typeof pv === "string" ? pv : pv.val;
 }
 
+function parseIcsDateToISO(icsDateString: string): string {
+  if (!icsDateString) return new Date().toISOString();
+
+  const isAlreadyISO = icsDateString.includes("-");
+  if (isAlreadyISO) {
+    return new Date(icsDateString).toISOString();
+  }
+
+  const isUTC = icsDateString.endsWith("Z");
+  const dateWithoutZ = icsDateString.replace("Z", "");
+
+  const tIndex = dateWithoutZ.indexOf("T");
+  const hasTime = tIndex !== -1;
+
+  if (hasTime && dateWithoutZ.length >= 15) {
+    const year = dateWithoutZ.substring(0, 4);
+    const month = dateWithoutZ.substring(4, 6);
+    const day = dateWithoutZ.substring(6, 8);
+    const hour = dateWithoutZ.substring(tIndex + 1, tIndex + 3);
+    const minute = dateWithoutZ.substring(tIndex + 3, tIndex + 5);
+    const second = dateWithoutZ.substring(tIndex + 5, tIndex + 7) || "00";
+
+    const isoFormatted = `${year}-${month}-${day}T${hour}:${minute}:${second}${
+      isUTC ? ".000Z" : ""
+    }`;
+    return new Date(isoFormatted).toISOString();
+  }
+
+  if (dateWithoutZ.length === 8) {
+    const year = dateWithoutZ.substring(0, 4);
+    const month = dateWithoutZ.substring(4, 6);
+    const day = dateWithoutZ.substring(6, 8);
+    return `${year}-${month}-${day}T00:00:00.000Z`;
+  }
+
+  return new Date(icsDateString).toISOString();
+}
+
 // POST /api/ics-subscriptions/:id/sync - Sync events from an ICS subscription
 export async function POST(
   req: Request,
@@ -60,8 +98,8 @@ export async function POST(
       calendar.events.forEach(async (event) => {
         const uid = event.uid;
 
-        const startDate = event.dtstart ?? "";
-        const endDate = event.dtend ?? "";
+        const startDate = parseIcsDateToISO(event.dtstart ?? "");
+        const endDate = parseIcsDateToISO(event.dtend ?? event.dtstart ?? "");
 
         await prisma.event.upsert({
           where: {
@@ -79,8 +117,8 @@ export async function POST(
             location: extractParameterValue(event.location) ?? null,
             start: startDate,
             end: endDate,
-            startTimezone: startDate ?? null,
-            endTimezone: endDate ?? null,
+            startTimezone: null,
+            endTimezone: null,
             isAllDay: false,
             status: event.status ?? null,
             recurrenceRule: event.rrule ? event.rrule.toString() : null,
@@ -96,9 +134,9 @@ export async function POST(
             description: extractParameterValue(event.description),
             location: extractParameterValue(event.location),
             start: startDate,
-            end: endDate || startDate,
-            startTimezone: startDate ?? null,
-            endTimezone: endDate ?? null,
+            end: endDate,
+            startTimezone: null,
+            endTimezone: null,
             isAllDay: false,
             status: event.status ?? null,
             recurrenceRule: event.rrule ? event.rrule.toString() : null,
