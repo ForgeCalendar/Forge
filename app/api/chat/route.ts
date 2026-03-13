@@ -202,38 +202,42 @@ Guidelines:
             }
 
             if (goal.chatHistoryId) {
-              await prisma.message.deleteMany({
-                where: { chatHistoryId: goal.chatHistoryId },
-              });
-
-              if (allMessages.length > 0) {
-                await prisma.message.createMany({
-                  data: allMessages.map((msg, idx) => ({
-                    chatHistoryId: goal.chatHistoryId!,
-                    role: msg.role ?? "user",
-                    content: JSON.stringify(msg),
-                    order: idx,
-                  })),
+              await prisma.$transaction(async (tx) => {
+                await tx.message.deleteMany({
+                  where: { chatHistoryId: goal.chatHistoryId },
                 });
-              }
-            } else {
-              const chatHistory = await prisma.chatHistory.create({
-                data: {
-                  userId: goal.userId,
-                  apiKeyId: apiKeyRecord.id,
-                  messages: {
-                    create: allMessages.map((msg, idx) => ({
+
+                if (allMessages.length > 0) {
+                  await tx.message.createMany({
+                    data: allMessages.map((msg, idx) => ({
+                      chatHistoryId: goal.chatHistoryId!,
                       role: msg.role ?? "user",
                       content: JSON.stringify(msg),
                       order: idx,
                     })),
-                  },
-                },
+                  });
+                }
               });
+            } else {
+              await prisma.$transaction(async (tx) => {
+                const chatHistory = await tx.chatHistory.create({
+                  data: {
+                    userId: goal.userId,
+                    apiKeyId: apiKeyRecord.id,
+                    messages: {
+                      create: allMessages.map((msg, idx) => ({
+                        role: msg.role ?? "user",
+                        content: JSON.stringify(msg),
+                        order: idx,
+                      })),
+                    },
+                  },
+                });
 
-              await prisma.goal.update({
-                where: { id: goalId },
-                data: { chatHistoryId: chatHistory.id },
+                await tx.goal.update({
+                  where: { id: goalId },
+                  data: { chatHistoryId: chatHistory.id },
+                });
               });
             }
           } catch (e) {
