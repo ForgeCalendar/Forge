@@ -22,7 +22,8 @@ import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import GoalDecomposeDialog from "@/components/GoalDecomposeDialog";
 import { useState, useRef, useEffect } from "react";
-import { ColorModeButton, useColorModeValue } from "@/components/ui/color-mode";
+import { ColorModeButton } from "@/components/ui/color-mode";
+import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
 import { useGoals, useCalendarEvents } from "@/storage/hooks";
 import type { CreateGoalInput, GoalWithId } from "@/storage/types";
@@ -38,10 +39,7 @@ function Header({
   currentView: string[];
   setCurrentView: (v: string[]) => void;
 }) {
-  const headerBg = useColorModeValue("white", "gray.900");
-  const borderColor = useColorModeValue("gray.200", "gray.700");
-  const headingColor = useColorModeValue("gray.900", "gray.50");
-  const subheadingColor = useColorModeValue("gray.600", "gray.300");
+  const { bgSurface: headerBg, border: borderColor, textHeading: headingColor, textMuted: subheadingColor } = useThemeTokens();
   const { user, logout, login } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
 
@@ -194,8 +192,7 @@ function CalendarView({
     end: Date | null;
   } | null>(null);
 
-  const headingColor = useColorModeValue("gray.900", "gray.50");
-  const subColor = useColorModeValue("gray.600", "gray.300");
+  const { textHeading: headingColor, textMuted: subColor } = useThemeTokens();
 
   useEffect(() => {
     if (calendarRef.current && currentView.length > 0) {
@@ -360,7 +357,7 @@ function CalendarView({
 }
 
 export default function App() {
-  const appBg = useColorModeValue("gray.50", "gray.900");
+  const { bgApp: appBg } = useThemeTokens();
   const { user, isLoading: authLoading, login } = useAuth();
   const {
     goals,

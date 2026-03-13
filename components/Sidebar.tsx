@@ -15,7 +15,7 @@ import WorkDialog from "./WorkDialog";
 import type { Goal } from "../states/goals";
 import type { GoalWithId, CreateGoalInput } from "@/storage/types";
 import { useState, useRef } from "react";
-import { useColorModeValue } from "@/components/ui/color-mode";
+import { useThemeTokens } from "@/lib/theme-tokens";
 
 type Props = {
   goals: (Goal | GoalWithId)[];
@@ -31,7 +31,7 @@ function DeleteGoalDialog({
   goalTitle: string;
   onDelete: () => void;
 }) {
-  const dialogTextColor = useColorModeValue("gray.600", "gray.300");
+  const { textMuted: dialogTextColor } = useThemeTokens();
 
   return (
     <Dialog.Root>
@@ -116,9 +116,7 @@ function GoalComponent({
   onRemove?: () => void;
   onUpdate?: () => void;
 }) {
-  const goalCardBg = useColorModeValue("gray.50", "gray.800");
-  const metaTextColor = useColorModeValue("gray.500", "gray.400");
-  const bodyTextColor = useColorModeValue("gray.600", "gray.300");
+  const { bgCard: goalCardBg, textSecondary: metaTextColor, textMuted: bodyTextColor } = useThemeTokens();
 
   // Type guard to check if goal has an id (is GoalWithId)
   const isGoalWithId = (g: Goal | GoalWithId): g is GoalWithId => {
@@ -187,9 +185,7 @@ export default function Sidebar({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueInput, setDueInput] = useState(""); // datetime-local value
-  const sidebarBg = useColorModeValue("white", "gray.900");
-  const sidebarBorder = useColorModeValue("gray.200", "gray.700");
-  const emptyStateColor = useColorModeValue("gray.600", "gray.400");
+  const { bgSurface: sidebarBg, border: sidebarBorder, textMuted: emptyStateColor } = useThemeTokens();
 
   function resetForm() {
     setTitle("");
