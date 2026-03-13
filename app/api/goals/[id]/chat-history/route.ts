@@ -99,33 +99,35 @@ export async function PUT(
         select: { id: true },
       });
 
-      const chatHistory = await prisma.chatHistory.create({
-        data: {
-          userId,
-          apiKeyId: apiKeyRecord?.id ?? null,
-          messages: {
-            create: Array.isArray(messages)
-              ? messages.map(
-                  (
-                    msg: { id?: string; role?: string; createdAt?: string },
-                    idx: number
-                  ) => ({
-                    role: msg.role ?? "user",
-                    content: JSON.stringify(msg),
-                    order: idx,
-                    createdAt: msg.createdAt
-                      ? new Date(msg.createdAt)
-                      : undefined,
-                  })
-                )
-              : [],
+      await prisma.$transaction(async (tx) => {
+        const chatHistory = await tx.chatHistory.create({
+          data: {
+            userId,
+            apiKeyId: apiKeyRecord?.id ?? null,
+            messages: {
+              create: Array.isArray(messages)
+                ? messages.map(
+                    (
+                      msg: { id?: string; role?: string; createdAt?: string },
+                      idx: number
+                    ) => ({
+                      role: msg.role ?? "user",
+                      content: JSON.stringify(msg),
+                      order: idx,
+                      createdAt: msg.createdAt
+                        ? new Date(msg.createdAt)
+                        : undefined,
+                    })
+                  )
+                : [],
+            },
           },
-        },
-      });
+        });
 
-      await prisma.goal.update({
-        where: { id },
-        data: { chatHistoryId: chatHistory.id },
+        await tx.goal.update({
+          where: { id },
+          data: { chatHistoryId: chatHistory.id },
+        });
       });
     }
 
