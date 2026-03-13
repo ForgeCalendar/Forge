@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await fetch("/api/auth/me");
         if (response.ok) {
           const data = await response.json();
-          setUser({ email: data.user.email });
+          setUser({ email: data.email });
         }
       } catch (error) {
         console.error("Auth check failed:", error);
