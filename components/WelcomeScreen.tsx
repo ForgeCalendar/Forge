@@ -20,7 +20,7 @@ export default function WelcomeScreen({
   onLoginClick,
   onRegisterClick,
 }: WelcomeScreenProps) {
-  const { textHeading: headingColor, textMuted: textColor, textAccent: accentColor } = useThemeTokens();
+  const { textHeading: headingColor, textMuted: textColor } = useThemeTokens();
   const bgGradient = useColorModeValue(
     "linear(to-br, gray.50, white)",
     "linear(to-br, gray.900, gray.800)"

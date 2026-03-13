@@ -1,3 +1,5 @@
+"use client";
+
 import { useColorModeValue } from "@/components/ui/color-mode";
 
 /**
