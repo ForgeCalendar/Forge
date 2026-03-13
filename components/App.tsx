@@ -362,12 +362,7 @@ function CalendarView({
 export default function App() {
   const appBg = useColorModeValue("gray.50", "gray.900");
   const { user, isLoading: authLoading, login } = useAuth();
-  const {
-    goals,
-    isLoading: goalsLoading,
-    create,
-    delete: deleteGoal,
-  } = useGoals();
+  const { goals, isLoading: _, create, delete: deleteGoal } = useGoals();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [decomposeGoal, setDecomposeGoal] = useState<{
