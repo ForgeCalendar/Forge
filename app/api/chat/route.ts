@@ -192,6 +192,15 @@ Guidelines:
             });
             if (!goal) return;
 
+            // Ensure the goal belongs to the authenticated user before modifying chat history
+            if (goal.userId !== userId) {
+              console.warn("Unauthorized attempt to modify goal chat history", {
+                goalId,
+                userId,
+              });
+              return;
+            }
+
             if (goal.chatHistoryId) {
               await prisma.message.deleteMany({
                 where: { chatHistoryId: goal.chatHistoryId },
