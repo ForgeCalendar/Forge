@@ -16,8 +16,43 @@ jest.mock("node-ical", () => ({
   },
 }));
 
+jest.mock("@jalexw/calendar-ics-parser", () => {
+  const ical = require("node-ical");
+  const mockFromURL = ical.async.fromURL as jest.Mock;
+
+  // Mock parser: always return whatever node-ical's async.fromURL is configured to resolve to.
+  const parseIcs = jest.fn(async () => {
+    // If the tests have set mockFromURL.mockResolvedValue(...), calling mockFromURL()
+    // will return that value; otherwise this will resolve to undefined.
+    return await mockFromURL();
+  });
+
+  return {
+    __esModule: true,
+    default: { parseIcs },
+    parseIcs,
+  };
+});
+
 import * as ical from "node-ical";
 const mockFromURL = ical.async.fromURL as jest.Mock;
+
+// Mock global.fetch so that the route's fetch() calls use the same data as mockFromURL.
+(global as any).fetch = jest.fn(async (url: string) => {
+  // Delegate to mockFromURL so existing test setups using mockFromURL.mockResolvedValue(...)
+  // continue to control the ICS data seen by the route.
+  const data = await mockFromURL(url);
+
+  return {
+    ok: true,
+    status: 200,
+    // The parser mock ignores the actual text value and instead returns mockFromURL()'s data,
+    // so this can be any placeholder string.
+    text: async () => "BEGIN:VCALENDAR\nMOCKED\nEND:VCALENDAR",
+    // Optional: provide a minimal json() in case the route inspects it for debugging.
+    json: async () => data,
+  } as any;
+});
 
 const makeDateWithTz = (iso: string, tz?: string): ical.DateWithTimeZone => {
   const d = new Date(iso) as ical.DateWithTimeZone;
