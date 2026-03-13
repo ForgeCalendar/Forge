@@ -71,26 +71,28 @@ export async function PUT(
     }
 
     if (goal.chatHistoryId) {
-      await prisma.message.deleteMany({
-        where: { chatHistoryId: goal.chatHistoryId },
-      });
-
-      if (Array.isArray(messages) && messages.length > 0) {
-        await prisma.message.createMany({
-          data: messages.map(
-            (
-              msg: { id?: string; role?: string; createdAt?: string },
-              idx: number
-            ) => ({
-              chatHistoryId: goal.chatHistoryId!,
-              role: msg.role ?? "user",
-              content: JSON.stringify(msg),
-              order: idx,
-              createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
-            })
-          ),
+      await prisma.$transaction(async (tx) => {
+        await tx.message.deleteMany({
+          where: { chatHistoryId: goal.chatHistoryId },
         });
-      }
+
+        if (Array.isArray(messages) && messages.length > 0) {
+          await tx.message.createMany({
+            data: messages.map(
+              (
+                msg: { id?: string; role?: string; createdAt?: string },
+                idx: number
+              ) => ({
+                chatHistoryId: goal.chatHistoryId!,
+                role: msg.role ?? "user",
+                content: JSON.stringify(msg),
+                order: idx,
+                createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
+              })
+            ),
+          });
+        }
+      });
     } else {
       const apiKeyRecord = await prisma.aIAgentApiKey.findFirst({
         where: { userId, provider: "ANTHROPIC" },
