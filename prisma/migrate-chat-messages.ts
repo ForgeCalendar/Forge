@@ -13,21 +13,36 @@ async function main(): Promise<void> {
     return;
   }
 
-  const db = (prisma as unknown as { $queryRawUnsafe: (q: string) => Promise<Array<{ id: string; chatHistory: string }>> }).$queryRawUnsafe;
-  const rows: Array<{ id: string; chatHistory: string }> = await db.call(
-    prisma,
-    `SELECT ch.id, g.chatHistory FROM ChatHistory ch INNER JOIN Goal g ON g.chatHistoryId = ch.id WHERE g.chatHistory IS NOT NULL`
-  ).catch(() => []);
+  const db = (
+    prisma as unknown as {
+      $queryRawUnsafe: (
+        q: string
+      ) => Promise<Array<{ id: string; chatHistory: string }>>;
+    }
+  ).$queryRawUnsafe;
+  const rows: Array<{ id: string; chatHistory: string }> = await db
+    .call(
+      prisma,
+      `SELECT ch.id, g.chatHistory FROM ChatHistory ch INNER JOIN Goal g ON g.chatHistoryId = ch.id WHERE g.chatHistory IS NOT NULL`
+    )
+    .catch(() => []);
 
   if (rows.length === 0) {
-    console.log("No legacy chatHistory blobs found (column may already be dropped). Skipping.");
+    console.log(
+      "No legacy chatHistory blobs found (column may already be dropped). Skipping."
+    );
     return;
   }
 
   let totalMessages = 0;
 
   for (const row of rows) {
-    let messages: Array<{ id?: string; role?: string; createdAt?: string; [key: string]: unknown }>;
+    let messages: Array<{
+      id?: string;
+      role?: string;
+      createdAt?: string;
+      [key: string]: unknown;
+    }>;
     try {
       messages = JSON.parse(row.chatHistory);
     } catch {
@@ -50,7 +65,9 @@ async function main(): Promise<void> {
     totalMessages += messageData.length;
   }
 
-  console.log(`Migrated ${totalMessages} messages across ${rows.length} chat histories.`);
+  console.log(
+    `Migrated ${totalMessages} messages across ${rows.length} chat histories.`
+  );
 }
 
 main()

@@ -78,7 +78,10 @@ export async function PUT(
       if (Array.isArray(messages) && messages.length > 0) {
         await prisma.message.createMany({
           data: messages.map(
-            (msg: { id?: string; role?: string; createdAt?: string }, idx: number) => ({
+            (
+              msg: { id?: string; role?: string; createdAt?: string },
+              idx: number
+            ) => ({
               chatHistoryId: goal.chatHistoryId!,
               role: msg.role ?? "user",
               content: JSON.stringify(msg),
@@ -101,7 +104,10 @@ export async function PUT(
           messages: {
             create: Array.isArray(messages)
               ? messages.map(
-                  (msg: { id?: string; role?: string; createdAt?: string }, idx: number) => ({
+                  (
+                    msg: { id?: string; role?: string; createdAt?: string },
+                    idx: number
+                  ) => ({
                     role: msg.role ?? "user",
                     content: JSON.stringify(msg),
                     order: idx,
