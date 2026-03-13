@@ -29,10 +29,12 @@ import type { CreateGoalInput, GoalWithId } from "@/storage/types";
 
 function Header({
   calendarRef,
+  calendarTitle,
   currentView,
   setCurrentView,
 }: {
   calendarRef: React.RefObject<FullCalendar | null>;
+  calendarTitle: string;
   currentView: string[];
   setCurrentView: (v: string[]) => void;
 }) {
@@ -42,17 +44,6 @@ function Header({
   const subheadingColor = useColorModeValue("gray.600", "gray.300");
   const { user, logout, login } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [title, setTitle] = useState("");
-
-  useEffect(() => {
-    const updateTitle = () => {
-      const api = calendarRef.current?.getApi();
-      if (api) setTitle(api.view.title);
-    };
-    updateTitle();
-    const interval = setInterval(updateTitle, 200);
-    return () => clearInterval(interval);
-  }, [calendarRef, currentView]);
 
   const goToday = () => calendarRef.current?.getApi().today();
   const goPrev = () => calendarRef.current?.getApi().prev();
@@ -104,7 +95,7 @@ function Header({
             color={headingColor}
             minW="150px"
           >
-            {title}
+            {calendarTitle}
           </Text>
 
           <Select.Root
@@ -182,10 +173,12 @@ function CalendarView({
   calendarRef,
   currentView,
   setCurrentView,
+  onTitleChange,
 }: {
   calendarRef: React.RefObject<FullCalendar | null>;
   currentView: string[];
   setCurrentView: (v: string[]) => void;
+  onTitleChange: (title: string) => void;
 }) {
   const {
     events: calendarEvents,
@@ -246,6 +239,9 @@ function CalendarView({
             eventStartEditable={true}
             eventDurationEditable={true}
             events={calendarEvents}
+            datesSet={(info) => {
+              onTitleChange(info.view.title);
+            }}
             dateClick={(info) => {
               if (currentView[0] === "dayGridMonth") {
                 const calendarApi = calendarRef.current?.getApi();
@@ -382,6 +378,7 @@ export default function App() {
     mode: "create" | "update";
   } | null>(null);
   const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
+  const [calendarTitle, setCalendarTitle] = useState("");
   const calendarRef = useRef<FullCalendar>(null);
 
   // Show loading state while checking authentication
@@ -452,6 +449,7 @@ export default function App() {
     <Box minH="100vh" bg={appBg}>
       <Header
         calendarRef={calendarRef}
+        calendarTitle={calendarTitle}
         currentView={currentView}
         setCurrentView={setCurrentView}
       />
@@ -472,6 +470,7 @@ export default function App() {
           calendarRef={calendarRef}
           currentView={currentView}
           setCurrentView={setCurrentView}
+          onTitleChange={setCalendarTitle}
         />
       </Flex>
 
