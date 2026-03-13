@@ -97,8 +97,16 @@ export async function POST(
       calendar.events.forEach(async (event) => {
         const uid = event.uid;
 
-        const startDate = parseIcsDateToISO(event.dtstart ?? "");
-        const endDate = parseIcsDateToISO(event.dtend ?? event.dtstart ?? "");
+        const parsedStart = parseIcsDate(event.dtstart ?? "") as any;
+        const parsedEnd = parseIcsDate(
+          event.dtend ?? event.dtstart ?? ""
+        ) as any;
+
+        const startDate = parsedStart?.date ?? null;
+        const endDate = parsedEnd?.date ?? startDate;
+        const isAllDay = !!parsedStart?.isAllDay;
+        const startTimezone = parsedStart?.timezone ?? null;
+        const endTimezone = parsedEnd?.timezone ?? startTimezone;
 
         await prisma.event.upsert({
           where: {
@@ -116,9 +124,9 @@ export async function POST(
             location: extractParameterValue(event.location) ?? null,
             start: startDate,
             end: endDate,
-            startTimezone: null,
-            endTimezone: null,
-            isAllDay: false,
+            startTimezone,
+            endTimezone,
+            isAllDay,
             status: event.status ?? null,
             recurrenceRule: event.rrule ? event.rrule.toString() : null,
             categories: event.categories
@@ -134,9 +142,9 @@ export async function POST(
             location: extractParameterValue(event.location),
             start: startDate,
             end: endDate,
-            startTimezone: null,
-            endTimezone: null,
-            isAllDay: false,
+            startTimezone,
+            endTimezone,
+            isAllDay,
             status: event.status ?? null,
             recurrenceRule: event.rrule ? event.rrule.toString() : null,
             categories: event.categories
