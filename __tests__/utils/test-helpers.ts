@@ -22,7 +22,7 @@ export function createMockRequest(options: {
     });
   }
 
-  const request = new NextRequest(url, init);
+  const request = new NextRequest(url, init as any);
 
   // Mock cookies
   if (Object.keys(cookies).length > 0) {
@@ -71,6 +71,21 @@ export const mockEvent = {
   minutesEstimate: null,
   order: 0,
   metadata: null,
+  // ICS-specific fields (null for user events)
+  subscriptionId: null,
+  uid: null,
+  description: null,
+  location: null,
+  startTimezone: null,
+  endTimezone: null,
+  isAllDay: false,
+  status: null,
+  organizer: null,
+  recurrenceRule: null,
+  transparency: null,
+  categories: null,
+  url: null,
+  rawData: null,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
 };
@@ -87,9 +102,11 @@ export const mockIcsSubscription = {
 
 export const mockIcsEvent = {
   id: "ics-event-1",
+  userId: "test@example.com",
+  goalId: null,
   subscriptionId: "ics-sub-1",
   uid: "event-uid-123@google.com",
-  summary: "Team Standup",
+  title: "Team Standup",
   description: "Daily standup meeting",
   location: "Conference Room A",
   start: "2024-06-01T10:00:00.000Z",
@@ -104,6 +121,11 @@ export const mockIcsEvent = {
   categories: null,
   url: null,
   rawData: "{}",
+  kind: "ics",
+  completed: false,
+  minutesEstimate: null,
+  order: 0,
+  metadata: null,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
 };

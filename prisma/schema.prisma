@@ -60,19 +60,39 @@ model Event {
   title           String
   start           String   // ISO datetime string
   end             String   // ISO datetime string
-  kind            String?  // 'task', 'break', etc.
+  kind            String?  // 'task', 'break', 'ics', etc.
   completed       Boolean  @default(false)
   minutesEstimate Int?
   order           Int      @default(0)
   metadata        String?  // JSON string for extensibility
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goal            Goal?    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  // ICS-specific fields (nullable for user-created events)
+  subscriptionId   String?          // Links to IcsSubscription if this is an ICS event
+  uid              String?          // ICS UID field (unique per subscription)
+  description      String?          // DESCRIPTION (also useful for user events)
+  location         String?          // LOCATION
+  startTimezone    String?          // Timezone of DTSTART
+  endTimezone      String?          // Timezone of DTEND
+  isAllDay         Boolean          @default(false)
+  status           String?          // STATUS (CONFIRMED, TENTATIVE, CANCELLED)
+  organizer        String?          // ORGANIZER
+  recurrenceRule   String?          // RRULE as raw string
+  transparency     String?          // TRANSP (TRANSPARENT/OPAQUE)
+  categories       String?          // CATEGORIES as JSON array string
+  url              String?          // URL
+  rawData          String?          // Full raw ICS VEVENT data as JSON
 
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal             Goal?             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  subscription     IcsSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, uid])
   @@index([userId])
   @@index([goalId])
+  @@index([subscriptionId])
 }
 
 enum AIProvider {
@@ -108,35 +128,7 @@ model IcsSubscription {
   updatedAt   DateTime   @updatedAt
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  icsEvents   IcsEvent[]
+  events      Event[]
 
   @@index([userId])
-}
-
-model IcsEvent {
-  id               String          @id @default(uuid())
-  subscriptionId   String
-  uid              String          // ICS UID field (unique per subscription)
-  summary          String?         // SUMMARY
-  description      String?         // DESCRIPTION
-  location         String?         // LOCATION
-  start            String          // DTSTART as ISO string
-  end              String?         // DTEND as ISO string
-  startTimezone    String?         // Timezone of DTSTART
-  endTimezone      String?         // Timezone of DTEND
-  isAllDay         Boolean         @default(false)
-  status           String?         // STATUS (CONFIRMED, TENTATIVE, CANCELLED)
-  organizer        String?         // ORGANIZER
-  recurrenceRule   String?         // RRULE as raw string
-  transparency     String?         // TRANSP (TRANSPARENT/OPAQUE)
-  categories       String?         // CATEGORIES as JSON array string
-  url              String?         // URL
-  rawData          String?         // Full raw ICS VEVENT data as JSON for extensibility
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-
-  subscription     IcsSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-  @@unique([subscriptionId, uid])
-  @@index([subscriptionId])
 }

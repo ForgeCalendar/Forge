@@ -58,7 +58,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
       "event-uid-123@google.com": mockVEvent,
     });
 
-    prismaMock.icsEvent.upsert.mockResolvedValue({} as any);
+    prismaMock.event.upsert.mockResolvedValue({} as any);
     prismaMock.icsSubscription.update.mockResolvedValue({} as any);
 
     const request = createMockRequest({ method: "POST" });
@@ -73,7 +73,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
 
     expect(mockFromURL).toHaveBeenCalledWith(mockIcsSubscription.url);
 
-    expect(prismaMock.icsEvent.upsert).toHaveBeenCalledWith({
+    expect(prismaMock.event.upsert).toHaveBeenCalledWith({
       where: {
         subscriptionId_uid: {
           subscriptionId: "ics-sub-1",
@@ -81,9 +81,10 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
         },
       },
       create: expect.objectContaining({
+        userId: "test@example.com",
         subscriptionId: "ics-sub-1",
         uid: "event-uid-123@google.com",
-        summary: "Team Standup",
+        title: "Team Standup",
         description: "Daily standup meeting",
         location: "Conference Room A",
         start: "2024-06-01T10:00:00.000Z",
@@ -93,9 +94,10 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
         isAllDay: false,
         status: "CONFIRMED",
         transparency: "OPAQUE",
+        kind: "ics",
       }),
       update: expect.objectContaining({
-        summary: "Team Standup",
+        title: "Team Standup",
         start: "2024-06-01T10:00:00.000Z",
       }),
     });
@@ -126,7 +128,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
       "all-day-uid@google.com": allDayEvent,
     });
 
-    prismaMock.icsEvent.upsert.mockResolvedValue({} as any);
+    prismaMock.event.upsert.mockResolvedValue({} as any);
     prismaMock.icsSubscription.update.mockResolvedValue({} as any);
 
     const request = createMockRequest({ method: "POST" });
@@ -138,7 +140,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     expect(response.status).toBe(200);
     expect(data.syncedCount).toBe(1);
 
-    expect(prismaMock.icsEvent.upsert).toHaveBeenCalledWith(
+    expect(prismaMock.event.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
           isAllDay: true,
@@ -166,7 +168,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
       "param-uid@google.com": eventWithParams,
     });
 
-    prismaMock.icsEvent.upsert.mockResolvedValue({} as any);
+    prismaMock.event.upsert.mockResolvedValue({} as any);
     prismaMock.icsSubscription.update.mockResolvedValue({} as any);
 
     const request = createMockRequest({ method: "POST" });
@@ -176,10 +178,10 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(prismaMock.icsEvent.upsert).toHaveBeenCalledWith(
+    expect(prismaMock.event.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
-          summary: "Besprechung",
+          title: "Besprechung",
           description: "Tägliches Meeting",
           location: "Raum A",
         }),
@@ -200,7 +202,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
       "event-uid-123@google.com": mockVEvent,
     });
 
-    prismaMock.icsEvent.upsert.mockResolvedValue({} as any);
+    prismaMock.event.upsert.mockResolvedValue({} as any);
     prismaMock.icsSubscription.update.mockResolvedValue({} as any);
 
     const request = createMockRequest({ method: "POST" });
@@ -211,7 +213,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
 
     expect(response.status).toBe(200);
     expect(data.syncedCount).toBe(1);
-    expect(prismaMock.icsEvent.upsert).toHaveBeenCalledTimes(1);
+    expect(prismaMock.event.upsert).toHaveBeenCalledTimes(1);
   });
 
   it("should return 404 when subscription is not found", async () => {
@@ -274,7 +276,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
       "event-uid-123@google.com": mockVEvent,
     });
 
-    prismaMock.icsEvent.upsert.mockRejectedValue(new Error("Database error"));
+    prismaMock.event.upsert.mockRejectedValue(new Error("Database error"));
 
     const request = createMockRequest({ method: "POST" });
     const params = Promise.resolve({ id: "ics-sub-1" });

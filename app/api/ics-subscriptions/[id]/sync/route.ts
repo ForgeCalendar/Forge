@@ -63,7 +63,7 @@ export async function POST(
         const startDate = event.dtstart ?? "";
         const endDate = event.dtend ?? "";
 
-        await prisma.icsEvent.upsert({
+        await prisma.event.upsert({
           where: {
             subscriptionId_uid: {
               subscriptionId: subscription.id,
@@ -71,9 +71,10 @@ export async function POST(
             },
           },
           create: {
+            userId,
             subscriptionId: subscription.id,
             uid,
-            summary: extractParameterValue(event.summary) ?? null,
+            title: extractParameterValue(event.summary) ?? "(No title)",
             description: extractParameterValue(event.description) ?? null,
             location: extractParameterValue(event.location) ?? null,
             start: startDate,
@@ -88,13 +89,14 @@ export async function POST(
               : null,
             url: event.url ?? null,
             rawData: JSON.stringify(event),
+            kind: "ics",
           },
           update: {
-            summary: extractParameterValue(event.summary) ?? null,
-            description: extractParameterValue(event.description) ?? null,
-            location: extractParameterValue(event.location) ?? null,
+            title: extractParameterValue(event.summary) ?? "(No title)",
+            description: extractParameterValue(event.description),
+            location: extractParameterValue(event.location),
             start: startDate,
-            end: endDate ? endDate : null,
+            end: endDate || startDate,
             startTimezone: startDate ?? null,
             endTimezone: endDate ?? null,
             isAllDay: false,

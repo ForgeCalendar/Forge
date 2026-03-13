@@ -23,7 +23,6 @@ describe("GET /api/events", () => {
     ];
 
     prismaMock.event.findMany.mockResolvedValue(mockEvents as any);
-    prismaMock.icsEvent.findMany.mockResolvedValue([]);
 
     const response = await GET();
     const data = await response.json();
@@ -46,7 +45,6 @@ describe("GET /api/events", () => {
   it("should return empty array when user has no events", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.event.findMany.mockResolvedValue([]);
-    prismaMock.icsEvent.findMany.mockResolvedValue([]);
 
     const response = await GET();
     const data = await response.json();

@@ -19,50 +19,35 @@ export async function GET() {
     const transformedEvents = events.map((event) => {
       const parsedMeta = event.metadata ? JSON.parse(event.metadata) : {};
       const isGoalEvent = !!event.goalId;
+      const isIcsEvent = !!event.subscriptionId;
 
       return {
         id: event.id,
         title: event.title,
         start: new Date(event.start),
         end: new Date(event.end),
+        allDay: event.isAllDay,
         ...(isGoalEvent
           ? { backgroundColor: "#4F46E5", borderColor: "#4338CA" }
+          : isIcsEvent
+          ? { backgroundColor: "#059669", borderColor: "#047857" }
           : {}),
         extendedProps: {
-          kind: event.kind,
+          kind: event.kind || (isIcsEvent ? "ics" : undefined),
           goalId: event.goalId,
           completed: event.completed,
           minutesEstimate: event.minutesEstimate,
+          subscriptionId: event.subscriptionId,
+          location: event.location,
+          status: event.status,
+          description: event.description,
+          isReadOnly: isIcsEvent,
           ...parsedMeta,
         },
       };
     });
 
-    const icsEvents = await prisma.icsEvent.findMany({
-      where: {
-        subscription: { userId },
-      },
-      orderBy: { start: "asc" },
-    });
-
-    const transformedIcsEvents = icsEvents.map((icsEvent) => ({
-      id: `ics-${icsEvent.id}`,
-      title: icsEvent.summary ?? "(No title)",
-      start: new Date(icsEvent.start),
-      end: icsEvent.end ? new Date(icsEvent.end) : new Date(icsEvent.start),
-      allDay: icsEvent.isAllDay,
-      backgroundColor: "#059669",
-      borderColor: "#047857",
-      extendedProps: {
-        kind: "ics",
-        subscriptionId: icsEvent.subscriptionId,
-        location: icsEvent.location,
-        status: icsEvent.status,
-        isReadOnly: true,
-      },
-    }));
-
-    return NextResponse.json([...transformedEvents, ...transformedIcsEvents]);
+    return NextResponse.json(transformedEvents);
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
