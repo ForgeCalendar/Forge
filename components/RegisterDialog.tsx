@@ -30,7 +30,8 @@ export default function RegisterDialog({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { textMuted: dialogTextColor, textError: errorColor } = useThemeTokens();
+  const { textMuted: dialogTextColor, textError: errorColor } =
+    useThemeTokens();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

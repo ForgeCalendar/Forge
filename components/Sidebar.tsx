@@ -116,7 +116,11 @@ function GoalComponent({
   onRemove?: () => void;
   onUpdate?: () => void;
 }) {
-  const { bgCard: goalCardBg, textSecondary: metaTextColor, textMuted: bodyTextColor } = useThemeTokens();
+  const {
+    bgCard: goalCardBg,
+    textSecondary: metaTextColor,
+    textMuted: bodyTextColor,
+  } = useThemeTokens();
 
   // Type guard to check if goal has an id (is GoalWithId)
   const isGoalWithId = (g: Goal | GoalWithId): g is GoalWithId => {
@@ -185,7 +189,11 @@ export default function Sidebar({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueInput, setDueInput] = useState(""); // datetime-local value
-  const { bgSurface: sidebarBg, border: sidebarBorder, textMuted: emptyStateColor } = useThemeTokens();
+  const {
+    bgSurface: sidebarBg,
+    border: sidebarBorder,
+    textMuted: emptyStateColor,
+  } = useThemeTokens();
 
   function resetForm() {
     setTitle("");

@@ -39,7 +39,12 @@ function Header({
   currentView: string[];
   setCurrentView: (v: string[]) => void;
 }) {
-  const { bgSurface: headerBg, border: borderColor, textHeading: headingColor, textMuted: subheadingColor } = useThemeTokens();
+  const {
+    bgSurface: headerBg,
+    border: borderColor,
+    textHeading: headingColor,
+    textMuted: subheadingColor,
+  } = useThemeTokens();
   const { user, logout, login } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
 

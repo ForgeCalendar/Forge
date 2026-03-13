@@ -22,7 +22,12 @@ function InfoTagSettingsPane() {
   const [selectedTag, setSelectedTag] = useState<
     typeof sampleInfoTags[number] | null
   >(null);
-  const { textMuted: subtitleColor, bgSurface: cardBg, border: cardBorder, textSecondary: placeholderColor } = useThemeTokens();
+  const {
+    textMuted: subtitleColor,
+    bgSurface: cardBg,
+    border: cardBorder,
+    textSecondary: placeholderColor,
+  } = useThemeTokens();
   const infoTextColor = subtitleColor;
 
   return (
@@ -129,7 +134,11 @@ const providerOptions = createListCollection({
 });
 
 function AccountSettingsPane() {
-  const { textMuted: subtitleColor, border: cardBorder, bgCard: cardBg } = useThemeTokens();
+  const {
+    textMuted: subtitleColor,
+    border: cardBorder,
+    bgCard: cardBg,
+  } = useThemeTokens();
 
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -395,7 +404,11 @@ function AccountSettingsPane() {
 }
 
 export default function SettingsDialog() {
-  const { bgSurface: bodyBg, textMuted: subtitleColor, bgActiveMenu: menuBgActive } = useThemeTokens();
+  const {
+    bgSurface: bodyBg,
+    textMuted: subtitleColor,
+    bgActiveMenu: menuBgActive,
+  } = useThemeTokens();
   const menuBg = "transparent";
 
   const panes = {
