@@ -1,25 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { verifyOwnership } from "@/lib/verify-ownership";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const GET = apiHandler<RouteContext>(async (userId, _req, ctx) => {
   const { id } = await ctx.params;
 
-  const subscription = await prisma.icsSubscription.findFirst({
-    where: {
-      id,
-      userId,
-    },
-  });
-
-  if (!subscription) {
-    return NextResponse.json(
-      { error: "Subscription not found" },
-      { status: 404 }
-    );
-  }
+  const subscription = await verifyOwnership(
+    prisma.icsSubscription.findFirst({ where: { id, userId } }),
+    "Subscription not found"
+  );
+  if (subscription instanceof NextResponse) return subscription;
 
   return NextResponse.json(subscription);
 });
@@ -29,16 +22,11 @@ export const PUT = apiHandler<RouteContext>(async (userId, req, ctx) => {
   const body = await req.json();
   const { name, url } = body;
 
-  const existing = await prisma.icsSubscription.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Subscription not found" },
-      { status: 404 }
-    );
-  }
+  const existing = await verifyOwnership(
+    prisma.icsSubscription.findFirst({ where: { id, userId } }),
+    "Subscription not found"
+  );
+  if (existing instanceof NextResponse) return existing;
 
   if (url !== undefined) {
     try {
@@ -72,16 +60,11 @@ export const PUT = apiHandler<RouteContext>(async (userId, req, ctx) => {
 export const DELETE = apiHandler<RouteContext>(async (userId, _req, ctx) => {
   const { id } = await ctx.params;
 
-  const existing = await prisma.icsSubscription.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Subscription not found" },
-      { status: 404 }
-    );
-  }
+  const existing = await verifyOwnership(
+    prisma.icsSubscription.findFirst({ where: { id, userId } }),
+    "Subscription not found"
+  );
+  if (existing instanceof NextResponse) return existing;
 
   await prisma.icsSubscription.delete({
     where: { id },
