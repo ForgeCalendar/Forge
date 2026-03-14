@@ -78,8 +78,10 @@ export function useCalendarEvents() {
   );
 
   const update = useCallback(
-    (id: string, input: UpdateCalendarEventInput): Promise<EventWithId | null> =>
-      updateMutation.mutateAsync({ id, input }),
+    (
+      id: string,
+      input: UpdateCalendarEventInput
+    ): Promise<EventWithId | null> => updateMutation.mutateAsync({ id, input }),
     [updateMutation]
   );
 
