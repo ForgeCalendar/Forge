@@ -18,8 +18,8 @@ export function toCalendarEvent(event: Event): Record<string, unknown> {
     ...(isGoalEvent
       ? { backgroundColor: "#4F46E5", borderColor: "#4338CA" }
       : isIcsEvent
-        ? { backgroundColor: "#059669", borderColor: "#047857" }
-        : {}),
+      ? { backgroundColor: "#059669", borderColor: "#047857" }
+      : {}),
     extendedProps: {
       kind: event.kind || (isIcsEvent ? "ics" : undefined),
       goalId: event.goalId,
