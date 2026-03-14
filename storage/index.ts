@@ -41,3 +41,13 @@ export {
   useUpdateInfoTagMutation,
   useDeleteInfoTagMutation,
 } from "./useInfoTagsQuery";
+
+export {
+  useProvidersQuery,
+  useDefaultProviderModel,
+} from "./useProvidersQuery";
+
+export type {
+  ProviderWithModels,
+  ProviderModel,
+} from "./useProvidersQuery";

@@ -1,54 +1,72 @@
-import { GET, PUT, DELETE } from "@/app/api/ai-agent-api-keys/[id]/route";
+import { GET, PUT, DELETE } from "@/app/api/providers/[id]/route";
 import { prismaMock } from "@/__tests__/utils/prisma-mock";
 import { createMockRequest } from "@/__tests__/utils/test-helpers";
 import * as auth from "@/lib/auth";
-import { AIProvider } from "@/lib/generated/prisma";
 
 jest.mock("@/lib/auth", () => ({
   requireAuth: jest.fn(),
 }));
 
-const mockApiKey = {
-  id: "api-key-1",
+jest.mock("@/lib/ai-providers", () => ({
+  isValidProviderType: jest.fn((type: string) =>
+    ["anthropic", "openai", "google", "mistral", "openai-compatible"].includes(
+      type,
+    ),
+  ),
+}));
+
+const mockProvider = {
+  id: "provider-1",
   userId: "test@example.com",
-  provider: AIProvider.OPENAI,
-  apiKey: "sk-test-key-123",
-  name: "My OpenAI Key",
+  type: "anthropic",
+  name: "My Anthropic",
+  baseUrl: null,
+  apiKey: "sk-ant-test-key-123",
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
+  models: [
+    {
+      id: "model-1",
+      providerId: "provider-1",
+      modelId: "claude-sonnet-4-5-20250929",
+      name: "Claude Sonnet 4.5",
+      isDefault: true,
+      createdAt: new Date("2024-01-01"),
+      updatedAt: new Date("2024-01-01"),
+    },
+  ],
 };
 
-describe("GET /api/ai-agent-api-keys/:id", () => {
+describe("GET /api/providers/:id", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should return a specific AI Agent API key", async () => {
+  it("should return a specific provider with models", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
+    prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
 
     const request = createMockRequest({ method: "GET" });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await GET(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.id).toBe("api-key-1");
-    expect(data.provider).toBe(AIProvider.OPENAI);
-    expect(prismaMock.aIAgentApiKey.findFirst).toHaveBeenCalledWith({
-      where: {
-        id: "api-key-1",
-        userId: "test@example.com",
-      },
+    expect(data.id).toBe("provider-1");
+    expect(data.type).toBe("anthropic");
+    expect(data.models).toHaveLength(1);
+    expect(prismaMock.provider.findFirst).toHaveBeenCalledWith({
+      where: { id: "provider-1", userId: "test@example.com" },
+      include: { models: true },
     });
   });
 
-  it("should return 404 when API key is not found", async () => {
+  it("should return 404 when provider is not found", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(null);
+    prismaMock.provider.findFirst.mockResolvedValue(null);
 
     const request = createMockRequest({ method: "GET" });
     const params = Promise.resolve({ id: "non-existent-id" });
@@ -57,16 +75,16 @@ describe("GET /api/ai-agent-api-keys/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe("API key not found");
+    expect(data.error).toBe("Provider not found");
   });
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized")
+      new Error("Unauthorized"),
     );
 
     const request = createMockRequest({ method: "GET" });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await GET(request, { params });
     const data = await response.json();
@@ -77,140 +95,108 @@ describe("GET /api/ai-agent-api-keys/:id", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.aIAgentApiKey.findFirst.mockRejectedValue(
-      new Error("Database error")
+    prismaMock.provider.findFirst.mockRejectedValue(
+      new Error("Database error"),
     );
 
     const request = createMockRequest({ method: "GET" });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await GET(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to fetch AI Agent API key");
+    expect(data.error).toBe("Failed to fetch provider");
   });
 });
 
-describe("PUT /api/ai-agent-api-keys/:id", () => {
+describe("PUT /api/providers/:id", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should update an AI Agent API key", async () => {
+  it("should update a provider", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
-    prismaMock.aIAgentApiKey.findUnique.mockResolvedValue(null);
-    prismaMock.aIAgentApiKey.update.mockResolvedValue({
-      ...mockApiKey,
+    prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
+    prismaMock.provider.update.mockResolvedValue({
+      ...mockProvider,
       name: "Updated Name",
-      apiKey: "sk-test-key-new",
+      apiKey: "sk-ant-new-key",
     } as any);
 
     const request = createMockRequest({
       method: "PUT",
       body: {
-        apiKey: "sk-test-key-new",
         name: "Updated Name",
+        apiKey: "sk-ant-new-key",
       },
     });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await PUT(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data.name).toBe("Updated Name");
-    expect(prismaMock.aIAgentApiKey.update).toHaveBeenCalledWith({
-      where: { id: "api-key-1" },
+    expect(prismaMock.provider.update).toHaveBeenCalledWith({
+      where: { id: "provider-1" },
       data: {
-        apiKey: "sk-test-key-new",
         name: "Updated Name",
+        apiKey: "sk-ant-new-key",
       },
+      include: { models: true },
     });
   });
 
-  it("should update provider if not conflicting", async () => {
+  it("should update provider type if valid", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
-    prismaMock.aIAgentApiKey.findUnique.mockResolvedValue(null);
-    prismaMock.aIAgentApiKey.update.mockResolvedValue({
-      ...mockApiKey,
-      provider: AIProvider.ANTHROPIC,
+    prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
+    prismaMock.provider.update.mockResolvedValue({
+      ...mockProvider,
+      type: "openai",
     } as any);
 
     const request = createMockRequest({
       method: "PUT",
-      body: {
-        provider: AIProvider.ANTHROPIC,
-      },
+      body: { type: "openai" },
     });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await PUT(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.provider).toBe(AIProvider.ANTHROPIC);
+    expect(data.type).toBe("openai");
   });
 
-  it("should return 400 when provider is invalid", async () => {
+  it("should return 400 when provider type is invalid", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
+    prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
 
     const request = createMockRequest({
       method: "PUT",
-      body: {
-        provider: "invalid-provider",
-      },
+      body: { type: "invalid-provider" },
     });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await PUT(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toContain("Invalid provider");
+    expect(data.error).toContain("Invalid provider type");
   });
 
-  it("should return 409 when updating provider conflicts with existing key", async () => {
+  it("should return 404 when provider is not found", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
-    prismaMock.aIAgentApiKey.findUnique.mockResolvedValue({
-      ...mockApiKey,
-      id: "different-key-id",
-      provider: AIProvider.ANTHROPIC,
-    } as any);
+    prismaMock.provider.findFirst.mockResolvedValue(null);
 
     const request = createMockRequest({
       method: "PUT",
-      body: {
-        provider: AIProvider.ANTHROPIC,
-      },
-    });
-    const params = Promise.resolve({ id: "api-key-1" });
-
-    const response = await PUT(request, { params });
-    const data = await response.json();
-
-    expect(response.status).toBe(409);
-    expect(data.error).toBe("API key for provider 'ANTHROPIC' already exists");
-  });
-
-  it("should return 404 when API key is not found", async () => {
-    (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(null);
-
-    const request = createMockRequest({
-      method: "PUT",
-      body: {
-        name: "Updated Name",
-      },
+      body: { name: "Updated Name" },
     });
     const params = Promise.resolve({ id: "non-existent-id" });
 
@@ -218,21 +204,19 @@ describe("PUT /api/ai-agent-api-keys/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe("API key not found");
+    expect(data.error).toBe("Provider not found");
   });
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized")
+      new Error("Unauthorized"),
     );
 
     const request = createMockRequest({
       method: "PUT",
-      body: {
-        name: "Updated Name",
-      },
+      body: { name: "Updated Name" },
     });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await PUT(request, { params });
     const data = await response.json();
@@ -243,55 +227,53 @@ describe("PUT /api/ai-agent-api-keys/:id", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
-    prismaMock.aIAgentApiKey.update.mockRejectedValue(
-      new Error("Database error")
+    prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
+    prismaMock.provider.update.mockRejectedValue(
+      new Error("Database error"),
     );
 
     const request = createMockRequest({
       method: "PUT",
-      body: {
-        name: "Updated Name",
-      },
+      body: { name: "Updated Name" },
     });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await PUT(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to update AI Agent API key");
+    expect(data.error).toBe("Failed to update provider");
   });
 });
 
-describe("DELETE /api/ai-agent-api-keys/:id", () => {
+describe("DELETE /api/providers/:id", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should delete an AI Agent API key", async () => {
+  it("should delete a provider", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
-    prismaMock.aIAgentApiKey.delete.mockResolvedValue(mockApiKey as any);
+    prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
+    prismaMock.provider.delete.mockResolvedValue(mockProvider as any);
 
     const request = createMockRequest({ method: "DELETE" });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await DELETE(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.message).toBe("API key deleted successfully");
-    expect(prismaMock.aIAgentApiKey.delete).toHaveBeenCalledWith({
-      where: { id: "api-key-1" },
+    expect(data.message).toBe("Provider deleted successfully");
+    expect(prismaMock.provider.delete).toHaveBeenCalledWith({
+      where: { id: "provider-1" },
     });
   });
 
-  it("should return 404 when API key is not found", async () => {
+  it("should return 404 when provider is not found", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(null);
+    prismaMock.provider.findFirst.mockResolvedValue(null);
 
     const request = createMockRequest({ method: "DELETE" });
     const params = Promise.resolve({ id: "non-existent-id" });
@@ -300,16 +282,16 @@ describe("DELETE /api/ai-agent-api-keys/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe("API key not found");
+    expect(data.error).toBe("Provider not found");
   });
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized")
+      new Error("Unauthorized"),
     );
 
     const request = createMockRequest({ method: "DELETE" });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await DELETE(request, { params });
     const data = await response.json();
@@ -320,18 +302,18 @@ describe("DELETE /api/ai-agent-api-keys/:id", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.aIAgentApiKey.findFirst.mockResolvedValue(mockApiKey as any);
-    prismaMock.aIAgentApiKey.delete.mockRejectedValue(
-      new Error("Database error")
+    prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
+    prismaMock.provider.delete.mockRejectedValue(
+      new Error("Database error"),
     );
 
     const request = createMockRequest({ method: "DELETE" });
-    const params = Promise.resolve({ id: "api-key-1" });
+    const params = Promise.resolve({ id: "provider-1" });
 
     const response = await DELETE(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to delete AI Agent API key");
+    expect(data.error).toBe("Failed to delete provider");
   });
 });

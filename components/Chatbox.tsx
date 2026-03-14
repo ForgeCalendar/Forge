@@ -24,6 +24,8 @@ type ChatboxProps = {
   extraParams?: Record<string, string>;
   initialMessage?: string;
   initialMessages?: ChatMessage[];
+  providerId?: string;
+  modelId?: string;
 };
 
 const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
@@ -56,13 +58,15 @@ export function ChatboxComponent({
   extraParams,
   initialMessage,
   initialMessages,
+  providerId,
+  modelId,
 }: ChatboxProps) {
   const extraParamsKey = extraParams ? JSON.stringify(extraParams) : "";
   const transport = useMemo(() => {
     const params = new URLSearchParams();
     if (summaryPrompt) params.set("summaryPrompt", summaryPrompt);
-    // For now, always use Claude (Anthropic provider)
-    params.set("provider", "ANTHROPIC");
+    if (providerId) params.set("providerId", providerId);
+    if (modelId) params.set("modelId", modelId);
     if (extraParams) {
       for (const [key, value] of Object.entries(extraParams)) {
         params.set(key, value);
@@ -72,7 +76,7 @@ export function ChatboxComponent({
     return new AssistantChatTransport({
       api: `/api/chat?${params.toString()}`,
     });
-  }, [name, systemPrompt, summaryPrompt, extraParamsKey]);
+  }, [name, systemPrompt, summaryPrompt, extraParamsKey, providerId, modelId]);
 
   const hasHistory = initialMessages && initialMessages.length > 0;
   const runtime = useChatRuntime({

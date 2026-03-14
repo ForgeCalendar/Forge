@@ -1,4 +1,4 @@
-import { PrismaClient, AIProvider } from "../lib/generated/prisma";
+import { PrismaClient } from "../lib/generated/prisma";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -8,12 +8,12 @@ async function main() {
   await prisma.event.deleteMany();
   await prisma.infoTag.deleteMany();
   await prisma.goal.deleteMany();
-  await prisma.aIAgentApiKey.deleteMany();
+  await prisma.aIModel.deleteMany();
+  await prisma.provider.deleteMany();
   await prisma.user.deleteMany();
 
-  // Create a test user
   const testUserEmail = "test@example.com";
-  const testUserPassword = "password123"; // In production, use a secure password
+  const testUserPassword = "password123";
   const passwordHash = await bcrypt.hash(testUserPassword, 10);
 
   const user = await prisma.user.create({
@@ -25,47 +25,63 @@ async function main() {
 
   console.log(`Created test user: ${testUserEmail} / ${testUserPassword}`);
 
-  // Create AI Agent API keys from environment variables if available
-  const apiKeyProviders = [
+  const providerConfigs = [
     {
-      provider: AIProvider.ANTHROPIC,
+      type: "anthropic",
       envKey: "ANTHROPIC_API_KEY",
-      name: "Claude API Key",
+      name: "Anthropic",
+      models: [
+        { modelId: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5", isDefault: true },
+        { modelId: "claude-haiku-4-20250414", name: "Claude Haiku 4", isDefault: false },
+      ],
     },
     {
-      provider: AIProvider.OPENAI,
+      type: "openai",
       envKey: "OPENAI_API_KEY",
-      name: "OpenAI API Key",
+      name: "OpenAI",
+      models: [
+        { modelId: "gpt-4o", name: "GPT-4o", isDefault: true },
+        { modelId: "gpt-4o-mini", name: "GPT-4o Mini", isDefault: false },
+      ],
     },
     {
-      provider: AIProvider.GOOGLE,
+      type: "google",
       envKey: "GOOGLE_API_KEY",
-      name: "Google AI API Key",
+      name: "Google AI",
+      models: [
+        { modelId: "gemini-2.5-flash", name: "Gemini 2.5 Flash", isDefault: true },
+      ],
     },
     {
-      provider: AIProvider.MISTRAL,
+      type: "mistral",
       envKey: "MISTRAL_API_KEY",
-      name: "Mistral API Key",
-    },
-    {
-      provider: AIProvider.COHERE,
-      envKey: "COHERE_API_KEY",
-      name: "Cohere API Key",
+      name: "Mistral",
+      models: [
+        { modelId: "mistral-large-latest", name: "Mistral Large", isDefault: true },
+      ],
     },
   ];
 
-  for (const { provider, envKey, name } of apiKeyProviders) {
-    const apiKey = process.env[envKey];
+  for (const config of providerConfigs) {
+    const apiKey = process.env[config.envKey];
     if (apiKey) {
-      await prisma.aIAgentApiKey.create({
+      const provider = await prisma.provider.create({
         data: {
           userId: user.id,
-          provider,
+          type: config.type,
+          name: config.name,
           apiKey,
-          name,
         },
       });
-      console.log(`Added ${provider} API key for test user`);
+      await prisma.aIModel.createMany({
+        data: config.models.map((m) => ({
+          providerId: provider.id,
+          modelId: m.modelId,
+          name: m.name,
+          isDefault: m.isDefault,
+        })),
+      });
+      console.log(`Added ${config.type} provider for test user`);
     }
   }
 

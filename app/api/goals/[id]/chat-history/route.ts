@@ -73,7 +73,7 @@ export async function PUT(
     if (goal.chatHistoryId) {
       await prisma.$transaction(async (tx) => {
         await tx.message.deleteMany({
-          where: { chatHistoryId: goal.chatHistoryId },
+          where: { chatHistoryId: goal.chatHistoryId! },
         });
 
         if (Array.isArray(messages) && messages.length > 0) {
@@ -94,16 +94,10 @@ export async function PUT(
         }
       });
     } else {
-      const apiKeyRecord = await prisma.aIAgentApiKey.findFirst({
-        where: { userId, provider: "ANTHROPIC" },
-        select: { id: true },
-      });
-
       await prisma.$transaction(async (tx) => {
         const chatHistory = await tx.chatHistory.create({
           data: {
             userId,
-            apiKeyId: apiKeyRecord?.id ?? null,
             messages: {
               create: Array.isArray(messages)
                 ? messages.map(

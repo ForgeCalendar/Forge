@@ -116,22 +116,45 @@ function InfoTagSettingsPane() {
   );
 }
 
-type ApiKeyRecord = {
+type ProviderRecord = {
   id: string;
-  provider: string;
+  type: string;
+  name: string;
+  baseUrl: string | null;
   apiKey: string;
-  name: string | null;
+  models: {
+    id: string;
+    modelId: string;
+    name: string;
+    isDefault: boolean;
+  }[];
 };
 
-const providerOptions = createListCollection({
+const providerTypeOptions = createListCollection({
   items: [
-    { label: "Anthropic", value: "ANTHROPIC" },
-    { label: "OpenAI", value: "OPENAI" },
-    { label: "Google", value: "GOOGLE" },
-    { label: "Mistral", value: "MISTRAL" },
-    { label: "Cohere", value: "COHERE" },
+    { label: "Anthropic", value: "anthropic" },
+    { label: "OpenAI", value: "openai" },
+    { label: "Google", value: "google" },
+    { label: "Mistral", value: "mistral" },
+    { label: "OpenAI-Compatible (Self-hosted)", value: "openai-compatible" },
   ],
 });
+
+function providerTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    anthropic: "Anthropic",
+    openai: "OpenAI",
+    google: "Google",
+    mistral: "Mistral",
+    "openai-compatible": "Self-hosted (OpenAI-compatible)",
+  };
+  return labels[type] ?? type;
+}
+
+function maskKey(key: string): string {
+  if (key.length <= 8) return "****";
+  return key.slice(0, 4) + "..." + key.slice(-4);
+}
 
 function AccountSettingsPane() {
   const {
@@ -140,58 +163,68 @@ function AccountSettingsPane() {
     bgCard: cardBg,
   } = useThemeTokens();
 
-  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state for adding a new key
-  const [newProvider, setNewProvider] = useState<string[]>([]);
+  const [newType, setNewType] = useState<string[]>([]);
+  const [newName, setNewName] = useState("");
   const [newApiKey, setNewApiKey] = useState("");
+  const [newBaseUrl, setNewBaseUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const [editApiKey, setEditApiKey] = useState("");
+  const [editBaseUrl, setEditBaseUrl] = useState("");
 
-  const fetchKeys = useCallback(async () => {
+  const fetchProviders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/ai-agent-api-keys");
-      if (!res.ok) throw new Error("Failed to fetch API keys");
-      const data = await res.json();
-      setApiKeys(data);
+      const res = await fetch("/api/providers");
+      if (!res.ok) throw new Error("Failed to fetch providers");
+      const data: ProviderRecord[] = await res.json();
+      setProviders(data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load API keys");
+      setError(
+        err instanceof Error ? err.message : "Failed to load providers",
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchKeys();
-  }, [fetchKeys]);
+    fetchProviders();
+  }, [fetchProviders]);
 
   async function handleAdd() {
-    if (!newProvider[0] || !newApiKey.trim()) return;
+    if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/ai-agent-api-keys", {
+      const res = await fetch("/api/providers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: newProvider[0],
+          type: newType[0],
+          name: newName.trim(),
           apiKey: newApiKey.trim(),
+          ...(newType[0] === "openai-compatible" && newBaseUrl.trim()
+            ? { baseUrl: newBaseUrl.trim() }
+            : {}),
         }),
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to save API key");
+        throw new Error(data.error || "Failed to save provider");
       }
-      setNewProvider([]);
+      setNewType([]);
+      setNewName("");
       setNewApiKey("");
-      await fetchKeys();
+      setNewBaseUrl("");
+      await fetchProviders();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -200,22 +233,31 @@ function AccountSettingsPane() {
   }
 
   async function handleUpdate(id: string) {
-    if (!editApiKey.trim()) return;
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/ai-agent-api-keys/${id}`, {
+      const body: Record<string, string> = {};
+      if (editName.trim()) body.name = editName.trim();
+      if (editApiKey.trim()) body.apiKey = editApiKey.trim();
+      const provider = providers.find((p) => p.id === id);
+      if (provider?.type === "openai-compatible") {
+        body.baseUrl = editBaseUrl.trim();
+      }
+
+      const res = await fetch(`/api/providers/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: editApiKey.trim() }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to update API key");
+        throw new Error(data.error || "Failed to update provider");
       }
       setEditingId(null);
+      setEditName("");
       setEditApiKey("");
-      await fetchKeys();
+      setEditBaseUrl("");
+      await fetchProviders();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update");
     } finally {
@@ -226,26 +268,28 @@ function AccountSettingsPane() {
   async function handleDelete(id: string) {
     setError(null);
     try {
-      const res = await fetch(`/api/ai-agent-api-keys/${id}`, {
+      const res = await fetch(`/api/providers/${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete API key");
-      await fetchKeys();
+      if (!res.ok) throw new Error("Failed to delete provider");
+      await fetchProviders();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete");
     }
   }
 
-  function maskKey(key: string) {
-    if (key.length <= 8) return "****";
-    return key.slice(0, 4) + "..." + key.slice(-4);
+  function startEditing(provider: ProviderRecord) {
+    setEditingId(provider.id);
+    setEditName(provider.name);
+    setEditApiKey("");
+    setEditBaseUrl(provider.baseUrl ?? "");
   }
 
   return (
     <Box>
       <Text fontWeight="semibold">Account</Text>
       <Text color={subtitleColor} mt={2}>
-        Manage your AI provider API keys.
+        Manage your AI providers and API keys.
       </Text>
 
       {error && (
@@ -254,20 +298,19 @@ function AccountSettingsPane() {
         </Text>
       )}
 
-      {/* Existing keys */}
       <Box mt={4}>
         {loading ? (
           <Text color={subtitleColor} fontSize="sm">
             Loading...
           </Text>
-        ) : apiKeys.length === 0 ? (
+        ) : providers.length === 0 ? (
           <Text color={subtitleColor} fontSize="sm">
-            No API keys configured. Add one below.
+            No providers configured. Add one below.
           </Text>
         ) : (
-          apiKeys.map((key) => (
+          providers.map((provider) => (
             <Box
-              key={key.id}
+              key={provider.id}
               p={3}
               mb={2}
               bg={cardBg}
@@ -275,74 +318,104 @@ function AccountSettingsPane() {
               borderColor={cardBorder}
               borderRadius="md"
             >
-              <Flex justify="space-between" align="center">
+              {editingId === provider.id ? (
                 <Box>
-                  <Text fontWeight="medium" fontSize="sm">
-                    {key.provider}
-                  </Text>
-                  <Text fontSize="xs" color={subtitleColor}>
-                    {maskKey(key.apiKey)}
-                  </Text>
-                </Box>
-                <Flex gap={2}>
-                  {editingId === key.id ? (
-                    <>
+                  <Flex gap={2} mb={2}>
+                    <Box flex={1}>
+                      <Text fontSize="xs" mb={1}>
+                        Name
+                      </Text>
                       <Input
                         size="sm"
-                        width="200px"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                    </Box>
+                    <Box flex={1}>
+                      <Text fontSize="xs" mb={1}>
+                        API Key
+                      </Text>
+                      <Input
+                        size="sm"
                         type="password"
-                        placeholder="New API key"
+                        placeholder="Leave blank to keep current"
                         value={editApiKey}
                         onChange={(e) => setEditApiKey(e.target.value)}
                       />
-                      <Button
+                    </Box>
+                  </Flex>
+                  {provider.type === "openai-compatible" && (
+                    <Box mb={2}>
+                      <Text fontSize="xs" mb={1}>
+                        Base URL
+                      </Text>
+                      <Input
                         size="sm"
-                        onClick={() => handleUpdate(key.id)}
-                        disabled={saving}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditApiKey("");
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingId(key.id);
-                          setEditApiKey("");
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        colorPalette="red"
-                        onClick={() => handleDelete(key.id)}
-                      >
-                        Delete
-                      </Button>
-                    </>
+                        placeholder="https://your-server.com/v1"
+                        value={editBaseUrl}
+                        onChange={(e) => setEditBaseUrl(e.target.value)}
+                      />
+                    </Box>
                   )}
+                  <Flex gap={2}>
+                    <Button
+                      size="sm"
+                      onClick={() => handleUpdate(provider.id)}
+                      disabled={saving}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditName("");
+                        setEditApiKey("");
+                        setEditBaseUrl("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </Flex>
+                </Box>
+              ) : (
+                <Flex justify="space-between" align="center">
+                  <Box>
+                    <Text fontWeight="medium" fontSize="sm">
+                      {provider.name}
+                    </Text>
+                    <Text fontSize="xs" color={subtitleColor}>
+                      {providerTypeLabel(provider.type)} &middot;{" "}
+                      {maskKey(provider.apiKey)} &middot;{" "}
+                      {provider.models.length} model
+                      {provider.models.length !== 1 ? "s" : ""}
+                    </Text>
+                  </Box>
+                  <Flex gap={2}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => startEditing(provider)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorPalette="red"
+                      onClick={() => handleDelete(provider.id)}
+                    >
+                      Delete
+                    </Button>
+                  </Flex>
                 </Flex>
-              </Flex>
+              )}
             </Box>
           ))
         )}
       </Box>
 
-      {/* Add new key form */}
       <Box
         mt={4}
         p={3}
@@ -351,25 +424,25 @@ function AccountSettingsPane() {
         borderRadius="md"
       >
         <Text fontWeight="medium" fontSize="sm" mb={2}>
-          Add API Key
+          Add Provider
         </Text>
-        <Flex gap={2} align="flex-end">
-          <Box flex={1}>
+        <Flex gap={2} flexWrap="wrap" align="flex-end">
+          <Box flex={1} minW="140px">
             <Text fontSize="xs" mb={1}>
-              Provider
+              Type
             </Text>
             <Select.Root
-              collection={providerOptions}
-              value={newProvider}
-              onValueChange={(e) => setNewProvider(e.value)}
+              collection={providerTypeOptions}
+              value={newType}
+              onValueChange={(e) => setNewType(e.value)}
               size="sm"
             >
               <Select.Trigger>
-                <Select.ValueText placeholder="Select provider" />
+                <Select.ValueText placeholder="Select type" />
               </Select.Trigger>
               <Select.Positioner>
                 <Select.Content>
-                  {providerOptions.items.map((opt) => (
+                  {providerTypeOptions.items.map((opt) => (
                     <Select.Item item={opt} key={opt.value}>
                       {opt.label}
                     </Select.Item>
@@ -378,7 +451,18 @@ function AccountSettingsPane() {
               </Select.Positioner>
             </Select.Root>
           </Box>
-          <Box flex={2}>
+          <Box flex={1} minW="120px">
+            <Text fontSize="xs" mb={1}>
+              Name
+            </Text>
+            <Input
+              size="sm"
+              placeholder="My Anthropic"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </Box>
+          <Box flex={2} minW="160px">
             <Text fontSize="xs" mb={1}>
               API Key
             </Text>
@@ -390,14 +474,28 @@ function AccountSettingsPane() {
               onChange={(e) => setNewApiKey(e.target.value)}
             />
           </Box>
-          <Button
-            size="sm"
-            onClick={handleAdd}
-            disabled={saving || !newProvider[0] || !newApiKey.trim()}
-          >
-            Add
-          </Button>
         </Flex>
+        {newType[0] === "openai-compatible" && (
+          <Box mt={2}>
+            <Text fontSize="xs" mb={1}>
+              Base URL
+            </Text>
+            <Input
+              size="sm"
+              placeholder="https://your-server.com/v1"
+              value={newBaseUrl}
+              onChange={(e) => setNewBaseUrl(e.target.value)}
+            />
+          </Box>
+        )}
+        <Button
+          size="sm"
+          mt={3}
+          onClick={handleAdd}
+          disabled={saving || !newType[0] || !newName.trim() || !newApiKey.trim()}
+        >
+          Add
+        </Button>
       </Box>
     </Box>
   );
