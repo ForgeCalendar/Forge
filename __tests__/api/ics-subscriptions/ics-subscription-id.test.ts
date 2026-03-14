@@ -82,7 +82,7 @@ describe("GET /api/ics-subscriptions/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to fetch ICS subscription");
+    expect(data.error).toBe("Internal server error");
   });
 });
 
@@ -218,7 +218,7 @@ describe("PUT /api/ics-subscriptions/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to update ICS subscription");
+    expect(data.error).toBe("Internal server error");
   });
 });
 
@@ -296,6 +296,6 @@ describe("DELETE /api/ics-subscriptions/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to delete ICS subscription");
+    expect(data.error).toBe("Internal server error");
   });
 });

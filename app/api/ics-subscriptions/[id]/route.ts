@@ -1,146 +1,91 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { apiHandler } from "@/lib/api-handler";
 
-// GET /api/ics-subscriptions/:id - Get a specific ICS subscription
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const userId = await requireAuth();
-    const { id } = await params;
+type RouteContext = { params: Promise<{ id: string }> };
 
-    const subscription = await prisma.icsSubscription.findFirst({
-      where: {
-        id,
-        userId,
-      },
-    });
+export const GET = apiHandler<RouteContext>(async (userId, _req, ctx) => {
+  const { id } = await ctx.params;
 
-    if (!subscription) {
-      return NextResponse.json(
-        { error: "Subscription not found" },
-        { status: 404 }
-      );
-    }
+  const subscription = await prisma.icsSubscription.findFirst({
+    where: {
+      id,
+      userId,
+    },
+  });
 
-    return NextResponse.json(subscription);
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error fetching ICS subscription:", error);
+  if (!subscription) {
     return NextResponse.json(
-      { error: "Failed to fetch ICS subscription" },
-      { status: 500 }
+      { error: "Subscription not found" },
+      { status: 404 }
     );
   }
-}
 
-// PUT /api/ics-subscriptions/:id - Update an ICS subscription
-export async function PUT(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const userId = await requireAuth();
-    const { id } = await params;
-    const body = await req.json();
-    const { name, url } = body;
+  return NextResponse.json(subscription);
+});
 
-    const existing = await prisma.icsSubscription.findFirst({
-      where: { id, userId },
-    });
+export const PUT = apiHandler<RouteContext>(async (userId, req, ctx) => {
+  const { id } = await ctx.params;
+  const body = await req.json();
+  const { name, url } = body;
 
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Subscription not found" },
-        { status: 404 }
-      );
-    }
+  const existing = await prisma.icsSubscription.findFirst({
+    where: { id, userId },
+  });
 
-    if (url !== undefined) {
-      try {
-        const parsed = new URL(url);
-        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-          return NextResponse.json(
-            { error: "Only http and https URLs are allowed" },
-            { status: 400 }
-          );
-        }
-      } catch {
+  if (!existing) {
+    return NextResponse.json(
+      { error: "Subscription not found" },
+      { status: 404 }
+    );
+  }
+
+  if (url !== undefined) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
         return NextResponse.json(
-          { error: "Invalid URL format" },
+          { error: "Only http and https URLs are allowed" },
           { status: 400 }
         );
       }
-    }
-
-    const updateData: { name?: string; url?: string } = {};
-    if (name !== undefined) updateData.name = name;
-    if (url !== undefined) updateData.url = url;
-
-    const updated = await prisma.icsSubscription.update({
-      where: { id },
-      data: updateData,
-    });
-
-    return NextResponse.json(updated);
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
+    } catch {
       return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
+        { error: "Invalid URL format" },
+        { status: 400 }
       );
     }
-    console.error("Error updating ICS subscription:", error);
+  }
+
+  const updateData: { name?: string; url?: string } = {};
+  if (name !== undefined) updateData.name = name;
+  if (url !== undefined) updateData.url = url;
+
+  const updated = await prisma.icsSubscription.update({
+    where: { id },
+    data: updateData,
+  });
+
+  return NextResponse.json(updated);
+});
+
+export const DELETE = apiHandler<RouteContext>(async (userId, _req, ctx) => {
+  const { id } = await ctx.params;
+
+  const existing = await prisma.icsSubscription.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
     return NextResponse.json(
-      { error: "Failed to update ICS subscription" },
-      { status: 500 }
+      { error: "Subscription not found" },
+      { status: 404 }
     );
   }
-}
 
-// DELETE /api/ics-subscriptions/:id - Delete an ICS subscription
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const userId = await requireAuth();
-    const { id } = await params;
+  await prisma.icsSubscription.delete({
+    where: { id },
+  });
 
-    const existing = await prisma.icsSubscription.findFirst({
-      where: { id, userId },
-    });
-
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Subscription not found" },
-        { status: 404 }
-      );
-    }
-
-    await prisma.icsSubscription.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: "Subscription deleted successfully" });
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error deleting ICS subscription:", error);
-    return NextResponse.json(
-      { error: "Failed to delete ICS subscription" },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({ message: "Subscription deleted successfully" });
+});

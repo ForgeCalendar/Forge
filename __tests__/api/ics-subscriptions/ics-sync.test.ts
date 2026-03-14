@@ -284,6 +284,6 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to sync ICS subscription");
+    expect(data.error).toBe("Internal server error");
   });
 });
