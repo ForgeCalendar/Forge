@@ -37,41 +37,20 @@ export function useGoals() {
   const deleteMutation = useDeleteGoalMutation();
 
   const create = useCallback(
-    async (input: CreateGoalInput): Promise<GoalWithId> => {
-      return new Promise((resolve, reject) => {
-        createMutation.mutate(input, {
-          onSuccess: (data) => resolve(data),
-          onError: (error) => reject(error),
-        });
-      });
-    },
+    (input: CreateGoalInput): Promise<GoalWithId> =>
+      createMutation.mutateAsync(input),
     [createMutation]
   );
 
   const update = useCallback(
-    async (id: string, input: UpdateGoalInput): Promise<GoalWithId | null> => {
-      return new Promise((resolve, reject) => {
-        updateMutation.mutate(
-          { id, input },
-          {
-            onSuccess: (data) => resolve(data),
-            onError: (error) => reject(error),
-          }
-        );
-      });
-    },
+    (id: string, input: UpdateGoalInput): Promise<GoalWithId | null> =>
+      updateMutation.mutateAsync({ id, input }),
     [updateMutation]
   );
 
   const deleteGoal = useCallback(
-    async (id: string): Promise<boolean> => {
-      return new Promise((resolve, reject) => {
-        deleteMutation.mutate(id, {
-          onSuccess: () => resolve(true),
-          onError: (error) => reject(error),
-        });
-      });
-    },
+    (id: string): Promise<boolean> =>
+      deleteMutation.mutateAsync(id).then(() => true),
     [deleteMutation]
   );
 
@@ -93,44 +72,20 @@ export function useCalendarEvents() {
   const deleteMutation = useDeleteEventMutation();
 
   const create = useCallback(
-    async (input: CreateCalendarEventInput): Promise<EventWithId> => {
-      return new Promise((resolve, reject) => {
-        createMutation.mutate(input, {
-          onSuccess: (data) => resolve(data),
-          onError: (error) => reject(error),
-        });
-      });
-    },
+    (input: CreateCalendarEventInput): Promise<EventWithId> =>
+      createMutation.mutateAsync(input),
     [createMutation]
   );
 
   const update = useCallback(
-    async (
-      id: string,
-      input: UpdateCalendarEventInput
-    ): Promise<EventWithId | null> => {
-      return new Promise((resolve, reject) => {
-        updateMutation.mutate(
-          { id, input },
-          {
-            onSuccess: (data) => resolve(data),
-            onError: (error) => reject(error),
-          }
-        );
-      });
-    },
+    (id: string, input: UpdateCalendarEventInput): Promise<EventWithId | null> =>
+      updateMutation.mutateAsync({ id, input }),
     [updateMutation]
   );
 
   const deleteEvent = useCallback(
-    async (id: string): Promise<boolean> => {
-      return new Promise((resolve, reject) => {
-        deleteMutation.mutate(id, {
-          onSuccess: () => resolve(true),
-          onError: (error) => reject(error),
-        });
-      });
-    },
+    (id: string): Promise<boolean> =>
+      deleteMutation.mutateAsync(id).then(() => true),
     [deleteMutation]
   );
 
@@ -152,44 +107,20 @@ export function useInfoTags() {
   const deleteMutation = useDeleteInfoTagMutation();
 
   const create = useCallback(
-    async (input: CreateInfoTagInput): Promise<InfoTagWithId> => {
-      return new Promise((resolve, reject) => {
-        createMutation.mutate(input, {
-          onSuccess: (data) => resolve(data),
-          onError: (error) => reject(error),
-        });
-      });
-    },
+    (input: CreateInfoTagInput): Promise<InfoTagWithId> =>
+      createMutation.mutateAsync(input),
     [createMutation]
   );
 
   const update = useCallback(
-    async (
-      id: string,
-      input: UpdateInfoTagInput
-    ): Promise<InfoTagWithId | null> => {
-      return new Promise((resolve, reject) => {
-        updateMutation.mutate(
-          { id, input },
-          {
-            onSuccess: (data) => resolve(data),
-            onError: (error) => reject(error),
-          }
-        );
-      });
-    },
+    (id: string, input: UpdateInfoTagInput): Promise<InfoTagWithId | null> =>
+      updateMutation.mutateAsync({ id, input }),
     [updateMutation]
   );
 
   const deleteInfoTag = useCallback(
-    async (id: string): Promise<boolean> => {
-      return new Promise((resolve, reject) => {
-        deleteMutation.mutate(id, {
-          onSuccess: () => resolve(true),
-          onError: (error) => reject(error),
-        });
-      });
-    },
+    (id: string): Promise<boolean> =>
+      deleteMutation.mutateAsync(id).then(() => true),
     [deleteMutation]
   );
 
