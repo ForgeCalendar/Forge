@@ -35,7 +35,7 @@ type ChatboxProps = {
 
 const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
   useAssistantInstructions(
-    prompt ? { instruction: prompt } : { instruction: "", disabled: true },
+    prompt ? { instruction: prompt } : { instruction: "", disabled: true }
   );
   return null;
 };
@@ -145,7 +145,7 @@ export function ChatboxComponent({
 
     if (historyData?.providerId && historyData?.modelId) {
       const providerExists = providers?.some(
-        (p: ProviderWithModels) => p.id === historyData.providerId,
+        (p: ProviderWithModels) => p.id === historyData.providerId
       );
       if (providerExists) {
         setSelectedProviderId(historyData.providerId);
@@ -165,14 +165,14 @@ export function ChatboxComponent({
   const handleProviderChange = (providerId: string): void => {
     setSelectedProviderId(providerId);
     const provider = providers?.find(
-      (p: ProviderWithModels) => p.id === providerId,
+      (p: ProviderWithModels) => p.id === providerId
     );
     if (provider && provider.models.length > 0) {
       const defaultModel = provider.models.find(
-        (m: ProviderWithModels["models"][number]) => m.isDefault,
+        (m: ProviderWithModels["models"][number]) => m.isDefault
       );
       setSelectedModelId(
-        defaultModel ? defaultModel.modelId : provider.models[0].modelId,
+        defaultModel ? defaultModel.modelId : provider.models[0].modelId
       );
     } else {
       setSelectedModelId("");

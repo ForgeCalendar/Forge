@@ -43,7 +43,7 @@ export default function GoalDecomposeDialog({
 
   const systemPrompt = useMemo(
     () => goalDecomposePrompt(goalTitle, goalDescription, dueDate),
-    [goalTitle, goalDescription, dueDate],
+    [goalTitle, goalDescription, dueDate]
   );
 
   const extraParams = useMemo(() => ({ goalId }), [goalId]);

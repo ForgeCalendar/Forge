@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 // GET /api/ics-subscriptions/:id - Get a specific ICS subscription
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await requireAuth();
@@ -21,7 +21,7 @@ export async function GET(
     if (!subscription) {
       return NextResponse.json(
         { error: "Subscription not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -30,13 +30,13 @@ export async function GET(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error fetching ICS subscription:", error);
     return NextResponse.json(
       { error: "Failed to fetch ICS subscription" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -44,7 +44,7 @@ export async function GET(
 // PUT /api/ics-subscriptions/:id - Update an ICS subscription
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await requireAuth();
@@ -59,7 +59,7 @@ export async function PUT(
     if (!existing) {
       return NextResponse.json(
         { error: "Subscription not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -69,13 +69,13 @@ export async function PUT(
         if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
           return NextResponse.json(
             { error: "Only http and https URLs are allowed" },
-            { status: 400 },
+            { status: 400 }
           );
         }
       } catch {
         return NextResponse.json(
           { error: "Invalid URL format" },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -94,13 +94,13 @@ export async function PUT(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error updating ICS subscription:", error);
     return NextResponse.json(
       { error: "Failed to update ICS subscription" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -108,7 +108,7 @@ export async function PUT(
 // DELETE /api/ics-subscriptions/:id - Delete an ICS subscription
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await requireAuth();
@@ -121,7 +121,7 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json(
         { error: "Subscription not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -134,13 +134,13 @@ export async function DELETE(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error deleting ICS subscription:", error);
     return NextResponse.json(
       { error: "Failed to delete ICS subscription" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

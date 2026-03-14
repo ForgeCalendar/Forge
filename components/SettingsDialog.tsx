@@ -17,10 +17,11 @@ import { InfoTagComponent } from "./InfoTagComponent";
 import { ChatboxComponent } from "@/components/Chatbox";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { tagEditorPrompt } from "@/components/prompts";
+import { useColorModeValue } from "./ui/color-mode";
 
 function InfoTagSettingsPane() {
   const [selectedTag, setSelectedTag] = useState<
-    (typeof sampleInfoTags)[number] | null
+    typeof sampleInfoTags[number] | null
   >(null);
   const {
     textMuted: subtitleColor,
@@ -514,7 +515,7 @@ function CalendarSettingsPane() {
   const cardBg = useColorModeValue("gray.50", "gray.800");
 
   const [subscriptions, setSubscriptions] = useState<IcsSubscriptionRecord[]>(
-    [],
+    []
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -539,7 +540,7 @@ function CalendarSettingsPane() {
       setError(null);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load subscriptions",
+        err instanceof Error ? err.message : "Failed to load subscriptions"
       );
     } finally {
       setLoading(false);

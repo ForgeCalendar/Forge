@@ -15,7 +15,7 @@ export const chatHistoryKeys = {
 };
 
 async function fetchChatHistory(
-  chatHistoryId: string,
+  chatHistoryId: string
 ): Promise<ChatHistoryResponse> {
   const response = await fetch(`/api/chat-history/${chatHistoryId}`);
   if (!response.ok) throw new Error("Failed to fetch chat history");
