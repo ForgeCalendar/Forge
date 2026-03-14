@@ -30,8 +30,7 @@ export default function LoginDialog({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { textMuted: dialogTextColor, textError: errorColor } =
-    useThemeTokens();
+  const { textError: errorColor } = useThemeTokens();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +60,7 @@ export default function LoginDialog({
       setPassword("");
       setError("");
       onOpenChange(false);
-    } catch (err) {
+    } catch {
       setError("Network error. Please try again.");
     } finally {
       setIsLoading(false);

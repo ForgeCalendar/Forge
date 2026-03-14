@@ -112,7 +112,6 @@ function GoalComponent({
   onUpdate,
 }: {
   goal: Goal | GoalWithId;
-  index: number;
   onRemove?: () => void;
   onUpdate?: () => void;
 }) {
@@ -242,7 +241,6 @@ export default function Sidebar({
             <GoalComponent
               key={"id" in g ? g.id : `${g.title}-${i}`}
               goal={g}
-              index={i}
               onRemove={() => {
                 if (onRemoveGoal) onRemoveGoal(i);
               }}
