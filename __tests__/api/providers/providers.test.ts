@@ -10,17 +10,15 @@ jest.mock("@/lib/auth", () => ({
 jest.mock("@/lib/ai-providers", () => ({
   isValidProviderType: jest.fn((type: string) =>
     ["anthropic", "openai", "google", "mistral", "openai-compatible"].includes(
-      type,
-    ),
+      type
+    )
   ),
   KNOWN_MODELS: {
     anthropic: [
       { modelId: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5" },
       { modelId: "claude-haiku-4-20250414", name: "Claude Haiku 4" },
     ],
-    openai: [
-      { modelId: "gpt-4o", name: "GPT-4o" },
-    ],
+    openai: [{ modelId: "gpt-4o", name: "GPT-4o" }],
     google: [],
     mistral: [],
     "openai-compatible": [],
@@ -80,7 +78,7 @@ describe("GET /api/providers", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const response = await GET();
@@ -92,9 +90,7 @@ describe("GET /api/providers", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.provider.findMany.mockRejectedValue(
-      new Error("Database error"),
-    );
+    prismaMock.provider.findMany.mockRejectedValue(new Error("Database error"));
 
     const response = await GET();
     const data = await response.json();
@@ -270,7 +266,7 @@ describe("POST /api/providers", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({
@@ -291,9 +287,7 @@ describe("POST /api/providers", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.provider.create.mockRejectedValue(
-      new Error("Database error"),
-    );
+    prismaMock.provider.create.mockRejectedValue(new Error("Database error"));
 
     const request = createMockRequest({
       method: "POST",

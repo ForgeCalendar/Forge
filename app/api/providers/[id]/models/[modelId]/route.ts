@@ -16,7 +16,10 @@ export async function PUT(
     });
 
     if (!provider) {
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Provider not found" },
+        { status: 404 }
+      );
     }
 
     const existing = await prisma.aIModel.findFirst({
@@ -73,7 +76,10 @@ export async function DELETE(
     });
 
     if (!provider) {
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Provider not found" },
+        { status: 404 }
+      );
     }
 
     const existing = await prisma.aIModel.findFirst({

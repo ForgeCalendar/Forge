@@ -17,7 +17,10 @@ export async function GET(
     });
 
     if (!provider) {
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Provider not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(provider);
@@ -51,12 +54,23 @@ export async function PUT(
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Provider not found" },
+        { status: 404 }
+      );
     }
 
     if (type !== undefined && !isValidProviderType(type)) {
       return NextResponse.json(
-        { error: `Invalid provider type. Must be one of: ${["anthropic", "openai", "google", "mistral", "openai-compatible"].join(", ")}` },
+        {
+          error: `Invalid provider type. Must be one of: ${[
+            "anthropic",
+            "openai",
+            "google",
+            "mistral",
+            "openai-compatible",
+          ].join(", ")}`,
+        },
         { status: 400 }
       );
     }
@@ -102,7 +116,10 @@ export async function DELETE(
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Provider not found" },
+        { status: 404 }
+      );
     }
 
     await prisma.provider.delete({ where: { id } });

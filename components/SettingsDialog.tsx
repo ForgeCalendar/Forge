@@ -187,9 +187,7 @@ function AccountSettingsPane() {
       setProviders(data);
       setError(null);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load providers",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load providers");
     } finally {
       setLoading(false);
     }
@@ -492,7 +490,9 @@ function AccountSettingsPane() {
           size="sm"
           mt={3}
           onClick={handleAdd}
-          disabled={saving || !newType[0] || !newName.trim() || !newApiKey.trim()}
+          disabled={
+            saving || !newType[0] || !newName.trim() || !newApiKey.trim()
+          }
         >
           Add
         </Button>

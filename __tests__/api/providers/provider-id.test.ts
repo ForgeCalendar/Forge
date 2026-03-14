@@ -10,8 +10,8 @@ jest.mock("@/lib/auth", () => ({
 jest.mock("@/lib/ai-providers", () => ({
   isValidProviderType: jest.fn((type: string) =>
     ["anthropic", "openai", "google", "mistral", "openai-compatible"].includes(
-      type,
-    ),
+      type
+    )
   ),
 }));
 
@@ -80,7 +80,7 @@ describe("GET /api/providers/:id", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({ method: "GET" });
@@ -96,7 +96,7 @@ describe("GET /api/providers/:id", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.provider.findFirst.mockRejectedValue(
-      new Error("Database error"),
+      new Error("Database error")
     );
 
     const request = createMockRequest({ method: "GET" });
@@ -209,7 +209,7 @@ describe("PUT /api/providers/:id", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({
@@ -228,9 +228,7 @@ describe("PUT /api/providers/:id", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
-    prismaMock.provider.update.mockRejectedValue(
-      new Error("Database error"),
-    );
+    prismaMock.provider.update.mockRejectedValue(new Error("Database error"));
 
     const request = createMockRequest({
       method: "PUT",
@@ -287,7 +285,7 @@ describe("DELETE /api/providers/:id", () => {
 
   it("should return 401 when user is not authenticated", async () => {
     (auth.requireAuth as jest.Mock).mockRejectedValue(
-      new Error("Unauthorized"),
+      new Error("Unauthorized")
     );
 
     const request = createMockRequest({ method: "DELETE" });
@@ -303,9 +301,7 @@ describe("DELETE /api/providers/:id", () => {
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
     prismaMock.provider.findFirst.mockResolvedValue(mockProvider as any);
-    prismaMock.provider.delete.mockRejectedValue(
-      new Error("Database error"),
-    );
+    prismaMock.provider.delete.mockRejectedValue(new Error("Database error"));
 
     const request = createMockRequest({ method: "DELETE" });
     const params = Promise.resolve({ id: "provider-1" });

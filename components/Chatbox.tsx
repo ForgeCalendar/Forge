@@ -87,9 +87,7 @@ function useChatHistoryById(chatHistoryId: string | null | undefined): {
             (msg: ChatMessage, idx: number) => ({
               ...msg,
               id: msg.id || `history-${idx}-${Date.now()}`,
-              createdAt: msg.createdAt
-                ? new Date(msg.createdAt)
-                : undefined,
+              createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
             })
           );
           setData({ ...json, messages });
@@ -262,7 +260,9 @@ export function ChatboxComponent({
     ...(hasHistory ? { messages: initialMessages } : {}),
   });
 
-  const providerKey = `${name}-${systemPrompt ?? "default"}-${extraParamsKey}-${chatHistoryId ?? "new"}`;
+  const providerKey = `${name}-${systemPrompt ?? "default"}-${extraParamsKey}-${
+    chatHistoryId ?? "new"
+  }`;
 
   if (chatHistoryId && historyLoading) {
     return (

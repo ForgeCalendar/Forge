@@ -31,8 +31,16 @@ async function main() {
       envKey: "ANTHROPIC_API_KEY",
       name: "Anthropic",
       models: [
-        { modelId: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5", isDefault: true },
-        { modelId: "claude-haiku-4-20250414", name: "Claude Haiku 4", isDefault: false },
+        {
+          modelId: "claude-sonnet-4-5-20250929",
+          name: "Claude Sonnet 4.5",
+          isDefault: true,
+        },
+        {
+          modelId: "claude-haiku-4-20250414",
+          name: "Claude Haiku 4",
+          isDefault: false,
+        },
       ],
     },
     {
@@ -49,7 +57,11 @@ async function main() {
       envKey: "GOOGLE_API_KEY",
       name: "Google AI",
       models: [
-        { modelId: "gemini-2.5-flash", name: "Gemini 2.5 Flash", isDefault: true },
+        {
+          modelId: "gemini-2.5-flash",
+          name: "Gemini 2.5 Flash",
+          isDefault: true,
+        },
       ],
     },
     {
@@ -57,7 +69,11 @@ async function main() {
       envKey: "MISTRAL_API_KEY",
       name: "Mistral",
       models: [
-        { modelId: "mistral-large-latest", name: "Mistral Large", isDefault: true },
+        {
+          modelId: "mistral-large-latest",
+          name: "Mistral Large",
+          isDefault: true,
+        },
       ],
     },
   ];

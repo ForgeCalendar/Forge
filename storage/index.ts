@@ -47,7 +47,4 @@ export {
   useDefaultProviderModel,
 } from "./useProvidersQuery";
 
-export type {
-  ProviderWithModels,
-  ProviderModel,
-} from "./useProvidersQuery";
+export type { ProviderWithModels, ProviderModel } from "./useProvidersQuery";

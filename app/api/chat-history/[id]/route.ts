@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const userId = await requireAuth();
@@ -23,7 +23,7 @@ export async function GET(
     if (!chatHistory) {
       return NextResponse.json(
         { error: "Chat history not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -45,13 +45,13 @@ export async function GET(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
     console.error("Error fetching chat history:", error);
     return NextResponse.json(
       { error: "Failed to fetch chat history" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

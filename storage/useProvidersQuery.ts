@@ -52,7 +52,7 @@ export function useDefaultProviderModel(): {
 
     for (const provider of providers) {
       const defaultModel = provider.models.find(
-        (m: ProviderModel) => m.isDefault,
+        (m: ProviderModel) => m.isDefault
       );
       if (defaultModel) {
         return { providerId: provider.id, modelId: defaultModel.modelId };

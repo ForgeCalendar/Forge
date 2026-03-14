@@ -12,7 +12,7 @@ export const PROVIDER_TYPES = [
   "openai-compatible",
 ] as const;
 
-export type ProviderType = (typeof PROVIDER_TYPES)[number];
+export type ProviderType = typeof PROVIDER_TYPES[number];
 
 export function isValidProviderType(type: string): type is ProviderType {
   return (PROVIDER_TYPES as readonly string[]).includes(type);
@@ -46,7 +46,7 @@ export const KNOWN_MODELS: Record<
 
 export function createLanguageModel(
   provider: Pick<Provider, "type" | "apiKey" | "baseUrl">,
-  modelId: string,
+  modelId: string
 ) {
   const opts = {
     apiKey: provider.apiKey,

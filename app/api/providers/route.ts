@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { isValidProviderType, KNOWN_MODELS, type ProviderType } from "@/lib/ai-providers";
+import {
+  isValidProviderType,
+  KNOWN_MODELS,
+  type ProviderType,
+} from "@/lib/ai-providers";
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -44,7 +48,15 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     if (!isValidProviderType(type)) {
       return NextResponse.json(
-        { error: `Invalid provider type. Must be one of: ${["anthropic", "openai", "google", "mistral", "openai-compatible"].join(", ")}` },
+        {
+          error: `Invalid provider type. Must be one of: ${[
+            "anthropic",
+            "openai",
+            "google",
+            "mistral",
+            "openai-compatible",
+          ].join(", ")}`,
+        },
         { status: 400 }
       );
     }
