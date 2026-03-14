@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  try {
-    const userId = await requireAuth();
-    const { id } = await params;
+type RouteContext = { params: Promise<{ id: string }> };
+
+export const GET = apiHandler<RouteContext>(
+  async (userId, _req, ctx): Promise<NextResponse> => {
+    const { id } = await ctx.params;
 
     const chatHistory = await prisma.chatHistory.findFirst({
       where: { id, userId },
@@ -41,17 +39,5 @@ export async function GET(
       modelId: chatHistory.modelId,
       messages,
     });
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error fetching chat history:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch chat history" },
-      { status: 500 }
-    );
   }
-}
+);
