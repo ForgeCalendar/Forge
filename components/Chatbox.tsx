@@ -16,18 +16,9 @@ import {
   useProvidersQuery,
   useDefaultProviderModel,
 } from "@/storage/useProvidersQuery";
+import { useChatHistoryQuery } from "@/storage/useChatHistoryQuery";
 import type { ProviderWithModels } from "@/storage/useProvidersQuery";
 import type { FC } from "react";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ChatMessage = any;
-
-type ChatHistoryResponse = {
-  id: string;
-  providerId: string | null;
-  modelId: string | null;
-  messages: ChatMessage[];
-};
 
 type ChatboxProps = {
   name: string;
@@ -60,53 +51,6 @@ const AutoSendMessage: FC<{ message: string }> = ({ message }) => {
 
   return null;
 };
-
-function useChatHistoryById(chatHistoryId: string | null | undefined): {
-  data: ChatHistoryResponse | null;
-  isLoading: boolean;
-} {
-  const [data, setData] = useState<ChatHistoryResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const fetchedRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!chatHistoryId || fetchedRef.current === chatHistoryId) return;
-    fetchedRef.current = chatHistoryId;
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    fetch(`/api/chat-history/${chatHistoryId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch");
-        return res.json();
-      })
-      .then((json: ChatHistoryResponse) => {
-        if (!cancelled) {
-          const messages = (json.messages ?? []).map(
-            (msg: ChatMessage, idx: number) => ({
-              ...msg,
-              id: msg.id || `history-${idx}-${Date.now()}`,
-              createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
-            })
-          );
-          setData({ ...json, messages });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chatHistoryId]);
-
-  return { data, isLoading };
-}
 
 function ProviderModelSelector({
   providers,
@@ -186,7 +130,7 @@ export function ChatboxComponent({
   const defaultPM = useDefaultProviderModel();
 
   const { data: historyData, isLoading: historyLoading } =
-    useChatHistoryById(chatHistoryId);
+    useChatHistoryQuery(chatHistoryId);
 
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [selectedModelId, setSelectedModelId] = useState<string>("");
