@@ -5,76 +5,81 @@ import {
   mockIcsSubscription,
 } from "@/__tests__/utils/test-helpers";
 import * as auth from "@/lib/auth";
+import type { ParsedIcsData, IcsEvent } from "@jalexw/calendar-ics-parser";
 
 jest.mock("@/lib/auth", () => ({
   requireAuth: jest.fn(),
 }));
 
-jest.mock("node-ical", () => ({
-  async: {
-    fromURL: jest.fn(),
-  },
-}));
+// Track the mock so tests can control what parseIcsData resolves to.
+const mockParseIcsData = jest.fn<Promise<ParsedIcsData>, [string]>();
 
 jest.mock("@jalexw/calendar-ics-parser", () => {
-  const ical = require("node-ical");
-  const mockFromURL = ical.async.fromURL as jest.Mock;
-
-  // Mock parser: always return whatever node-ical's async.fromURL is configured to resolve to.
-  const parseIcs = jest.fn(async () => {
-    // If the tests have set mockFromURL.mockResolvedValue(...), calling mockFromURL()
-    // will return that value; otherwise this will resolve to undefined.
-    return await mockFromURL();
-  });
-
+  // Keep the real parseIcsDate so date conversion works as expected.
+  const actual = jest.requireActual("@jalexw/calendar-ics-parser");
   return {
-    __esModule: true,
-    default: { parseIcs },
-    parseIcs,
+    ...actual,
+    parseIcsData: (...args: [string]) => mockParseIcsData(...args),
   };
 });
 
-import * as ical from "node-ical";
-const mockFromURL = ical.async.fromURL as jest.Mock;
+// Mock global.fetch so the route's fetch() returns controlled text.
+const mockFetch = jest.fn<Promise<Partial<Response>>, [string]>();
+(global as unknown as { fetch: typeof mockFetch }).fetch = mockFetch;
 
-// Mock global.fetch so that the route's fetch() calls use the same data as mockFromURL.
-(global as any).fetch = jest.fn(async (url: string) => {
-  // Delegate to mockFromURL so existing test setups using mockFromURL.mockResolvedValue(...)
-  // continue to control the ICS data seen by the route.
-  const data = await mockFromURL(url);
-
+/** Helper to build a minimal ParsedIcsData with the given events. */
+function makeParsedIcsData(events: IcsEvent[]): ParsedIcsData {
   return {
+    calendars: [
+      {
+        version: "2.0" as const,
+        prodid: "-//Test//Test//EN",
+        events,
+        todos: [],
+        journals: [],
+        freebusys: [],
+        timezones: [],
+        unparsedComponents: [],
+      },
+    ],
+    metadata: {
+      totalEvents: events.length,
+      totalTodos: 0,
+      totalJournals: 0,
+      totalFreebusys: 0,
+      totalTimezones: 0,
+      parseErrors: [],
+      parseWarnings: [],
+    },
+  };
+}
+
+/** Helper to set up fetch + parseIcsData mocks for a set of events. */
+function mockIcsResponse(events: IcsEvent[]): void {
+  mockFetch.mockResolvedValue({
     ok: true,
     status: 200,
-    // The parser mock ignores the actual text value and instead returns mockFromURL()'s data,
-    // so this can be any placeholder string.
     text: async () => "BEGIN:VCALENDAR\nMOCKED\nEND:VCALENDAR",
-    // Optional: provide a minimal json() in case the route inspects it for debugging.
-    json: async () => data,
-  } as any;
-});
+  } as Response);
+  mockParseIcsData.mockResolvedValue(makeParsedIcsData(events));
+}
 
-const makeDateWithTz = (iso: string, tz?: string): ical.DateWithTimeZone => {
-  const d = new Date(iso) as ical.DateWithTimeZone;
-  if (tz) d.tz = tz;
-  return d;
-};
+/** Helper to set up fetch + parseIcsData to simulate a network error. */
+function mockFetchFailure(error: Error): void {
+  mockFetch.mockRejectedValue(error);
+}
 
-const mockVEvent: ical.VEvent = {
-  type: "VEVENT",
+const mockVEvent: IcsEvent = {
   uid: "event-uid-123@google.com",
-  dtstamp: makeDateWithTz("2024-06-01T00:00:00Z"),
+  dtstamp: "20240601T000000Z",
   summary: "Team Standup",
   description: "Daily standup meeting",
   location: "Conference Room A",
-  start: makeDateWithTz("2024-06-01T10:00:00Z", "America/New_York"),
-  end: makeDateWithTz("2024-06-01T10:30:00Z", "America/New_York"),
-  datetype: "date-time",
+  dtstart: "20240601T100000Z",
+  dtend: "20240601T103000Z",
   status: "CONFIRMED",
-  organizer: "mailto:organizer@example.com",
-  transparency: "OPAQUE",
-  categories: ["work", "standup"],
   url: "https://meet.google.com/abc",
+  categories: ["work", "standup"],
 };
 
 describe("POST /api/ics-subscriptions/:id/sync", () => {
@@ -86,15 +91,13 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any
+      mockIcsSubscription as never
     );
 
-    mockFromURL.mockResolvedValue({
-      "event-uid-123@google.com": mockVEvent,
-    });
+    mockIcsResponse([mockVEvent]);
 
-    prismaMock.event.upsert.mockResolvedValue({} as any);
-    prismaMock.icsSubscription.update.mockResolvedValue({} as any);
+    prismaMock.event.upsert.mockResolvedValue({} as never);
+    prismaMock.icsSubscription.update.mockResolvedValue({} as never);
 
     const request = createMockRequest({ method: "POST" });
     const params = Promise.resolve({ id: "ics-sub-1" });
@@ -106,7 +109,10 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     expect(data.syncedCount).toBe(1);
     expect(data.message).toBe("Synced 1 events");
 
-    expect(mockFromURL).toHaveBeenCalledWith(mockIcsSubscription.url);
+    expect(mockFetch).toHaveBeenCalledWith(
+      mockIcsSubscription.url,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
 
     expect(prismaMock.event.upsert).toHaveBeenCalledWith({
       where: {
@@ -124,11 +130,10 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
         location: "Conference Room A",
         start: "2024-06-01T10:00:00.000Z",
         end: "2024-06-01T10:30:00.000Z",
-        startTimezone: "America/New_York",
-        endTimezone: "America/New_York",
+        startTimezone: null,
+        endTimezone: null,
         isAllDay: false,
         status: "CONFIRMED",
-        transparency: "OPAQUE",
         kind: "ics",
       }),
       update: expect.objectContaining({
@@ -147,24 +152,21 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any
+      mockIcsSubscription as never
     );
 
-    const allDayEvent: ical.VEvent = {
-      ...mockVEvent,
+    const allDayEvent: IcsEvent = {
       uid: "all-day-uid@google.com",
+      dtstamp: "20240704T000000Z",
       summary: "Holiday",
-      datetype: "date",
-      start: makeDateWithTz("2024-07-04T00:00:00Z"),
-      end: makeDateWithTz("2024-07-05T00:00:00Z"),
+      dtstart: "20240704",
+      dtend: "20240705",
     };
 
-    mockFromURL.mockResolvedValue({
-      "all-day-uid@google.com": allDayEvent,
-    });
+    mockIcsResponse([allDayEvent]);
 
-    prismaMock.event.upsert.mockResolvedValue({} as any);
-    prismaMock.icsSubscription.update.mockResolvedValue({} as any);
+    prismaMock.event.upsert.mockResolvedValue({} as never);
+    prismaMock.icsSubscription.update.mockResolvedValue({} as never);
 
     const request = createMockRequest({ method: "POST" });
     const params = Promise.resolve({ id: "ics-sub-1" });
@@ -184,27 +186,24 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     );
   });
 
-  it("should handle ParameterValue objects for summary/description/location", async () => {
+  it("should skip events without dtstart", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any
+      mockIcsSubscription as never
     );
 
-    const eventWithParams: ical.VEvent = {
-      ...mockVEvent,
-      uid: "param-uid@google.com",
-      summary: { val: "Besprechung", params: { LANGUAGE: "de" } },
-      description: { val: "Tägliches Meeting", params: {} },
-      location: { val: "Raum A", params: { LANGUAGE: "de" } },
+    const eventNoDtstart: IcsEvent = {
+      uid: "no-start@google.com",
+      dtstamp: "20240601T000000Z",
+      summary: "No Start",
+      // dtstart is omitted
     };
 
-    mockFromURL.mockResolvedValue({
-      "param-uid@google.com": eventWithParams,
-    });
+    mockIcsResponse([eventNoDtstart, mockVEvent]);
 
-    prismaMock.event.upsert.mockResolvedValue({} as any);
-    prismaMock.icsSubscription.update.mockResolvedValue({} as any);
+    prismaMock.event.upsert.mockResolvedValue({} as never);
+    prismaMock.icsSubscription.update.mockResolvedValue({} as never);
 
     const request = createMockRequest({ method: "POST" });
     const params = Promise.resolve({ id: "ics-sub-1" });
@@ -213,40 +212,7 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(prismaMock.event.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        create: expect.objectContaining({
-          title: "Besprechung",
-          description: "Tägliches Meeting",
-          location: "Raum A",
-        }),
-      })
-    );
-  });
-
-  it("should skip non-VEVENT components", async () => {
-    (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-
-    prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any
-    );
-
-    mockFromURL.mockResolvedValue({
-      vcalendar: { type: "VCALENDAR", version: "2.0" },
-      timezone: { type: "VTIMEZONE", tzid: "America/New_York" },
-      "event-uid-123@google.com": mockVEvent,
-    });
-
-    prismaMock.event.upsert.mockResolvedValue({} as any);
-    prismaMock.icsSubscription.update.mockResolvedValue({} as any);
-
-    const request = createMockRequest({ method: "POST" });
-    const params = Promise.resolve({ id: "ics-sub-1" });
-
-    const response = await POST(request, { params });
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
+    // Only the valid event should be synced
     expect(data.syncedCount).toBe(1);
     expect(prismaMock.event.upsert).toHaveBeenCalledTimes(1);
   });
@@ -270,10 +236,10 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any
+      mockIcsSubscription as never
     );
 
-    mockFromURL.mockRejectedValue(new Error("Network error"));
+    mockFetchFailure(new Error("Network error"));
 
     const request = createMockRequest({ method: "POST" });
     const params = Promise.resolve({ id: "ics-sub-1" });
@@ -304,12 +270,10 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.icsSubscription.findFirst.mockResolvedValue(
-      mockIcsSubscription as any
+      mockIcsSubscription as never
     );
 
-    mockFromURL.mockResolvedValue({
-      "event-uid-123@google.com": mockVEvent,
-    });
+    mockIcsResponse([mockVEvent]);
 
     prismaMock.event.upsert.mockRejectedValue(new Error("Database error"));
 
