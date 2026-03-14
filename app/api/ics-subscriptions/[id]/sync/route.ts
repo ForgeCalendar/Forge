@@ -1,61 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import type { VEvent, CalendarComponent, ParameterValue } from "node-ical";
 import {
   parseIcsData,
-  formatParsedData,
   type ParsedIcsData,
   parseIcsDate,
 } from "@jalexw/calendar-ics-parser";
 
-function extractParameterValue(pv: ParameterValue | undefined): string | null {
-  if (!pv) return null;
-  return typeof pv === "string" ? pv : pv.val;
-}
-
-function parseIcsDateToISO(icsDateString: string): string {
-  if (!icsDateString) return new Date().toISOString();
-
-  const isAlreadyISO = icsDateString.includes("-");
-  if (isAlreadyISO) {
-    return new Date(icsDateString).toISOString();
-  }
-
-  const isUTC = icsDateString.endsWith("Z");
-  const dateWithoutZ = icsDateString.replace("Z", "");
-
-  const tIndex = dateWithoutZ.indexOf("T");
-  const hasTime = tIndex !== -1;
-
-  if (hasTime && dateWithoutZ.length >= 15) {
-    const year = dateWithoutZ.substring(0, 4);
-    const month = dateWithoutZ.substring(4, 6);
-    const day = dateWithoutZ.substring(6, 8);
-    const hour = dateWithoutZ.substring(tIndex + 1, tIndex + 3);
-    const minute = dateWithoutZ.substring(tIndex + 3, tIndex + 5);
-    const second = dateWithoutZ.substring(tIndex + 5, tIndex + 7) || "00";
-
-    const isoFormatted = `${year}-${month}-${day}T${hour}:${minute}:${second}${
-      isUTC ? ".000Z" : ""
-    }`;
-    return new Date(isoFormatted).toISOString();
-  }
-
-  if (dateWithoutZ.length === 8) {
-    const year = dateWithoutZ.substring(0, 4);
-    const month = dateWithoutZ.substring(4, 6);
-    const day = dateWithoutZ.substring(6, 8);
-    return `${year}-${month}-${day}T00:00:00.000Z`;
-  }
-
-  return new Date(icsDateString).toISOString();
+/**
+ * Determine whether an ICS date string represents an all-day event.
+ * All-day dates are bare YYYYMMDD (8 chars, no "T").
+ */
+function isAllDayDate(icsDateString: string): boolean {
+  return !icsDateString.includes("T");
 }
 
 // POST /api/ics-subscriptions/:id/sync - Sync events from an ICS subscription
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const userId = await requireAuth();
@@ -68,45 +31,77 @@ export async function POST(
     if (!subscription) {
       return NextResponse.json(
         { error: "Subscription not found" },
-        { status: 404 }
+        { status: 404 },
+      );
+    }
+
+    // Validate URL scheme to prevent SSRF
+    try {
+      const parsed = new URL(subscription.url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return NextResponse.json(
+          { error: "Only http and https URLs are allowed" },
+          { status: 400 },
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid subscription URL" },
+        { status: 400 },
       );
     }
 
     let calendarData: ParsedIcsData;
-    let response = await fetch(subscription.url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    let response: Response;
+    try {
+      response = await fetch(subscription.url, { signal: controller.signal });
+    } catch (fetchError) {
+      console.error("Error fetching ICS data:", fetchError);
+      return NextResponse.json(
+        { error: "Failed to fetch ICS data from URL" },
+        { status: 502 },
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     if (!response.ok) {
       return NextResponse.json(
         { error: "Failed to fetch ICS data from URL" },
-        { status: 502 }
+        { status: 502 },
       );
     }
+
     try {
-      let text: string = await response.text();
-      console.log(text);
+      const text: string = await response.text();
       calendarData = await parseIcsData(text);
     } catch (parseError) {
       console.error("Error parsing ICS data:", parseError);
       return NextResponse.json(
         { error: "ICS Parsing failed." },
-        { status: 500 }
+        { status: 500 },
       );
     }
-    calendarData.calendars;
+
     let synced = 0;
-    calendarData.calendars.forEach((calendar) => {
-      calendar.events.forEach(async (event) => {
+    for (const calendar of calendarData.calendars) {
+      for (const event of calendar.events) {
         const uid = event.uid;
 
-        const parsedStart = parseIcsDate(event.dtstart ?? "") as any;
-        const parsedEnd = parseIcsDate(
-          event.dtend ?? event.dtstart ?? ""
-        ) as any;
+        if (!event.dtstart) continue;
 
-        const startDate = parsedStart?.date ?? null;
-        const endDate = parsedEnd?.date ?? startDate;
-        const isAllDay = !!parsedStart?.isAllDay;
-        const startTimezone = parsedStart?.timezone ?? null;
-        const endTimezone = parsedEnd?.timezone ?? startTimezone;
+        let startDate: string;
+        let endDate: string;
+        try {
+          startDate = parseIcsDate(event.dtstart).toISOString();
+          endDate = parseIcsDate(event.dtend ?? event.dtstart).toISOString();
+        } catch {
+          continue;
+        }
+
+        const isAllDay = isAllDayDate(event.dtstart);
 
         await prisma.event.upsert({
           where: {
@@ -119,16 +114,16 @@ export async function POST(
             userId,
             subscriptionId: subscription.id,
             uid,
-            title: extractParameterValue(event.summary) ?? "(No title)",
-            description: extractParameterValue(event.description) ?? null,
-            location: extractParameterValue(event.location) ?? null,
+            title: event.summary ?? "(No title)",
+            description: event.description ?? null,
+            location: event.location ?? null,
             start: startDate,
             end: endDate,
-            startTimezone,
-            endTimezone,
+            startTimezone: null,
+            endTimezone: null,
             isAllDay,
             status: event.status ?? null,
-            recurrenceRule: event.rrule ? event.rrule.toString() : null,
+            recurrenceRule: event.rrule ?? null,
             categories: event.categories
               ? JSON.stringify(event.categories)
               : null,
@@ -137,16 +132,16 @@ export async function POST(
             kind: "ics",
           },
           update: {
-            title: extractParameterValue(event.summary) ?? "(No title)",
-            description: extractParameterValue(event.description),
-            location: extractParameterValue(event.location),
+            title: event.summary ?? "(No title)",
+            description: event.description ?? null,
+            location: event.location ?? null,
             start: startDate,
             end: endDate,
-            startTimezone,
-            endTimezone,
+            startTimezone: null,
+            endTimezone: null,
             isAllDay,
             status: event.status ?? null,
-            recurrenceRule: event.rrule ? event.rrule.toString() : null,
+            recurrenceRule: event.rrule ?? null,
             categories: event.categories
               ? JSON.stringify(event.categories)
               : null,
@@ -155,8 +150,8 @@ export async function POST(
           },
         });
         synced++;
-      });
-    });
+      }
+    }
 
     await prisma.icsSubscription.update({
       where: { id: subscription.id },
@@ -171,13 +166,13 @@ export async function POST(
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
     console.error("Error syncing ICS subscription:", error);
     return NextResponse.json(
       { error: "Failed to sync ICS subscription" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -20,7 +20,7 @@ import { tagEditorPrompt } from "@/components/prompts";
 
 function InfoTagSettingsPane() {
   const [selectedTag, setSelectedTag] = useState<
-    typeof sampleInfoTags[number] | null
+    (typeof sampleInfoTags)[number] | null
   >(null);
   const subtitleColor = useColorModeValue("gray.600", "gray.300");
   const cardBg = useColorModeValue("white", "gray.900");
@@ -412,7 +412,7 @@ function CalendarSettingsPane() {
   const cardBg = useColorModeValue("gray.50", "gray.800");
 
   const [subscriptions, setSubscriptions] = useState<IcsSubscriptionRecord[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -437,7 +437,7 @@ function CalendarSettingsPane() {
       setError(null);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load subscriptions"
+        err instanceof Error ? err.message : "Failed to load subscriptions",
       );
     } finally {
       setLoading(false);
@@ -532,9 +532,15 @@ function CalendarSettingsPane() {
     }
   }
 
-  function maskUrl(url: string) {
-    if (url.length <= 35) return url;
-    return url.slice(0, 30) + "...";
+  function maskUrl(url: string): string {
+    try {
+      const { hostname } = new URL(url);
+      const lastFour = url.slice(-4);
+      return `${hostname}/***${lastFour}`;
+    } catch {
+      if (url.length <= 12) return url;
+      return url.slice(0, 8) + "***" + url.slice(-4);
+    }
   }
 
   return (
