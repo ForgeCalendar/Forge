@@ -11,7 +11,10 @@ export const GET = apiHandler<RouteContext>(
     const { id } = await ctx.params;
 
     const provider = await verifyOwnership(
-      prisma.provider.findFirst({ where: { id, userId }, include: { models: true } }),
+      prisma.provider.findFirst({
+        where: { id, userId },
+        include: { models: true },
+      }),
       "Provider not found"
     );
     if (provider instanceof NextResponse) return provider;

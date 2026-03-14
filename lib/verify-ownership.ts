@@ -20,10 +20,7 @@ export async function verifyOwnership<T>(
 ): Promise<T | NextResponse> {
   const record = await query;
   if (!record) {
-    return NextResponse.json(
-      { error: notFoundMessage },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: notFoundMessage }, { status: 404 });
   }
   return record;
 }
