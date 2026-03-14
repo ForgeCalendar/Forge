@@ -11,10 +11,6 @@ import { goalDecomposePrompt } from "@/components/prompts";
 import { useQueryClient } from "@tanstack/react-query";
 import { goalKeys } from "@/storage/useGoalsQuery";
 import { eventKeys } from "@/storage/useEventsQuery";
-import {
-  useChatHistoryQuery,
-  chatHistoryKeys,
-} from "@/storage/useChatHistoryQuery";
 import { useMemo } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
 
@@ -23,6 +19,7 @@ type Props = {
   goalTitle: string;
   goalDescription: string;
   dueDate: string | null;
+  chatHistoryId?: string | null;
   open: boolean;
   onClose: () => void;
   mode?: "create" | "update";
@@ -33,6 +30,7 @@ export default function GoalDecomposeDialog({
   goalTitle,
   goalDescription,
   dueDate,
+  chatHistoryId,
   open,
   onClose,
   mode = "create",
@@ -41,9 +39,6 @@ export default function GoalDecomposeDialog({
   const { textSecondary: subtitleColor } = useThemeTokens();
 
   const isUpdate = mode === "update";
-  const { data: chatHistory, isLoading: historyLoading } = useChatHistoryQuery(
-    isUpdate && open ? goalId : null
-  );
 
   const systemPrompt = useMemo(
     () => goalDecomposePrompt(goalTitle, goalDescription, dueDate),
@@ -52,12 +47,9 @@ export default function GoalDecomposeDialog({
 
   const extraParams = useMemo(() => ({ goalId }), [goalId]);
 
-  const hasHistory = isUpdate && chatHistory && chatHistory.length > 0;
-
   function handleClose() {
     queryClient.invalidateQueries({ queryKey: goalKeys.all });
     queryClient.invalidateQueries({ queryKey: eventKeys.all });
-    queryClient.invalidateQueries({ queryKey: chatHistoryKeys.detail(goalId) });
     onClose();
   }
 
@@ -103,22 +95,18 @@ export default function GoalDecomposeDialog({
                 display="flex"
                 flexDirection="column"
               >
-                {isUpdate && historyLoading ? (
-                  <Text color={subtitleColor}>Loading conversation...</Text>
-                ) : (
-                  <ChatboxComponent
-                    name={`decompose-${goalId}`}
-                    systemPrompt={systemPrompt}
-                    summaryPrompt="Summarize the tasks we agreed on for this goal."
-                    extraParams={extraParams}
-                    initialMessage={
-                      hasHistory
-                        ? undefined
-                        : "Break down this goal into tasks and save them to my calendar."
-                    }
-                    initialMessages={hasHistory ? chatHistory : undefined}
-                  />
-                )}
+                <ChatboxComponent
+                  name={`decompose-${goalId}`}
+                  chatHistoryId={isUpdate ? chatHistoryId : undefined}
+                  systemPrompt={systemPrompt}
+                  summaryPrompt="Summarize the tasks we agreed on for this goal."
+                  extraParams={extraParams}
+                  initialMessage={
+                    isUpdate && chatHistoryId
+                      ? undefined
+                      : "Break down this goal into tasks and save them to my calendar."
+                  }
+                />
               </Box>
             </Dialog.Body>
             <Dialog.Footer>

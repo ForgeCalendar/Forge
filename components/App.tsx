@@ -372,6 +372,7 @@ export default function App() {
     title: string;
     description: string;
     dueDate: string | null;
+    chatHistoryId?: string | null;
     mode: "create" | "update";
   } | null>(null);
   const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
@@ -437,6 +438,7 @@ export default function App() {
       title: goal.title,
       description: goal.description,
       dueDate: goal.dueDate,
+      chatHistoryId: goal.chatHistoryId,
       mode: "update",
     });
   };
@@ -477,6 +479,7 @@ export default function App() {
           goalTitle={decomposeGoal.title}
           goalDescription={decomposeGoal.description}
           dueDate={decomposeGoal.dueDate}
+          chatHistoryId={decomposeGoal.chatHistoryId}
           open={true}
           onClose={() => setDecomposeGoal(null)}
           mode={decomposeGoal.mode}
