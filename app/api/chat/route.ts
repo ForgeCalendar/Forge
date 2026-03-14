@@ -1,72 +1,43 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
 import { convertToModelMessages, streamText, tool } from "ai";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { AIProvider } from "@/lib/generated/prisma";
+import { createLanguageModel } from "@/lib/ai-providers";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    // Authenticate the user
     const userId = await requireAuth();
 
-    // Get the provider from query params
     const url = new URL(req.url);
-    const provider = url.searchParams.get("provider");
+    const providerId = url.searchParams.get("providerId");
+    const modelId = url.searchParams.get("modelId");
+
+    if (!providerId || !modelId) {
+      return NextResponse.json(
+        { error: "providerId and modelId parameters are required" },
+        { status: 400 }
+      );
+    }
+
+    const provider = await prisma.provider.findFirst({
+      where: { id: providerId, userId },
+    });
 
     if (!provider) {
       return NextResponse.json(
-        { error: "Provider parameter is required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate provider
-    if (!Object.values(AIProvider).includes(provider as AIProvider)) {
-      return NextResponse.json(
-        {
-          error: `Invalid provider. Must be one of: ${Object.values(
-            AIProvider
-          ).join(", ")}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Fetch the user's API key for the specified provider
-    const apiKeyRecord = await prisma.aIAgentApiKey.findUnique({
-      where: {
-        userId_provider: {
-          userId,
-          provider: provider as AIProvider,
-        },
-      },
-    });
-
-    if (!apiKeyRecord) {
-      return NextResponse.json(
-        {
-          error: `No API key found for provider '${provider}'. Please add one in settings.`,
-        },
+        { error: "Provider not found. Please configure one in settings." },
         { status: 404 }
       );
     }
 
-    // Check for optional goalId (enables goal decomposition tools)
     const goalId = url.searchParams.get("goalId");
-
-    // Parse request body
     const { messages } = await req.json();
 
-    // Create the Anthropic provider with the user's API key
-    const anthropic = createAnthropic({
-      apiKey: apiKeyRecord.apiKey,
-    });
+    const model = createLanguageModel(provider, modelId);
 
-    // Define tools conditionally when decomposing a goal
     const tools = goalId
       ? {
           saveTasks: tool({
@@ -94,7 +65,6 @@ export async function POST(req: Request) {
               });
               if (!goal) return { success: false, error: "Goal not found" };
 
-              // Delete any existing events for this goal (idempotent)
               await prisma.event.deleteMany({ where: { goalId } });
 
               const savedEvents = [];
@@ -138,7 +108,6 @@ export async function POST(req: Request) {
         }
       : undefined;
 
-    // Build system prompt for goal decomposition if goalId is present
     let system: string | undefined;
     if (goalId) {
       const goal = await prisma.goal.findUnique({
@@ -175,7 +144,7 @@ Guidelines:
     }
 
     const result = streamText({
-      model: anthropic("claude-sonnet-4-5-20250929"),
+      model,
       messages: await convertToModelMessages(messages),
       ...(system ? { system } : {}),
       ...(tools ? { tools, maxSteps: 10 } : {}),
@@ -192,7 +161,6 @@ Guidelines:
             });
             if (!goal) return;
 
-            // Ensure the goal belongs to the authenticated user before modifying chat history
             if (goal.userId !== userId) {
               console.warn("Unauthorized attempt to modify goal chat history", {
                 goalId,
@@ -204,7 +172,7 @@ Guidelines:
             if (goal.chatHistoryId) {
               await prisma.$transaction(async (tx) => {
                 await tx.message.deleteMany({
-                  where: { chatHistoryId: goal.chatHistoryId },
+                  where: { chatHistoryId: goal.chatHistoryId! },
                 });
 
                 if (allMessages.length > 0) {
@@ -223,7 +191,8 @@ Guidelines:
                 const chatHistory = await tx.chatHistory.create({
                   data: {
                     userId: goal.userId,
-                    apiKeyId: apiKeyRecord.id,
+                    providerId: provider.id,
+                    modelId,
                     messages: {
                       create: allMessages.map((msg, idx) => ({
                         role: msg.role ?? "user",
