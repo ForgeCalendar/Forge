@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
+interface EventInput {
+  title: string;
+  start?: string;
+  end?: string;
+  completed?: boolean;
+  minutesEstimate?: number;
+}
+
+interface InfoTagInput {
+  title: string;
+  info: string;
+}
+
 // GET /api/goals/:id - Get a specific goal
 export async function GET(
   req: Request,
@@ -87,7 +100,7 @@ export async function PUT(
         dueDate,
         events: {
           create:
-            events?.map((d: any, index: number) => ({
+            events?.map((d: EventInput, index: number) => ({
               userId,
               title: d.title,
               start: d.start || new Date().toISOString(),
@@ -99,7 +112,7 @@ export async function PUT(
         },
         infoTags: {
           create:
-            infoTags?.map((tag: any) => ({
+            infoTags?.map((tag: InfoTagInput) => ({
               title: tag.title,
               info: tag.info,
             })) ?? [],
