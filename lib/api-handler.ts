@@ -6,12 +6,17 @@ export function apiHandler<TCtx = unknown>(
     userId: string,
     req: Request,
     ctx: TCtx
-  ) => Promise<NextResponse | Response>
-): (...args: [req?: Request, ctx?: TCtx]) => Promise<NextResponse | Response> {
-  return async (...args: [req?: Request, ctx?: TCtx]) => {
+  ) => Promise<NextResponse | Response>,
+  label?: string
+): (req?: Request, ctx?: TCtx) => Promise<NextResponse | Response> {
+  return async (req?: Request, ctx?: TCtx) => {
     try {
       const userId = await requireAuth();
-      return await handler(userId, args[0] as Request, args[1] as TCtx);
+      return await handler(
+        userId,
+        req ?? new Request("http://localhost"),
+        ctx ?? ({} as TCtx)
+      );
     } catch (error) {
       if (error instanceof Error && error.message === "Unauthorized") {
         return NextResponse.json(
@@ -19,7 +24,7 @@ export function apiHandler<TCtx = unknown>(
           { status: 401 }
         );
       }
-      console.error(error);
+      console.error(label ? `[${label}]` : "[apiHandler]", error);
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 }
