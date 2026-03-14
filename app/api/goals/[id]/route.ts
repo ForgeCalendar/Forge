@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { verifyOwnership } from "@/lib/verify-ownership";
 
 interface EventInput {
   title: string;
@@ -20,24 +21,17 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const GET = apiHandler<RouteContext>(async (userId, _req, ctx) => {
   const { id } = await ctx.params;
 
-  const goal = await prisma.goal.findFirst({
-    where: {
-      id,
-      userId,
-    },
-    include: {
-      events: {
-        orderBy: {
-          order: "asc",
-        },
+  const goal = await verifyOwnership(
+    prisma.goal.findFirst({
+      where: { id, userId },
+      include: {
+        events: { orderBy: { order: "asc" } },
+        infoTags: true,
       },
-      infoTags: true,
-    },
-  });
-
-  if (!goal) {
-    return NextResponse.json({ error: "Goal not found" }, { status: 404 });
-  }
+    }),
+    "Goal not found"
+  );
+  if (goal instanceof NextResponse) return goal;
 
   return NextResponse.json(goal);
 });
@@ -47,13 +41,11 @@ export const PUT = apiHandler<RouteContext>(async (userId, req, ctx) => {
   const body = await req.json();
   const { title, description, dueDate, events, infoTags } = body;
 
-  const existingGoal = await prisma.goal.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existingGoal) {
-    return NextResponse.json({ error: "Goal not found" }, { status: 404 });
-  }
+  const existingGoal = await verifyOwnership(
+    prisma.goal.findFirst({ where: { id, userId } }),
+    "Goal not found"
+  );
+  if (existingGoal instanceof NextResponse) return existingGoal;
 
   await prisma.goal.update({
     where: { id },
@@ -109,13 +101,11 @@ export const PUT = apiHandler<RouteContext>(async (userId, req, ctx) => {
 export const DELETE = apiHandler<RouteContext>(async (userId, _req, ctx) => {
   const { id } = await ctx.params;
 
-  const existingGoal = await prisma.goal.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existingGoal) {
-    return NextResponse.json({ error: "Goal not found" }, { status: 404 });
-  }
+  const existingGoal = await verifyOwnership(
+    prisma.goal.findFirst({ where: { id, userId } }),
+    "Goal not found"
+  );
+  if (existingGoal instanceof NextResponse) return existingGoal;
 
   await prisma.goal.delete({
     where: { id },
