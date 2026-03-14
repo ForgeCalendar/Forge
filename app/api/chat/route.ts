@@ -2,123 +2,120 @@ import { convertToModelMessages, streamText, tool } from "ai";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { apiHandler } from "@/lib/api-handler";
 import { createLanguageModel } from "@/lib/ai-providers";
 
 export const maxDuration = 30;
 
-export async function POST(req: Request) {
-  try {
-    const userId = await requireAuth();
+export const POST = apiHandler(async (userId, req) => {
+  const url = new URL(req.url);
+  const providerId = url.searchParams.get("providerId");
+  const modelId = url.searchParams.get("modelId");
 
-    const url = new URL(req.url);
-    const providerId = url.searchParams.get("providerId");
-    const modelId = url.searchParams.get("modelId");
+  if (!providerId || !modelId) {
+    return NextResponse.json(
+      { error: "providerId and modelId parameters are required" },
+      { status: 400 }
+    );
+  }
 
-    if (!providerId || !modelId) {
-      return NextResponse.json(
-        { error: "providerId and modelId parameters are required" },
-        { status: 400 }
-      );
-    }
+  const provider = await prisma.provider.findFirst({
+    where: { id: providerId, userId },
+  });
 
-    const provider = await prisma.provider.findFirst({
-      where: { id: providerId, userId },
-    });
+  if (!provider) {
+    return NextResponse.json(
+      { error: "Provider not found. Please configure one in settings." },
+      { status: 404 }
+    );
+  }
 
-    if (!provider) {
-      return NextResponse.json(
-        { error: "Provider not found. Please configure one in settings." },
-        { status: 404 }
-      );
-    }
+  const goalId = url.searchParams.get("goalId");
+  const { messages } = await req.json();
 
-    const goalId = url.searchParams.get("goalId");
-    const { messages } = await req.json();
+  const model = createLanguageModel(provider, modelId);
 
-    const model = createLanguageModel(provider, modelId);
+  const tools = goalId
+    ? {
+        saveTasks: tool({
+          description:
+            "Save the proposed tasks for the goal as calendar events. Each task must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",
+          inputSchema: z.object({
+            tasks: z
+              .array(
+                z.object({
+                  title: z.string().describe("Short, actionable task title"),
+                  start: z
+                    .string()
+                    .describe("ISO 8601 start datetime for this task"),
+                  end: z
+                    .string()
+                    .describe("ISO 8601 end datetime for this task"),
+                })
+              )
+              .min(1)
+              .max(10),
+          }),
+          execute: async ({ tasks }) => {
+            const goal = await prisma.goal.findUnique({
+              where: { id: goalId },
+            });
+            if (!goal) return { success: false, error: "Goal not found" };
 
-    const tools = goalId
-      ? {
-          saveTasks: tool({
-            description:
-              "Save the proposed tasks for the goal as calendar events. Each task must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",
-            inputSchema: z.object({
-              tasks: z
-                .array(
-                  z.object({
-                    title: z.string().describe("Short, actionable task title"),
-                    start: z
-                      .string()
-                      .describe("ISO 8601 start datetime for this task"),
-                    end: z
-                      .string()
-                      .describe("ISO 8601 end datetime for this task"),
-                  })
-                )
-                .min(1)
-                .max(10),
-            }),
-            execute: async ({ tasks }) => {
-              const goal = await prisma.goal.findUnique({
-                where: { id: goalId },
-              });
-              if (!goal) return { success: false, error: "Goal not found" };
+            await prisma.event.deleteMany({ where: { goalId } });
 
-              await prisma.event.deleteMany({ where: { goalId } });
+            const savedEvents = [];
 
-              const savedEvents = [];
+            for (let i = 0; i < tasks.length; i++) {
+              const taskStart = new Date(tasks[i].start);
+              const taskEnd = new Date(tasks[i].end);
+              const minutesEstimate = Math.round(
+                (taskEnd.getTime() - taskStart.getTime()) / 60000
+              );
 
-              for (let i = 0; i < tasks.length; i++) {
-                const taskStart = new Date(tasks[i].start);
-                const taskEnd = new Date(tasks[i].end);
-                const minutesEstimate = Math.round(
-                  (taskEnd.getTime() - taskStart.getTime()) / 60000
-                );
-
-                await prisma.event.create({
-                  data: {
-                    userId: goal.userId,
-                    goalId,
-                    title: tasks[i].title,
-                    start: taskStart.toISOString(),
-                    end: taskEnd.toISOString(),
-                    kind: "task",
-                    minutesEstimate,
-                    order: i,
-                    completed: false,
-                  },
-                });
-
-                savedEvents.push({
+              await prisma.event.create({
+                data: {
+                  userId: goal.userId,
+                  goalId,
                   title: tasks[i].title,
                   start: taskStart.toISOString(),
                   end: taskEnd.toISOString(),
+                  kind: "task",
                   minutesEstimate,
-                });
-              }
+                  order: i,
+                  completed: false,
+                },
+              });
 
-              return {
-                success: true,
-                taskCount: tasks.length,
-                savedEvents,
-              };
-            },
-          }),
-        }
-      : undefined;
+              savedEvents.push({
+                title: tasks[i].title,
+                start: taskStart.toISOString(),
+                end: taskEnd.toISOString(),
+                minutesEstimate,
+              });
+            }
 
-    let system: string | undefined;
-    if (goalId) {
-      const goal = await prisma.goal.findUnique({
-        where: { id: goalId },
-      });
-      if (goal) {
-        const dueDateContext = goal.dueDate
-          ? `The goal is due on ${new Date(goal.dueDate).toLocaleString()}.`
-          : "There is no specific due date.";
-        const nowContext = `The current date/time is ${new Date().toLocaleString()}.`;
-        system = `You are an AI assistant helping the user break down a goal into scheduled calendar events.
+            return {
+              success: true,
+              taskCount: tasks.length,
+              savedEvents,
+            };
+          },
+        }),
+      }
+    : undefined;
+
+  let system: string | undefined;
+  if (goalId) {
+    const goal = await prisma.goal.findUnique({
+      where: { id: goalId },
+    });
+    if (goal) {
+      const dueDateContext = goal.dueDate
+        ? `The goal is due on ${new Date(goal.dueDate).toLocaleString()}.`
+        : "There is no specific due date.";
+      const nowContext = `The current date/time is ${new Date().toLocaleString()}.`;
+      system = `You are an AI assistant helping the user break down a goal into scheduled calendar events.
 
 The user just created a goal:
 - Title: ${goal.title}
@@ -140,92 +137,79 @@ Guidelines:
 - Order tasks in the sequence they should be done.
 - Be conversational and helpful. If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call saveTasks again with the updated list.
 - Always call saveTasks proactively — do not wait for explicit user approval on the first proposal.`;
-      }
     }
+  }
 
-    const result = streamText({
-      model,
-      messages: await convertToModelMessages(messages),
-      ...(system ? { system } : {}),
-      ...(tools ? { tools, maxSteps: 10 } : {}),
-    });
+  const result = streamText({
+    model,
+    messages: await convertToModelMessages(messages),
+    ...(system ? { system } : {}),
+    ...(tools ? { tools, maxSteps: 10 } : {}),
+  });
 
-    return result.toUIMessageStreamResponse({
-      originalMessages: messages,
-      onFinish: async ({ messages: allMessages }) => {
-        if (goalId) {
-          try {
-            const goal = await prisma.goal.findUnique({
-              where: { id: goalId },
-              select: { chatHistoryId: true, userId: true },
+  return result.toUIMessageStreamResponse({
+    originalMessages: messages,
+    onFinish: async ({ messages: allMessages }) => {
+      if (goalId) {
+        try {
+          const goal = await prisma.goal.findUnique({
+            where: { id: goalId },
+            select: { chatHistoryId: true, userId: true },
+          });
+          if (!goal) return;
+
+          if (goal.userId !== userId) {
+            console.warn("Unauthorized attempt to modify goal chat history", {
+              goalId,
+              userId,
             });
-            if (!goal) return;
+            return;
+          }
 
-            if (goal.userId !== userId) {
-              console.warn("Unauthorized attempt to modify goal chat history", {
-                goalId,
-                userId,
+          if (goal.chatHistoryId) {
+            await prisma.$transaction(async (tx) => {
+              await tx.message.deleteMany({
+                where: { chatHistoryId: goal.chatHistoryId! },
               });
-              return;
-            }
 
-            if (goal.chatHistoryId) {
-              await prisma.$transaction(async (tx) => {
-                await tx.message.deleteMany({
-                  where: { chatHistoryId: goal.chatHistoryId! },
+              if (allMessages.length > 0) {
+                await tx.message.createMany({
+                  data: allMessages.map((msg, idx) => ({
+                    chatHistoryId: goal.chatHistoryId!,
+                    role: msg.role ?? "user",
+                    content: JSON.stringify(msg),
+                    order: idx,
+                  })),
                 });
-
-                if (allMessages.length > 0) {
-                  await tx.message.createMany({
-                    data: allMessages.map((msg, idx) => ({
-                      chatHistoryId: goal.chatHistoryId!,
+              }
+            });
+          } else {
+            await prisma.$transaction(async (tx) => {
+              const chatHistory = await tx.chatHistory.create({
+                data: {
+                  userId: goal.userId,
+                  providerId: provider.id,
+                  modelId,
+                  messages: {
+                    create: allMessages.map((msg, idx) => ({
                       role: msg.role ?? "user",
                       content: JSON.stringify(msg),
                       order: idx,
                     })),
-                  });
-                }
-              });
-            } else {
-              await prisma.$transaction(async (tx) => {
-                const chatHistory = await tx.chatHistory.create({
-                  data: {
-                    userId: goal.userId,
-                    providerId: provider.id,
-                    modelId,
-                    messages: {
-                      create: allMessages.map((msg, idx) => ({
-                        role: msg.role ?? "user",
-                        content: JSON.stringify(msg),
-                        order: idx,
-                      })),
-                    },
                   },
-                });
-
-                await tx.goal.update({
-                  where: { id: goalId },
-                  data: { chatHistoryId: chatHistory.id },
-                });
+                },
               });
-            }
-          } catch (e) {
-            console.error("Failed to save chat history:", e);
+
+              await tx.goal.update({
+                where: { id: goalId },
+                data: { chatHistoryId: chatHistory.id },
+              });
+            });
           }
+        } catch (e) {
+          console.error("Failed to save chat history:", e);
         }
-      },
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error in chat endpoint:", error);
-    return NextResponse.json(
-      { error: "Failed to process chat request" },
-      { status: 500 }
-    );
-  }
-}
+      }
+    },
+  });
+});
