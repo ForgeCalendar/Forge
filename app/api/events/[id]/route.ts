@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { toEventResponse } from "@/lib/event-serializer";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -18,19 +19,7 @@ export const GET = apiHandler<RouteContext>(async (userId, _req, ctx) => {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    id: event.id,
-    title: event.title,
-    start: new Date(event.start),
-    end: new Date(event.end),
-    extendedProps: {
-      kind: event.kind,
-      goalId: event.goalId,
-      completed: event.completed,
-      minutesEstimate: event.minutesEstimate,
-      ...(event.metadata ? JSON.parse(event.metadata) : {}),
-    },
-  });
+  return NextResponse.json(toEventResponse(event));
 });
 
 export const PATCH = apiHandler<RouteContext>(async (userId, req, ctx) => {
@@ -62,19 +51,7 @@ export const PATCH = apiHandler<RouteContext>(async (userId, req, ctx) => {
     },
   });
 
-  return NextResponse.json({
-    id: event.id,
-    title: event.title,
-    start: new Date(event.start),
-    end: new Date(event.end),
-    extendedProps: {
-      kind: event.kind,
-      goalId: event.goalId,
-      completed: event.completed,
-      minutesEstimate: event.minutesEstimate,
-      ...(event.metadata ? JSON.parse(event.metadata) : {}),
-    },
-  });
+  return NextResponse.json(toEventResponse(event));
 });
 
 export const DELETE = apiHandler<RouteContext>(async (userId, _req, ctx) => {
