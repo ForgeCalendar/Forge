@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { verifyOwnership } from "@/lib/verify-ownership";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -8,16 +9,11 @@ export const GET = apiHandler<RouteContext>(
   async (userId, _req, ctx): Promise<NextResponse> => {
     const { id } = await ctx.params;
 
-    const provider = await prisma.provider.findFirst({
-      where: { id, userId },
-    });
-
-    if (!provider) {
-      return NextResponse.json(
-        { error: "Provider not found" },
-        { status: 404 }
-      );
-    }
+    const provider = await verifyOwnership(
+      prisma.provider.findFirst({ where: { id, userId } }),
+      "Provider not found"
+    );
+    if (provider instanceof NextResponse) return provider;
 
     const models = await prisma.aIModel.findMany({
       where: { providerId: id },
@@ -41,16 +37,11 @@ export const POST = apiHandler<RouteContext>(
       );
     }
 
-    const provider = await prisma.provider.findFirst({
-      where: { id, userId },
-    });
-
-    if (!provider) {
-      return NextResponse.json(
-        { error: "Provider not found" },
-        { status: 404 }
-      );
-    }
+    const provider = await verifyOwnership(
+      prisma.provider.findFirst({ where: { id, userId } }),
+      "Provider not found"
+    );
+    if (provider instanceof NextResponse) return provider;
 
     if (isDefault) {
       await prisma.aIModel.updateMany({
