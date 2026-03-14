@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { verifyOwnership } from "@/lib/verify-ownership";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export const GET = apiHandler<RouteContext>(async (userId, _req, ctx) => {
   const { id } = await ctx.params;
 
-  const event = await prisma.event.findFirst({
-    where: {
-      id,
-      userId,
-    },
-  });
-
-  if (!event) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
-  }
+  const event = await verifyOwnership(
+    prisma.event.findFirst({ where: { id, userId } }),
+    "Event not found"
+  );
+  if (event instanceof NextResponse) return event;
 
   return NextResponse.json({
     id: event.id,
@@ -39,13 +35,11 @@ export const PATCH = apiHandler<RouteContext>(async (userId, req, ctx) => {
   const { title, start, end, kind, metadata, completed, minutesEstimate } =
     body;
 
-  const existingEvent = await prisma.event.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existingEvent) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
-  }
+  const existingEvent = await verifyOwnership(
+    prisma.event.findFirst({ where: { id, userId } }),
+    "Event not found"
+  );
+  if (existingEvent instanceof NextResponse) return existingEvent;
 
   const event = await prisma.event.update({
     where: { id },
@@ -80,13 +74,11 @@ export const PATCH = apiHandler<RouteContext>(async (userId, req, ctx) => {
 export const DELETE = apiHandler<RouteContext>(async (userId, _req, ctx) => {
   const { id } = await ctx.params;
 
-  const existingEvent = await prisma.event.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existingEvent) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
-  }
+  const existingEvent = await verifyOwnership(
+    prisma.event.findFirst({ where: { id, userId } }),
+    "Event not found"
+  );
+  if (existingEvent instanceof NextResponse) return existingEvent;
 
   await prisma.event.delete({
     where: { id },
