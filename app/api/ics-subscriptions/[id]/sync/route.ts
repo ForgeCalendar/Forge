@@ -70,10 +70,7 @@ export const POST = apiHandler<RouteContext>(async (userId, _req, ctx) => {
     calendarData = await parseIcsData(text);
   } catch (parseError) {
     console.error("Error parsing ICS data:", parseError);
-    return NextResponse.json(
-      { error: "ICS Parsing failed." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "ICS Parsing failed." }, { status: 500 });
   }
 
   let synced = 0;

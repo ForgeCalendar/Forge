@@ -35,10 +35,7 @@ export const POST = apiHandler(async (userId, req) => {
       );
     }
   } catch {
-    return NextResponse.json(
-      { error: "Invalid URL format" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
   }
 
   const subscription = await prisma.icsSubscription.create({
