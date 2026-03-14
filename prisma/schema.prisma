@@ -19,23 +19,25 @@ model User {
 
   goals            Goal[]
   events           Event[]
-  aiAgentApiKeys   AIAgentApiKey[]
+  providers        Provider[]
+  chatHistories    ChatHistory[]
   icsSubscriptions IcsSubscription[]
 }
 
 model Goal {
-  id           String          @id @default(uuid())
-  userId       String
-  title        String
-  description  String
-  dueDate      String?         // ISO datetime string or null
-  chatHistory  String?         // JSON-serialized conversation messages
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id            String          @id @default(uuid())
+  userId        String
+  title         String
+  description   String
+  dueDate       String?         // ISO datetime string or null
+  chatHistoryId String?         @unique // FK to ChatHistory (1:1)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events       Event[]
-  infoTags     InfoTag[]
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatHistory   ChatHistory?    @relation(fields: [chatHistoryId], references: [id], onDelete: SetNull)
+  events        Event[]
+  infoTags      InfoTag[]
 
   @@index([userId])
 }
@@ -95,27 +97,65 @@ model Event {
   @@index([subscriptionId])
 }
 
-enum AIProvider {
-  OPENAI
-  ANTHROPIC
-  GOOGLE
-  MISTRAL
-  COHERE
-}
-
-model AIAgentApiKey {
-  id        String     @id @default(uuid())
+model Provider {
+  id        String   @id @default(uuid())
   userId    String
-  provider  AIProvider
-  apiKey    String     // Encrypted API key
-  name      String?    // Optional friendly name for the key
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  type      String   // "anthropic" | "openai" | "google" | "mistral" | "cohere" | "openai-compatible"
+  name      String   // User-friendly label, e.g. "My Ollama", "Anthropic"
+  baseUrl   String?  // null = use SDK default; set for self-hosted
+  apiKey    String   // API key for the provider
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  models        AIModel[]
+  chatHistories ChatHistory[]
 
   @@index([userId])
-  @@unique([userId, provider])
+}
+
+model AIModel {
+  id         String   @id @default(uuid())
+  providerId String
+  modelId    String   // SDK model identifier, e.g. "claude-sonnet-4-5-20250929", "gpt-4o"
+  name       String   // Display name, e.g. "Claude Sonnet 4.5"
+  isDefault  Boolean  @default(false) // User's default model for this provider
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+}
+
+model ChatHistory {
+  id         String   @id @default(uuid())
+  userId     String
+  providerId String?  // nullable FK — which provider was used
+  modelId    String?  // model identifier used for this chat
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  Provider?  @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  messages  Message[]
+  goal      Goal?      // back-relation for 1:1
+
+  @@index([userId])
+  @@index([providerId])
+}
+
+model Message {
+  id            String   @id @default(uuid())
+  chatHistoryId String
+  role          String   // 'user', 'assistant', 'system'
+  content       String   // JSON — full AI SDK message payload
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  chatHistory   ChatHistory @relation(fields: [chatHistoryId], references: [id], onDelete: Cascade)
+
+  @@index([chatHistoryId])
 }
 
 model IcsSubscription {

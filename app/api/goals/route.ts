@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
+interface InfoTagInput {
+  title: string;
+  info: string;
+}
+
 // GET /api/goals - Get all goals with their events and infoTags
 export async function GET() {
   try {
@@ -56,7 +61,7 @@ export async function POST(req: Request) {
         dueDate,
         infoTags: {
           create:
-            infoTags?.map((tag: any) => ({
+            infoTags?.map((tag: InfoTagInput) => ({
               title: tag.title,
               info: tag.info,
             })) ?? [],

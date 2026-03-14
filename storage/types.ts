@@ -8,6 +8,7 @@ import { InfoTag } from "../states/InfoTag";
 export interface GoalWithId
   extends Omit<import("../states/goals").Goal, "events" | "infoTags"> {
   id: string;
+  chatHistoryId?: string | null;
   events: EventWithId[];
   infoTags: InfoTagWithId[];
 }
