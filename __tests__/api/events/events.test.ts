@@ -118,6 +118,9 @@ describe("POST /api/events", () => {
         start: new Date("2024-06-01T10:00:00Z").toISOString(),
         end: new Date("2024-06-01T11:00:00Z").toISOString(),
         kind: "meeting",
+        goalId: null,
+        completed: false,
+        minutesEstimate: null,
         metadata: JSON.stringify({ location: "Conference Room A" }),
       },
     });

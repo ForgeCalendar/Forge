@@ -20,6 +20,9 @@ import { useChatHistoryQuery } from "@/storage/useChatHistoryQuery";
 import type { ProviderWithModels } from "@/storage/useProvidersQuery";
 import type { FC } from "react";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ChatMessage = any;
+
 type ChatboxProps = {
   name: string;
   chatHistoryId?: string | null;
@@ -27,6 +30,7 @@ type ChatboxProps = {
   summaryPrompt?: string;
   extraParams?: Record<string, string>;
   initialMessage?: string;
+  initialMessages?: ChatMessage[];
 };
 
 const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {

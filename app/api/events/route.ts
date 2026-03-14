@@ -16,24 +16,32 @@ export async function GET() {
       },
     });
 
-    // Transform to match FullCalendar format
     const transformedEvents = events.map((event) => {
       const parsedMeta = event.metadata ? JSON.parse(event.metadata) : {};
       const isGoalEvent = !!event.goalId;
+      const isIcsEvent = !!event.subscriptionId;
 
       return {
         id: event.id,
         title: event.title,
         start: new Date(event.start),
         end: new Date(event.end),
+        allDay: event.isAllDay,
         ...(isGoalEvent
           ? { backgroundColor: "#4F46E5", borderColor: "#4338CA" }
+          : isIcsEvent
+          ? { backgroundColor: "#059669", borderColor: "#047857" }
           : {}),
         extendedProps: {
-          kind: event.kind,
+          kind: event.kind || (isIcsEvent ? "ics" : undefined),
           goalId: event.goalId,
           completed: event.completed,
           minutesEstimate: event.minutesEstimate,
+          subscriptionId: event.subscriptionId,
+          location: event.location,
+          status: event.status,
+          description: event.description,
+          isReadOnly: isIcsEvent,
           ...parsedMeta,
         },
       };

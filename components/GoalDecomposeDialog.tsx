@@ -11,6 +11,7 @@ import { goalDecomposePrompt } from "@/components/prompts";
 import { useQueryClient } from "@tanstack/react-query";
 import { goalKeys } from "@/storage/useGoalsQuery";
 import { eventKeys } from "@/storage/useEventsQuery";
+import { chatHistoryKeys } from "@/storage/useChatHistoryQuery";
 import { useMemo } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
 
@@ -50,6 +51,11 @@ export default function GoalDecomposeDialog({
   function handleClose() {
     queryClient.invalidateQueries({ queryKey: goalKeys.all });
     queryClient.invalidateQueries({ queryKey: eventKeys.all });
+    if (chatHistoryId) {
+      queryClient.invalidateQueries({
+        queryKey: chatHistoryKeys.detail(chatHistoryId),
+      });
+    }
     onClose();
   }
 

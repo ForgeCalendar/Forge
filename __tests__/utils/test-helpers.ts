@@ -22,7 +22,7 @@ export function createMockRequest(options: {
     });
   }
 
-  const request = new NextRequest(url, init);
+  const request = new NextRequest(url, init as any);
 
   // Mock cookies
   if (Object.keys(cookies).length > 0) {
@@ -67,6 +67,61 @@ export const mockEvent = {
   start: "2024-06-01T10:00:00.000Z",
   end: "2024-06-01T11:00:00.000Z",
   kind: "meeting",
+  completed: false,
+  minutesEstimate: null,
+  order: 0,
+  metadata: null,
+  // ICS-specific fields (null for user events)
+  subscriptionId: null,
+  uid: null,
+  description: null,
+  location: null,
+  startTimezone: null,
+  endTimezone: null,
+  isAllDay: false,
+  status: null,
+  organizer: null,
+  recurrenceRule: null,
+  transparency: null,
+  categories: null,
+  url: null,
+  rawData: null,
+  createdAt: new Date("2024-01-01"),
+  updatedAt: new Date("2024-01-01"),
+};
+
+export const mockIcsSubscription = {
+  id: "ics-sub-1",
+  userId: "test@example.com",
+  name: "Work Calendar",
+  url: "https://calendar.google.com/calendar/ical/test/basic.ics",
+  lastSynced: null,
+  createdAt: new Date("2024-01-01"),
+  updatedAt: new Date("2024-01-01"),
+};
+
+export const mockIcsEvent = {
+  id: "ics-event-1",
+  userId: "test@example.com",
+  goalId: null,
+  subscriptionId: "ics-sub-1",
+  uid: "event-uid-123@google.com",
+  title: "Team Standup",
+  description: "Daily standup meeting",
+  location: "Conference Room A",
+  start: "2024-06-01T10:00:00.000Z",
+  end: "2024-06-01T10:30:00.000Z",
+  startTimezone: "America/New_York",
+  endTimezone: "America/New_York",
+  isAllDay: false,
+  status: "CONFIRMED",
+  organizer: "mailto:organizer@example.com",
+  recurrenceRule: null,
+  transparency: "OPAQUE",
+  categories: null,
+  url: null,
+  rawData: "{}",
+  kind: "ics",
   completed: false,
   minutesEstimate: null,
   order: 0,
