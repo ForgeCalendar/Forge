@@ -75,9 +75,6 @@ function DeleteGoalDialog({
                   Delete
                 </Button>
               </Dialog.ActionTrigger>
-              <Dialog.CloseTrigger asChild>
-                <CloseButton size="sm" />
-              </Dialog.CloseTrigger>
             </Dialog.Footer>
 
             <Dialog.CloseTrigger asChild>
