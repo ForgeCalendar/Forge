@@ -106,7 +106,7 @@ describe("GET /api/providers/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to fetch provider");
+    expect(data.error).toBe("Internal server error");
   });
 });
 
@@ -240,7 +240,7 @@ describe("PUT /api/providers/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to update provider");
+    expect(data.error).toBe("Internal server error");
   });
 });
 
@@ -310,6 +310,6 @@ describe("DELETE /api/providers/:id", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to delete provider");
+    expect(data.error).toBe("Internal server error");
   });
 });
