@@ -12,12 +12,14 @@ import type { GoalWithId } from "@/storage/types";
 import { useState } from "react";
 import { useCalendarEvents } from "@/storage/hooks";
 import { toaster } from "@/components/ui/toaster";
+import { useThemeTokens } from "@/lib/theme-tokens";
 
 export function WorkDialog({ goal }: { goal: GoalWithId }) {
   const defaultVal = goal.events && goal.events.length > 0 ? "0" : "";
   const [selected, setSelected] = useState<string>(defaultVal);
   const [isOpen, setIsOpen] = useState(false);
   const { create: createCalendarEvent } = useCalendarEvents();
+  const { textMuted, textSecondary } = useThemeTokens();
 
   const handleStartWork = async () => {
     if (!goal.events || goal.events.length === 0) {
@@ -99,7 +101,7 @@ export function WorkDialog({ goal }: { goal: GoalWithId }) {
             <Dialog.Body>
               <Box>
                 <Text fontWeight="semibold">{goal.title}</Text>
-                <Text mt={2} color="gray.600">
+                <Text mt={2} color={textMuted}>
                   Choose a event to work on for this session.
                 </Text>
 
@@ -136,7 +138,7 @@ export function WorkDialog({ goal }: { goal: GoalWithId }) {
                     </RadioCard.Root>
                   </Box>
                 ) : (
-                  <Text mt={3} color="gray.500">
+                  <Text mt={3} color={textSecondary}>
                     No events defined for this goal.
                   </Text>
                 )}
