@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
 import { createLanguageModel } from "@/lib/ai-providers";
+import { verifyOwnership } from "@/lib/verify-ownership";
 
 export const maxDuration = 30;
 
@@ -19,16 +20,11 @@ export const POST = apiHandler(async (userId, req) => {
     );
   }
 
-  const provider = await prisma.provider.findFirst({
-    where: { id: providerId, userId },
-  });
-
-  if (!provider) {
-    return NextResponse.json(
-      { error: "Provider not found. Please configure one in settings." },
-      { status: 404 }
-    );
-  }
+  const provider = await verifyOwnership(
+    prisma.provider.findFirst({ where: { id: providerId, userId } }),
+    "Provider not found. Please configure one in settings."
+  );
+  if (provider instanceof NextResponse) return provider;
 
   const goalId = url.searchParams.get("goalId");
   const { messages } = await req.json();
