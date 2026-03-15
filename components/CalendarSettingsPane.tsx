@@ -1,6 +1,6 @@
 import { Box, Button, Text, Input, Flex } from "@chakra-ui/react";
 import { useState, useEffect, useCallback } from "react";
-import { useColorModeValue } from "./ui/color-mode";
+import { useThemeTokens } from "../lib/theme-tokens";
 
 type IcsSubscriptionRecord = {
   id: string;
@@ -21,13 +21,13 @@ function maskUrl(url: string): string {
 }
 
 export default function CalendarSettingsPane() {
-  const subtitleColor = useColorModeValue("gray.600", "gray.300");
-  const cardBorder = useColorModeValue("gray.200", "gray.700");
-  const cardBg = useColorModeValue("gray.50", "gray.800");
+  const { textMuted: subtitleColor, border: cardBorder, bgCard: cardBg } = useThemeTokens();
 
   const [subscriptions, setSubscriptions] = useState<IcsSubscriptionRecord[]>(
     []
   );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
