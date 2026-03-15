@@ -1,0 +1,205 @@
+import {
+  Box,
+  Flex,
+  Text,
+  Button,
+  Dialog,
+  Portal,
+  CloseButton,
+} from "@chakra-ui/react";
+import FullCalendar from "@fullcalendar/react";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import { useState, useEffect } from "react";
+import { useThemeTokens } from "@/lib/theme-tokens";
+import { useCalendarEvents } from "@/storage/hooks";
+
+export default function CalendarView({
+  calendarRef,
+  currentView,
+  setCurrentView,
+  onTitleChange,
+}: {
+  calendarRef: React.RefObject<FullCalendar | null>;
+  currentView: string[];
+  setCurrentView: (v: string[]) => void;
+  onTitleChange: (title: string) => void;
+}) {
+  const {
+    events: calendarEvents,
+    isLoading,
+    update: updateCalendarEvent,
+    delete: deleteEvent,
+  } = useCalendarEvents();
+  const [selectedEvent, setSelectedEvent] = useState<{
+    id: string;
+    title: string;
+    kind: string;
+    start: Date | null;
+    end: Date | null;
+  } | null>(null);
+
+  const { textHeading: headingColor, textMuted: subColor } = useThemeTokens();
+
+  useEffect(() => {
+    if (calendarRef.current && currentView.length > 0) {
+      const calendarApi = calendarRef.current.getApi();
+      calendarApi.changeView(currentView[0]);
+    }
+  }, [calendarRef, currentView]);
+
+  const formatTime = (date: Date | null) => {
+    if (!date) return "\u2014";
+    return date.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <Box flex={1} p={2} height="100%" minHeight={0} overflow="hidden">
+      {isLoading ? (
+        <Box p={4}>
+          <Text>Loading events...</Text>
+        </Box>
+      ) : (
+        <Box minHeight={0} height="100%">
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="timeGridDay"
+            headerToolbar={false}
+            nowIndicator={true}
+            height="100%"
+            allDaySlot={false}
+            slotDuration="00:30:00"
+            slotLabelInterval="01:00"
+            expandRows={true}
+            weekends={true}
+            editable={true}
+            eventStartEditable={true}
+            eventDurationEditable={true}
+            events={calendarEvents}
+            datesSet={(info) => {
+              onTitleChange(info.view.title);
+            }}
+            dateClick={(info) => {
+              if (currentView[0] === "dayGridMonth") {
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.gotoDate(info.dateStr);
+                  calendarApi.changeView("timeGridDay");
+                  setCurrentView(["timeGridDay"]);
+                }
+              }
+            }}
+            eventClick={(info) => {
+              setSelectedEvent({
+                id: info.event.id,
+                title: info.event.title,
+                kind: info.event.extendedProps?.kind ?? "task",
+                start: info.event.start,
+                end: info.event.end,
+              });
+            }}
+            eventDrop={async (info) => {
+              try {
+                await updateCalendarEvent(info.event.id, {
+                  start: info.event.start!,
+                  end: info.event.end!,
+                });
+              } catch {
+                info.revert();
+              }
+            }}
+            eventResize={async (info) => {
+              try {
+                await updateCalendarEvent(info.event.id, {
+                  start: info.event.start!,
+                  end: info.event.end!,
+                });
+              } catch {
+                info.revert();
+              }
+            }}
+          />
+        </Box>
+      )}
+
+      <Dialog.Root
+        open={!!selectedEvent}
+        onOpenChange={(e) => {
+          if (!e.open) setSelectedEvent(null);
+        }}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>{selectedEvent?.title}</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton
+                    size="sm"
+                    position="absolute"
+                    top={3}
+                    right={3}
+                  />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Flex direction="column" gap={2}>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>
+                      Type:
+                    </Text>
+                    <Text color={subColor}>{selectedEvent?.kind}</Text>
+                  </Flex>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>
+                      Start:
+                    </Text>
+                    <Text color={subColor}>
+                      {formatTime(selectedEvent?.start ?? null)}
+                    </Text>
+                  </Flex>
+                  <Flex gap={2}>
+                    <Text fontWeight="bold" color={headingColor}>
+                      End:
+                    </Text>
+                    <Text color={subColor}>
+                      {formatTime(selectedEvent?.end ?? null)}
+                    </Text>
+                  </Flex>
+                </Flex>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Close
+                  </Button>
+                </Dialog.ActionTrigger>
+                <Button
+                  colorPalette="red"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedEvent?.id) {
+                      deleteEvent(selectedEvent.id);
+                      setSelectedEvent(null);
+                    }
+                  }}
+                >
+                  Delete Event
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+    </Box>
+  );
+}
