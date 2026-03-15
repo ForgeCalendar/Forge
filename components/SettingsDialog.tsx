@@ -11,7 +11,7 @@ import CalendarSettingsPane from "./CalendarSettingsPane";
 
 function InfoTagSettingsPane() {
   const [selectedTag, setSelectedTag] = useState<
-    (typeof sampleInfoTags)[number] | null
+    typeof sampleInfoTags[number] | null
   >(null);
   const {
     textMuted: subtitleColor,
