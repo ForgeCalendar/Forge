@@ -8,7 +8,7 @@ export function apiHandler<TCtx = unknown>(
     ctx: TCtx
   ) => Promise<NextResponse | Response>,
   label?: string
-): (req?: Request, ctx?: TCtx) => Promise<NextResponse | Response> {
+): (req: Request, ctx: TCtx) => Promise<NextResponse | Response> {
   return async (req?: Request, ctx?: TCtx) => {
     try {
       const userId = await requireAuth();
