@@ -20,13 +20,13 @@ export const POST = apiHandler(async (userId, req) => {
   if (!providerId || !modelId) {
     return NextResponse.json(
       { error: "providerId and modelId parameters are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   const provider = await verifyOwnership(
     prisma.provider.findFirst({ where: { id: providerId, userId } }),
-    "Provider not found. Please configure one in settings."
+    "Provider not found. Please configure one in settings.",
   );
   if (provider instanceof NextResponse) return provider;
 
@@ -55,7 +55,13 @@ export const POST = apiHandler(async (userId, req) => {
     originalMessages: messages,
     onFinish: async ({ messages: allMessages }) => {
       if (goalId) {
-        await saveChatHistory(goalId, userId, provider.id, modelId, allMessages);
+        await saveChatHistory(
+          goalId,
+          userId,
+          provider.id,
+          modelId,
+          allMessages,
+        );
       }
     },
   });
