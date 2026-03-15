@@ -18,7 +18,7 @@ export function buildGoalTools(goalId: string) {
                 .string()
                 .describe("ISO 8601 start datetime for this task"),
               end: z.string().describe("ISO 8601 end datetime for this task"),
-            }),
+            })
           )
           .min(1)
           .max(10),
@@ -37,7 +37,7 @@ export function buildGoalTools(goalId: string) {
           const taskStart = new Date(tasks[i].start);
           const taskEnd = new Date(tasks[i].end);
           const minutesEstimate = Math.round(
-            (taskEnd.getTime() - taskStart.getTime()) / 60000,
+            (taskEnd.getTime() - taskStart.getTime()) / 60000
           );
 
           await prisma.event.create({
@@ -107,7 +107,7 @@ export async function saveChatHistory(
   userId: string,
   providerId: string,
   modelId: string,
-  allMessages: UIMessage[],
+  allMessages: UIMessage[]
 ): Promise<void> {
   try {
     const goal = await prisma.goal.findUnique({
