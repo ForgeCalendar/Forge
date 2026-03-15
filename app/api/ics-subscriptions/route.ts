@@ -1,88 +1,50 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { apiHandler } from "@/lib/api-handler";
 
-// GET /api/ics-subscriptions - Get all ICS subscriptions for the authenticated user
-export async function GET() {
-  try {
-    const userId = await requireAuth();
+export const GET = apiHandler(async (userId) => {
+  const subscriptions = await prisma.icsSubscription.findMany({
+    where: {
+      userId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
-    const subscriptions = await prisma.icsSubscription.findMany({
-      where: {
-        userId,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+  return NextResponse.json(subscriptions);
+});
 
-    return NextResponse.json(subscriptions);
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error fetching ICS subscriptions:", error);
+export const POST = apiHandler(async (userId, req) => {
+  const body = await req.json();
+  const { name, url } = body;
+
+  if (!name || !url) {
     return NextResponse.json(
-      { error: "Failed to fetch ICS subscriptions" },
-      { status: 500 }
+      { error: "Name and url are required" },
+      { status: 400 }
     );
   }
-}
 
-// POST /api/ics-subscriptions - Create a new ICS subscription
-export async function POST(req: Request) {
   try {
-    const userId = await requireAuth();
-    const body = await req.json();
-    const { name, url } = body;
-
-    // Validate required fields
-    if (!name || !url) {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return NextResponse.json(
-        { error: "Name and url are required" },
+        { error: "Only http and https URLs are allowed" },
         { status: 400 }
       );
     }
-
-    // Validate URL format and scheme (prevent SSRF)
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-        return NextResponse.json(
-          { error: "Only http and https URLs are allowed" },
-          { status: 400 }
-        );
-      }
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid URL format" },
-        { status: 400 }
-      );
-    }
-
-    const subscription = await prisma.icsSubscription.create({
-      data: {
-        userId,
-        name,
-        url,
-      },
-    });
-
-    return NextResponse.json(subscription, { status: 201 });
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error creating ICS subscription:", error);
-    return NextResponse.json(
-      { error: "Failed to create ICS subscription" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
   }
-}
+
+  const subscription = await prisma.icsSubscription.create({
+    data: {
+      userId,
+      name,
+      url,
+    },
+  });
+
+  return NextResponse.json(subscription, { status: 201 });
+});

@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  try {
-    const userId = await requireAuth();
-    const { id } = await params;
+type RouteContext = { params: Promise<{ id: string }> };
+
+export const GET = apiHandler<RouteContext>(
+  async (userId, _req, ctx): Promise<NextResponse> => {
+    const { id } = await ctx.params;
 
     const provider = await prisma.provider.findFirst({
       where: { id, userId },
@@ -27,28 +25,12 @@ export async function GET(
     });
 
     return NextResponse.json(models);
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error fetching models:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch models" },
-      { status: 500 }
-    );
   }
-}
+);
 
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  try {
-    const userId = await requireAuth();
-    const { id } = await params;
+export const POST = apiHandler<RouteContext>(
+  async (userId, req, ctx): Promise<NextResponse> => {
+    const { id } = await ctx.params;
     const body = await req.json();
     const { modelId, name, isDefault } = body;
 
@@ -87,17 +69,5 @@ export async function POST(
     });
 
     return NextResponse.json(model, { status: 201 });
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error creating model:", error);
-    return NextResponse.json(
-      { error: "Failed to create model" },
-      { status: 500 }
-    );
   }
-}
+);

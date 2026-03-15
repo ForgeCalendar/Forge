@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function PUT(
-  req: Request,
-  { params }: { params: Promise<{ id: string; modelId: string }> }
-): Promise<NextResponse> {
-  try {
-    const userId = await requireAuth();
-    const { id, modelId } = await params;
+type RouteContext = { params: Promise<{ id: string; modelId: string }> };
+
+export const PUT = apiHandler<RouteContext>(
+  async (userId, req, ctx): Promise<NextResponse> => {
+    const { id, modelId } = await ctx.params;
     const body = await req.json();
 
     const provider = await prisma.provider.findFirst({
@@ -48,28 +46,12 @@ export async function PUT(
     });
 
     return NextResponse.json(updated);
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error updating model:", error);
-    return NextResponse.json(
-      { error: "Failed to update model" },
-      { status: 500 }
-    );
   }
-}
+);
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string; modelId: string }> }
-): Promise<NextResponse> {
-  try {
-    const userId = await requireAuth();
-    const { id, modelId } = await params;
+export const DELETE = apiHandler<RouteContext>(
+  async (userId, _req, ctx): Promise<NextResponse> => {
+    const { id, modelId } = await ctx.params;
 
     const provider = await prisma.provider.findFirst({
       where: { id, userId },
@@ -93,17 +75,5 @@ export async function DELETE(
     await prisma.aIModel.delete({ where: { id: modelId } });
 
     return NextResponse.json({ message: "Model deleted successfully" });
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-    console.error("Error deleting model:", error);
-    return NextResponse.json(
-      { error: "Failed to delete model" },
-      { status: 500 }
-    );
   }
-}
+);

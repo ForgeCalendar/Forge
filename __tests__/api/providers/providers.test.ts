@@ -96,7 +96,7 @@ describe("GET /api/providers", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to fetch providers");
+    expect(data.error).toBe("Internal server error");
   });
 });
 
@@ -302,6 +302,6 @@ describe("POST /api/providers", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Failed to create provider");
+    expect(data.error).toBe("Internal server error");
   });
 });
