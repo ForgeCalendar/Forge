@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { verifyOwnership } from "@/lib/verify-ownership";
 import {
   parseIcsData,
   type ParsedIcsData,
@@ -16,17 +17,13 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const POST = apiHandler<RouteContext>(async (userId, _req, ctx) => {
   const { id } = await ctx.params;
 
-  const subscription = await prisma.icsSubscription.findFirst({
-    where: { id, userId },
-  });
+  const subscription = await verifyOwnership(
+    prisma.icsSubscription.findFirst({ where: { id, userId } }),
+    "Subscription not found"
+  );
+  if (subscription instanceof NextResponse) return subscription;
 
-  if (!subscription) {
-    return NextResponse.json(
-      { error: "Subscription not found" },
-      { status: 404 }
-    );
-  }
-
+  // Validate URL scheme to prevent SSRF
   try {
     const parsed = new URL(subscription.url);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {

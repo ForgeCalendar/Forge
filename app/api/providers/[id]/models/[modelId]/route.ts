@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { verifyOwnership } from "@/lib/verify-ownership";
 
 type RouteContext = { params: Promise<{ id: string; modelId: string }> };
 
@@ -9,24 +10,17 @@ export const PUT = apiHandler<RouteContext>(
     const { id, modelId } = await ctx.params;
     const body = await req.json();
 
-    const provider = await prisma.provider.findFirst({
-      where: { id, userId },
-    });
+    const provider = await verifyOwnership(
+      prisma.provider.findFirst({ where: { id, userId } }),
+      "Provider not found"
+    );
+    if (provider instanceof NextResponse) return provider;
 
-    if (!provider) {
-      return NextResponse.json(
-        { error: "Provider not found" },
-        { status: 404 }
-      );
-    }
-
-    const existing = await prisma.aIModel.findFirst({
-      where: { id: modelId, providerId: id },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Model not found" }, { status: 404 });
-    }
+    const existing = await verifyOwnership(
+      prisma.aIModel.findFirst({ where: { id: modelId, providerId: id } }),
+      "Model not found"
+    );
+    if (existing instanceof NextResponse) return existing;
 
     if (body.isDefault) {
       await prisma.aIModel.updateMany({
@@ -53,24 +47,17 @@ export const DELETE = apiHandler<RouteContext>(
   async (userId, _req, ctx): Promise<NextResponse> => {
     const { id, modelId } = await ctx.params;
 
-    const provider = await prisma.provider.findFirst({
-      where: { id, userId },
-    });
+    const provider = await verifyOwnership(
+      prisma.provider.findFirst({ where: { id, userId } }),
+      "Provider not found"
+    );
+    if (provider instanceof NextResponse) return provider;
 
-    if (!provider) {
-      return NextResponse.json(
-        { error: "Provider not found" },
-        { status: 404 }
-      );
-    }
-
-    const existing = await prisma.aIModel.findFirst({
-      where: { id: modelId, providerId: id },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Model not found" }, { status: 404 });
-    }
+    const existing = await verifyOwnership(
+      prisma.aIModel.findFirst({ where: { id: modelId, providerId: id } }),
+      "Model not found"
+    );
+    if (existing instanceof NextResponse) return existing;
 
     await prisma.aIModel.delete({ where: { id: modelId } });
 
