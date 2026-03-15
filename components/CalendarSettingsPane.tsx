@@ -26,7 +26,7 @@ export default function CalendarSettingsPane() {
   const cardBg = useColorModeValue("gray.50", "gray.800");
 
   const [subscriptions, setSubscriptions] = useState<IcsSubscriptionRecord[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export default function CalendarSettingsPane() {
       setError(null);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load subscriptions"
+        err instanceof Error ? err.message : "Failed to load subscriptions",
       );
     } finally {
       setLoading(false);

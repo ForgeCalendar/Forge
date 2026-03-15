@@ -1,11 +1,4 @@
-import {
-  Box,
-  Button,
-  Dialog,
-  Portal,
-  Heading,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Button, Dialog, Portal, Heading, Text } from "@chakra-ui/react";
 import SettingsButton from "./SettingsButton";
 import { useState } from "react";
 import { sampleInfoTags } from "../states/InfoTag";
@@ -18,7 +11,7 @@ import CalendarSettingsPane from "./CalendarSettingsPane";
 
 function InfoTagSettingsPane() {
   const [selectedTag, setSelectedTag] = useState<
-    typeof sampleInfoTags[number] | null
+    (typeof sampleInfoTags)[number] | null
   >(null);
   const {
     textMuted: subtitleColor,
