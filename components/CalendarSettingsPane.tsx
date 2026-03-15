@@ -21,13 +21,15 @@ function maskUrl(url: string): string {
 }
 
 export default function CalendarSettingsPane() {
-  const { textMuted: subtitleColor, border: cardBorder, bgCard: cardBg } = useThemeTokens();
+  const {
+    textMuted: subtitleColor,
+    border: cardBorder,
+    bgCard: cardBg,
+  } = useThemeTokens();
 
   const [subscriptions, setSubscriptions] = useState<IcsSubscriptionRecord[]>(
     []
   );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export default function CalendarSettingsPane() {
       setLoading(true);
       const res = await fetch("/api/ics-subscriptions");
       if (!res.ok) throw new Error("Failed to fetch subscriptions");
-      const data = await res.json();
+      const data: IcsSubscriptionRecord[] = await res.json();
       setSubscriptions(data);
       setError(null);
     } catch (err) {
