@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { Goal } from "@/lib/generated/prisma";
 
-export function buildGoalTools(goalId: string) {
+export function buildGoalTools(goalId: string, userId: string) {
   return {
     saveTasks: tool({
       description:
@@ -24,10 +24,27 @@ export function buildGoalTools(goalId: string) {
           .max(10),
       }),
       execute: async ({ tasks }) => {
-        const goal = await prisma.goal.findUnique({
-          where: { id: goalId },
+        const goal = await prisma.goal.findFirst({
+          where: { id: goalId, userId },
         });
         if (!goal) return { success: false, error: "Goal not found" };
+
+        for (const t of tasks) {
+          const s = new Date(t.start);
+          const e = new Date(t.end);
+          if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
+            return {
+              success: false,
+              error: `Invalid date in task "${t.title}"`,
+            };
+          }
+          if (e.getTime() <= s.getTime()) {
+            return {
+              success: false,
+              error: `End must be after start in task "${t.title}"`,
+            };
+          }
+        }
 
         await prisma.event.deleteMany({ where: { goalId } });
 

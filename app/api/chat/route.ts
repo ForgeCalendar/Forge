@@ -34,11 +34,13 @@ export const POST = apiHandler(async (userId, req) => {
   const { messages } = await req.json();
 
   const model = createLanguageModel(provider, modelId);
-  const tools = goalId ? buildGoalTools(goalId) : undefined;
+  const tools = goalId ? buildGoalTools(goalId, userId) : undefined;
 
   let system: string | undefined;
   if (goalId) {
-    const goal = await prisma.goal.findUnique({ where: { id: goalId } });
+    const goal = await prisma.goal.findFirst({
+      where: { id: goalId, userId },
+    });
     if (goal) {
       system = buildGoalSystemPrompt(goal);
     }
