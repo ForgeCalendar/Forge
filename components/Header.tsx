@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Box,
   Flex,
@@ -7,9 +9,10 @@ import {
   Select,
   createListCollection,
 } from "@chakra-ui/react";
-import FullCalendar from "@fullcalendar/react";
+import type FullCalendar from "@fullcalendar/react";
 import SettingsDialog from "@/components/SettingsDialog";
 import LoginDialog from "@/components/LoginDialog";
+import type React from "react";
 import { useState } from "react";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { useThemeTokens } from "@/lib/theme-tokens";

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Box,
   Flex,
@@ -11,6 +13,7 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import type React from "react";
 import { useState, useEffect } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useCalendarEvents } from "@/storage/hooks";
@@ -186,9 +189,13 @@ export default function CalendarView({
                 <Button
                   colorPalette="red"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
                     if (selectedEvent?.id) {
-                      deleteEvent(selectedEvent.id);
+                      try {
+                        await deleteEvent(selectedEvent.id);
+                      } catch {
+                        // deletion failed — event stays
+                      }
                       setSelectedEvent(null);
                     }
                   }}

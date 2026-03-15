@@ -1,6 +1,6 @@
 "use client";
 import { Box, Flex } from "@chakra-ui/react";
-import FullCalendar from "@fullcalendar/react";
+import type FullCalendar from "@fullcalendar/react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CalendarView from "@/components/CalendarView";
@@ -30,7 +30,7 @@ export default function App() {
   } | null>(null);
   const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
   const [calendarTitle, setCalendarTitle] = useState("");
-  const calendarRef = useRef<FullCalendar>(null);
+  const calendarRef = useRef<FullCalendar | null>(null);
 
   if (authLoading) {
     return null;
