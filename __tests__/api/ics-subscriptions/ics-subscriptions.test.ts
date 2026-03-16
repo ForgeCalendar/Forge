@@ -60,7 +60,7 @@ describe("GET /api/ics-subscriptions", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Internal server error");
+    expect(data.error).toBe("Failed to fetch ICS subscriptions");
   });
 });
 
@@ -189,6 +189,6 @@ describe("POST /api/ics-subscriptions", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Internal server error");
+    expect(data.error).toBe("Failed to create ICS subscription");
   });
 });

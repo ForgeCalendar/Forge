@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiHandler } from "@/lib/api-handler";
+import { requireAuth } from "@/lib/auth";
 import { verifyOwnership } from "@/lib/verify-ownership";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export const GET = apiHandler<RouteContext>(
-  async (userId, _req, ctx): Promise<NextResponse> => {
+export async function GET(
+  _req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
     const { id } = await ctx.params;
 
     const provider = await verifyOwnership(
@@ -21,11 +25,27 @@ export const GET = apiHandler<RouteContext>(
     });
 
     return NextResponse.json(models);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error fetching models:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch models" },
+      { status: 500 }
+    );
   }
-);
+}
 
-export const POST = apiHandler<RouteContext>(
-  async (userId, req, ctx): Promise<NextResponse> => {
+export async function POST(
+  req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
     const { id } = await ctx.params;
     const body = await req.json();
     const { modelId, name, isDefault } = body;
@@ -60,5 +80,17 @@ export const POST = apiHandler<RouteContext>(
     });
 
     return NextResponse.json(model, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error creating model:", error);
+    return NextResponse.json(
+      { error: "Failed to create model" },
+      { status: 500 }
+    );
   }
-);
+}

@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiHandler } from "@/lib/api-handler";
+import { requireAuth } from "@/lib/auth";
 import { verifyOwnership } from "@/lib/verify-ownership";
 
 type RouteContext = { params: Promise<{ id: string; modelId: string }> };
 
-export const PUT = apiHandler<RouteContext>(
-  async (userId, req, ctx): Promise<NextResponse> => {
+export async function PUT(
+  req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
     const { id, modelId } = await ctx.params;
     const body = await req.json();
 
@@ -40,11 +44,27 @@ export const PUT = apiHandler<RouteContext>(
     });
 
     return NextResponse.json(updated);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error updating model:", error);
+    return NextResponse.json(
+      { error: "Failed to update model" },
+      { status: 500 }
+    );
   }
-);
+}
 
-export const DELETE = apiHandler<RouteContext>(
-  async (userId, _req, ctx): Promise<NextResponse> => {
+export async function DELETE(
+  _req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
     const { id, modelId } = await ctx.params;
 
     const provider = await verifyOwnership(
@@ -62,5 +82,17 @@ export const DELETE = apiHandler<RouteContext>(
     await prisma.aIModel.delete({ where: { id: modelId } });
 
     return NextResponse.json({ message: "Model deleted successfully" });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error deleting model:", error);
+    return NextResponse.json(
+      { error: "Failed to delete model" },
+      { status: 500 }
+    );
   }
-);
+}

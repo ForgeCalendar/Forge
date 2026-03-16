@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiHandler } from "@/lib/api-handler";
+import { requireAuth } from "@/lib/auth";
 import { verifyOwnership } from "@/lib/verify-ownership";
 
 interface EventInput {
@@ -18,98 +18,152 @@ interface InfoTagInput {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export const GET = apiHandler<RouteContext>(async (userId, _req, ctx) => {
-  const { id } = await ctx.params;
+export async function GET(
+  _req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
+    const { id } = await ctx.params;
 
-  const goal = await verifyOwnership(
-    prisma.goal.findFirst({
-      where: { id, userId },
-      include: {
-        events: { orderBy: { order: "asc" } },
-        infoTags: true,
-      },
-    }),
-    "Goal not found"
-  );
-  if (goal instanceof NextResponse) return goal;
+    const goal = await verifyOwnership(
+      prisma.goal.findFirst({
+        where: { id, userId },
+        include: {
+          events: { orderBy: { order: "asc" } },
+          infoTags: true,
+        },
+      }),
+      "Goal not found"
+    );
+    if (goal instanceof NextResponse) return goal;
 
-  return NextResponse.json(goal);
-});
+    return NextResponse.json(goal);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error fetching goal:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch goal" },
+      { status: 500 }
+    );
+  }
+}
 
-export const PUT = apiHandler<RouteContext>(async (userId, req, ctx) => {
-  const { id } = await ctx.params;
-  const body = await req.json();
-  const { title, description, dueDate, events, infoTags } = body;
+export async function PUT(
+  req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
+    const { id } = await ctx.params;
+    const body = await req.json();
+    const { title, description, dueDate, events, infoTags } = body;
 
-  const existingGoal = await verifyOwnership(
-    prisma.goal.findFirst({ where: { id, userId } }),
-    "Goal not found"
-  );
-  if (existingGoal instanceof NextResponse) return existingGoal;
+    const existingGoal = await verifyOwnership(
+      prisma.goal.findFirst({ where: { id, userId } }),
+      "Goal not found"
+    );
+    if (existingGoal instanceof NextResponse) return existingGoal;
 
-  await prisma.goal.update({
-    where: { id },
-    data: {
-      events: {
-        deleteMany: {},
-      },
-      infoTags: {
-        deleteMany: {},
-      },
-    },
-  });
-
-  const goal = await prisma.goal.update({
-    where: { id },
-    data: {
-      title,
-      description,
-      dueDate,
-      events: {
-        create:
-          events?.map((d: EventInput, index: number) => ({
-            userId,
-            title: d.title,
-            start: d.start || new Date().toISOString(),
-            end: d.end || new Date().toISOString(),
-            completed: d.completed ?? false,
-            minutesEstimate: d.minutesEstimate,
-            order: index,
-          })) ?? [],
-      },
-      infoTags: {
-        create:
-          infoTags?.map((tag: InfoTagInput) => ({
-            title: tag.title,
-            info: tag.info,
-          })) ?? [],
-      },
-    },
-    include: {
-      events: {
-        orderBy: {
-          order: "asc",
+    await prisma.goal.update({
+      where: { id },
+      data: {
+        events: {
+          deleteMany: {},
+        },
+        infoTags: {
+          deleteMany: {},
         },
       },
-      infoTags: true,
-    },
-  });
+    });
 
-  return NextResponse.json(goal);
-});
+    const goal = await prisma.goal.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        dueDate,
+        events: {
+          create:
+            events?.map((d: EventInput, index: number) => ({
+              userId,
+              title: d.title,
+              start: d.start || new Date().toISOString(),
+              end: d.end || new Date().toISOString(),
+              completed: d.completed ?? false,
+              minutesEstimate: d.minutesEstimate,
+              order: index,
+            })) ?? [],
+        },
+        infoTags: {
+          create:
+            infoTags?.map((tag: InfoTagInput) => ({
+              title: tag.title,
+              info: tag.info,
+            })) ?? [],
+        },
+      },
+      include: {
+        events: {
+          orderBy: {
+            order: "asc",
+          },
+        },
+        infoTags: true,
+      },
+    });
 
-export const DELETE = apiHandler<RouteContext>(async (userId, _req, ctx) => {
-  const { id } = await ctx.params;
+    return NextResponse.json(goal);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error updating goal:", error);
+    return NextResponse.json(
+      { error: "Failed to update goal" },
+      { status: 500 }
+    );
+  }
+}
 
-  const existingGoal = await verifyOwnership(
-    prisma.goal.findFirst({ where: { id, userId } }),
-    "Goal not found"
-  );
-  if (existingGoal instanceof NextResponse) return existingGoal;
+export async function DELETE(
+  _req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
+    const { id } = await ctx.params;
 
-  await prisma.goal.delete({
-    where: { id },
-  });
+    const existingGoal = await verifyOwnership(
+      prisma.goal.findFirst({ where: { id, userId } }),
+      "Goal not found"
+    );
+    if (existingGoal instanceof NextResponse) return existingGoal;
 
-  return NextResponse.json({ message: "Goal deleted successfully" });
-});
+    await prisma.goal.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: "Goal deleted successfully" });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error deleting goal:", error);
+    return NextResponse.json(
+      { error: "Failed to delete goal" },
+      { status: 500 }
+    );
+  }
+}

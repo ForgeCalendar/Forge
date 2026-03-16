@@ -73,7 +73,7 @@ describe("GET /api/events", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Internal server error");
+    expect(data.error).toBe("Failed to fetch events");
   });
 });
 
@@ -194,6 +194,6 @@ describe("POST /api/events", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Internal server error");
+    expect(data.error).toBe("Failed to create event");
   });
 });
