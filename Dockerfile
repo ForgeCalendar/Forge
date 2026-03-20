@@ -46,8 +46,14 @@ ENV NODE_ENV=production
 # Uncomment the following line in case you want to disable telemetry during runtime.
 # ENV NEXT_TELEMETRY_DISABLED=1
 
+# Default database location for production
+ENV DATABASE_URL=file:/data/prod.db
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# Create persistent data directory for SQLite
+RUN mkdir -p /data && chown nextjs:nodejs /data
 
 COPY --from=builder /app/public ./public
 
@@ -55,6 +61,11 @@ COPY --from=builder /app/public ./public
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy prisma schema, migrations, and CLI for running migrations at startup
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
 
@@ -65,4 +76,4 @@ ENV PORT=3000
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/schema.prisma && node server.js"]
