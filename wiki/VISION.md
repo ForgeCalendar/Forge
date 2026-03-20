@@ -65,7 +65,10 @@ The system exists to reduce activation energy, not to enforce discipline.
 
 ## Current scope
 
-- Frontend-first development
-- Minimal calendar
-- Mocked backend/API layer
-- Explicit architectural seams for future expansion
+- Full-stack Next.js 16 application with REST API backend
+- SQLite database with Prisma ORM (9 models)
+- Multi-provider AI integration (Anthropic, OpenAI, Google, Mistral)
+- User authentication with session-based auth
+- ICS calendar subscription support
+- Interactive calendar with FullCalendar
+- Goal management with AI-powered chat per goal

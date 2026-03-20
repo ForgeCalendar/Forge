@@ -8,20 +8,25 @@ This project has comprehensive backend testing with mocking using Jest and GitHu
 __tests__/
 ├── api/
 │   ├── auth/
-│   │   ├── register.test.ts       # User registration tests
-│   │   └── login.test.ts          # User login tests
+│   │   ├── register.test.ts           # User registration tests
+│   │   └── login.test.ts              # User login tests
 │   ├── goals/
-│   │   ├── goals.test.ts          # Goals CRUD tests (GET, POST)
-│   │   └── goal-id.test.ts        # Individual goal tests (GET, PUT, DELETE)
+│   │   ├── goals.test.ts              # Goals CRUD tests (GET, POST)
+│   │   └── goal-id.test.ts            # Individual goal tests (GET, PUT, DELETE)
 │   ├── events/
-│   │   └── event-id.test.ts # Event tests (PATCH, DELETE)
-│   └── events/
-│       └── events.test.ts         # Calendar events tests (GET, POST)
+│   │   └── events.test.ts             # Events tests (GET, POST, PATCH, DELETE)
+│   ├── providers/
+│   │   ├── providers.test.ts          # Providers CRUD tests
+│   │   └── provider-id.test.ts        # Individual provider tests
+│   └── ics-subscriptions/
+│       ├── ics-subscriptions.test.ts   # ICS subscriptions CRUD tests
+│       ├── ics-subscription-id.test.ts # Individual subscription tests
+│       └── ics-sync.test.ts           # ICS sync tests
 ├── lib/
-│   └── auth.test.ts               # Auth utilities tests
+│   └── auth.test.ts                   # Auth utilities tests
 └── utils/
-    ├── prisma-mock.ts             # Prisma Client mock setup
-    └── test-helpers.ts            # Test utilities and fixtures
+    ├── prisma-mock.ts                 # Prisma Client mock setup
+    └── test-helpers.ts                # Test utilities and fixtures
 ```
 
 ## Running Tests
@@ -39,14 +44,18 @@ npm run test:coverage
 
 ## Test Coverage
 
-All 50 tests pass successfully, covering:
+98 tests across 11 test files, covering:
 
-- ✅ Authentication (Register, Login) - 13 tests
-- ✅ Goals CRUD operations - 11 tests
-- ✅ Events operations - 8 tests
-- ✅ Calendar events - 8 tests
-- ✅ Auth utilities - 6 tests
-- ✅ Goal individual operations - 4 tests
+- ✅ Authentication (Register, Login) — 13 tests
+- ✅ Auth utilities — 5 tests
+- ✅ Goals CRUD operations — 7 tests
+- ✅ Goal individual operations — 10 tests
+- ✅ Events operations — 8 tests
+- ✅ Providers CRUD — 11 tests
+- ✅ Provider individual operations — 14 tests
+- ✅ ICS Subscriptions CRUD — 9 tests
+- ✅ ICS Subscription individual operations — 14 tests
+- ✅ ICS Sync — 7 tests
 
 ## Mocking Strategy
 
@@ -78,7 +87,7 @@ prismaMock.user.findUnique.mockResolvedValue(mockUser);
 The `test-helpers.ts` file provides:
 
 - `createMockRequest()`: Creates mock Next.js requests with body/headers/cookies
-- Mock data fixtures: `mockUser`, `mockGoal`, `mockEvent`, `mockEvent`
+- Mock data fixtures: `mockUser`, `mockGoal`, `mockEvent`, etc.
 
 ## GitHub Actions Integration
 
@@ -89,12 +98,14 @@ Tests run automatically on:
 
 The workflow (`.github/workflows/backend-tests.yml`):
 
-1. Checks out code
-2. Sets up Node.js 20.x
-3. Installs dependencies
-4. Generates Prisma Client
-5. Runs tests with coverage
-6. Uploads coverage to Codecov (optional)
+1. Runs pre-commit checks
+2. Checks out code
+3. Sets up Node.js 20.x
+4. Installs dependencies
+5. Generates Prisma Client
+6. Runs tests
+7. Runs tests with coverage
+8. Uploads coverage to Codecov (optional)
 
 ## Configuration
 
@@ -102,7 +113,7 @@ The workflow (`.github/workflows/backend-tests.yml`):
 
 - Uses Next.js Jest configuration preset
 - Test environment: Node.js
-- Coverage threshold: 70% for all metrics
+- Coverage thresholds: branches 50%, functions 50%, lines 55%, statements 55%
 - Module path aliasing: `@/` → project root
 
 ### Test Setup (`jest.setup.js`)
