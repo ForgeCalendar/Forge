@@ -128,6 +128,17 @@ npm start
 npm run lint
 ```
 
+## Documentation
+
+Detailed documentation lives in the [`wiki/`](wiki/) directory:
+
+- [**API Documentation**](wiki/API_DOCUMENTATION.md) — REST API endpoint reference
+- [**Auth Documentation**](wiki/AUTH_DOCUMENTATION.md) — Authentication flow, session management, and security
+- [**Auth Summary**](wiki/AUTH_SUMMARY.md) — Authentication implementation overview
+- [**Backend Summary**](wiki/BACKEND_SUMMARY.md) — Backend architecture and setup
+- [**Testing**](wiki/TESTING.md) — Test structure, mocking strategy, and CI integration
+- [**Vision**](wiki/VISION.md) — Project vision, principles, and long-term direction
+
 ## Project Structure
 
 ```
@@ -143,6 +154,13 @@ Forge/
 │   ├── Sidebar.tsx       # Goal management sidebar
 │   ├── Chatbox.tsx       # AI chat interface
 │   └── WorkDialog.tsx    # Task planning dialog
+├── wiki/                  # Project documentation
+│   ├── API_DOCUMENTATION.md
+│   ├── AUTH_DOCUMENTATION.md
+│   ├── AUTH_SUMMARY.md
+│   ├── BACKEND_SUMMARY.md
+│   ├── TESTING.md
+│   └── VISION.md
 ├── states/               # State management
 │   ├── goals.ts         # Goal data types and samples
 │   ├── events.tsx       # Calendar event management

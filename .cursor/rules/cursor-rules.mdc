@@ -39,4 +39,4 @@ When generating code:
 - Include quick “how to run / test” steps when relevant.
 
 ## Project philosophy
-Before making architectural or UX decisions, read `VISION.md` and treat it as a hard constraint.
+Before making architectural or UX decisions, read `wiki/VISION.md` and treat it as a hard constraint.
