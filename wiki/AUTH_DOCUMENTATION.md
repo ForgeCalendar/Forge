@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Vibe Kanban backend now includes secure user authentication with email-based login and bcrypt password hashing. All data endpoints are protected and scoped to the authenticated user.
+The Forge backend includes secure user authentication with email-based login and bcrypt password hashing. All data endpoints are protected and scoped to the authenticated user.
 
 ## Security Features
 
@@ -119,28 +119,33 @@ The Vibe Kanban backend now includes secure user authentication with email-based
 
 ## Protected Endpoints
 
-All data endpoints now require authentication:
+All data endpoints require authentication:
 
 ### Goals API
 
-- `GET /api/goals` - Returns only the authenticated user's goals
-- `POST /api/goals` - Creates a goal for the authenticated user
-- `GET /api/goals/:id` - Returns goal only if it belongs to the user
-- `PUT /api/goals/:id` - Updates goal only if it belongs to the user
-- `DELETE /api/goals/:id` - Deletes goal only if it belongs to the user
+- `GET /api/goals` — Returns only the authenticated user's goals
+- `POST /api/goals` — Creates a goal for the authenticated user
+- `GET /api/goals/:id` — Returns goal only if it belongs to the user
+- `PUT /api/goals/:id` — Updates goal only if it belongs to the user
+- `DELETE /api/goals/:id` — Deletes goal only if it belongs to the user
 
 ### Events API
 
-- `GET /api/events` - Returns only the authenticated user's events
-- `POST /api/events` - Creates an event for the authenticated user
-- `GET /api/events/:id` - Returns event only if it belongs to the user
-- `PATCH /api/events/:id` - Updates event only if it belongs to the user
-- `DELETE /api/events/:id` - Deletes event only if it belongs to the user
+- `GET /api/events` — Returns only the authenticated user's events
+- `POST /api/events` — Creates an event for the authenticated user
+- `GET /api/events/:id` — Returns event only if it belongs to the user
+- `PATCH /api/events/:id` — Updates event only if it belongs to the user
+- `DELETE /api/events/:id` — Deletes event only if it belongs to the user
 
-### Events API
+### Providers API
 
-- `PATCH /api/events/:id` - Updates event (verified through parent goal)
-- `DELETE /api/events/:id` - Deletes event (verified through parent goal)
+- `GET /api/providers` — Returns only the authenticated user's AI providers
+- `POST /api/providers` — Creates a provider for the authenticated user
+- All provider and model endpoints verify ownership
+
+### ICS Subscriptions API
+
+- All ICS subscription endpoints are scoped to the authenticated user
 
 ## Session Management
 
@@ -148,10 +153,10 @@ All data endpoints now require authentication:
 
 **Cookie Settings**:
 
-- `httpOnly: true` - Cannot be accessed via JavaScript (XSS protection)
-- `secure: true` (in production) - Only sent over HTTPS
-- `sameSite: 'lax'` - CSRF protection
-- `maxAge: 7 days` - Session expires after 7 days
+- `httpOnly: true` — Cannot be accessed via JavaScript (XSS protection)
+- `secure: true` (in production) — Only sent over HTTPS
+- `sameSite: 'lax'` — CSRF protection
+- `maxAge: 7 days` — Session expires after 7 days
 
 ## Testing Authentication
 
@@ -159,31 +164,31 @@ All data endpoints now require authentication:
 
 ```bash
 # Register a new user
-curl -X POST http://localhost:3001/api/auth/register \
+curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password123"}' \
   -c cookies.txt
 
 # Login (saves session cookie)
-curl -X POST http://localhost:3001/api/auth/login \
+curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password123"}' \
   -c cookies.txt
 
 # Get current user (uses saved cookie)
-curl http://localhost:3001/api/auth/me -b cookies.txt
+curl http://localhost:3000/api/auth/me -b cookies.txt
 
 # Fetch goals (authenticated)
-curl http://localhost:3001/api/goals -b cookies.txt
+curl http://localhost:3000/api/goals -b cookies.txt
 
 # Create a goal (authenticated)
-curl -X POST http://localhost:3001/api/goals \
+curl -X POST http://localhost:3000/api/goals \
   -H "Content-Type: application/json" \
-  -d '{"title":"My Goal","description":"Test goal","dueDate":null,"events":[],"infoTags":[]}' \
+  -d '{"title":"My Goal","description":"Test goal","dueDate":null,"infoTags":[]}' \
   -b cookies.txt
 
 # Logout
-curl -X POST http://localhost:3001/api/auth/logout -b cookies.txt
+curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
 ```
 
 ### Test User Credentials
@@ -246,48 +251,67 @@ model User {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  goals         Goal[]
-  calendarEvents CalendarEvent[]
+  goals            Goal[]
+  events           Event[]
+  providers        Provider[]
+  chatHistories    ChatHistory[]
+  icsSubscriptions IcsSubscription[]
 }
 ```
 
-### Modified Goal Table
+### Goal Table
 
 ```prisma
 model Goal {
-  id           String        @id @default(uuid())
-  userId       String        // NEW: Links to User
-  title        String
-  description  String
-  dueDate      String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id            String          @id @default(uuid())
+  userId        String
+  title         String
+  description   String
+  dueDate       String?
+  chatHistoryId String?         @unique
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events Event[]
-  infoTags     InfoTag[]
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatHistory   ChatHistory?    @relation(fields: [chatHistoryId], references: [id], onDelete: SetNull)
+  events        Event[]
+  infoTags      InfoTag[]
 
   @@index([userId])
 }
 ```
 
-### Modified CalendarEvent Table
+### Event Table (Unified)
 
 ```prisma
-model CalendarEvent {
-  id        String   @id @default(uuid())
-  userId    String   // NEW: Links to User
-  title     String
-  start     String
-  end       String
-  kind      String?
-  metadata  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Event {
+  id              String   @id @default(uuid())
+  userId          String
+  goalId          String?  // nullable — links to Goal if it's a goal task
+  title           String
+  start           String   // ISO datetime string
+  end             String   // ISO datetime string
+  kind            String?  // 'task', 'break', 'ics', etc.
+  completed       Boolean  @default(false)
+  minutesEstimate Int?
+  order           Int      @default(0)
+  metadata        String?  // JSON string for extensibility
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // ICS-specific fields (nullable for user-created events)
+  subscriptionId   String?
+  uid              String?
+  description      String?
+  location         String?
+  // ... additional ICS fields
 
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal             Goal?             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  subscription     IcsSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, uid])
   @@index([userId])
+  @@index([goalId])
+  @@index([subscriptionId])
 }
 ```
 
@@ -295,7 +319,7 @@ model CalendarEvent {
 
 ### Password Security
 
-- Uses bcryptjs library for secure password hashing
+- Uses bcryptjs library (v3.x) for secure password hashing
 - 10 salt rounds (2^10 = 1,024 iterations)
 - Passwords are never stored in plain text
 - Passwords are never returned in API responses
@@ -304,12 +328,12 @@ model CalendarEvent {
 
 Located in `lib/auth.ts`:
 
-- `hashPassword(password)` - Hashes a password
-- `verifyPassword(password, hash)` - Verifies a password against its hash
-- `setAuthCookie(email)` - Sets the session cookie
-- `clearAuthCookie()` - Clears the session cookie
-- `getCurrentUser()` - Gets the current authenticated user's email
-- `requireAuth()` - Throws error if not authenticated (used in protected routes)
+- `hashPassword(password)` — Hashes a password
+- `verifyPassword(password, hash)` — Verifies a password against its hash
+- `setAuthCookie(email)` — Sets the session cookie
+- `clearAuthCookie()` — Clears the session cookie
+- `getCurrentUser()` — Gets the current authenticated user's email
+- `requireAuth()` — Throws error if not authenticated (used in protected routes)
 
 ### Route Protection Pattern
 
@@ -331,21 +355,6 @@ export async function GET(req: Request) {
   }
 }
 ```
-
-## Migration from Previous Version
-
-If you had data before adding authentication:
-
-1. The previous database will be recreated (existing data cleared)
-2. Run `npm run db:seed` to populate with test data
-3. Use the test credentials to access the seeded data
-
-To preserve existing data, you would need to:
-
-1. Export existing data before migration
-2. Create a user account
-3. Associate all data with that user's ID
-4. Re-import the data
 
 ## Security Best Practices
 

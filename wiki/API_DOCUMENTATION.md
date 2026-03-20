@@ -1,6 +1,6 @@
-# Vibe Kanban Backend API Documentation
+# Forge Backend API Documentation
 
-This document describes the REST API endpoints for the Vibe Kanban application backend.
+This document describes the REST API endpoints for the Forge application backend.
 
 ## Base URL
 
@@ -15,7 +15,7 @@ All API endpoints are prefixed with `/api`
 npm install
 
 # Run migrations to create database tables
-npx prisma migrate dev
+npm run db:init
 
 # Seed the database with sample data
 npm run db:seed
@@ -25,18 +25,103 @@ npm run db:seed
 
 The backend uses SQLite with Prisma ORM. The database includes:
 
-- **Goals**: Main planning entities with title, description, and due dates
-- **Events**: Tasks/subtasks within goals
-- **InfoTags**: Metadata tags for goals
-- **CalendarEvents**: Calendar scheduling entries
+- **User**: Authenticated users (email as primary key)
+- **Goal**: Main planning entities with title, description, and due dates
+- **Event**: Unified event model for both goal tasks and calendar events
+- **InfoTag**: Metadata tags for goals
+- **Provider**: AI provider configurations (Anthropic, OpenAI, Google, Mistral)
+- **AIModel**: AI models associated with providers
+- **ChatHistory**: Conversation history per goal
+- **Message**: Individual messages within chat histories
+- **IcsSubscription**: External ICS calendar subscriptions
 
 ## API Endpoints
 
+### Authentication
+
+#### POST /api/auth/register
+
+Register a new user.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+**Response** (201 Created):
+
+```json
+{
+  "message": "User registered successfully",
+  "user": {
+    "email": "user@example.com",
+    "createdAt": "2026-01-15T18:00:00.000Z"
+  }
+}
+```
+
+#### POST /api/auth/login
+
+Login an existing user.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+**Response** (200 OK):
+
+```json
+{
+  "message": "Login successful",
+  "user": {
+    "email": "user@example.com",
+    "createdAt": "2026-01-15T18:00:00.000Z"
+  }
+}
+```
+
+#### POST /api/auth/logout
+
+Logout the current user. No request body required.
+
+**Response** (200 OK):
+
+```json
+{
+  "message": "Logout successful"
+}
+```
+
+#### GET /api/auth/me
+
+Get the current authenticated user.
+
+**Response** (200 OK):
+
+```json
+{
+  "email": "user@example.com",
+  "createdAt": "2026-01-15T18:00:00.000Z",
+  "updatedAt": "2026-01-15T18:00:00.000Z"
+}
+```
+
 ### Goals
+
+All goals endpoints require authentication.
 
 #### GET /api/goals
 
-Get all goals with their events and info tags.
+Get all goals for the authenticated user, with their events and info tags.
 
 **Response:**
 
@@ -44,21 +129,25 @@ Get all goals with their events and info tags.
 [
   {
     "id": "uuid",
+    "userId": "user@example.com",
     "title": "Goal title",
     "description": "Goal description",
-    "dueDate": "2026-01-15T17:00:00" | null,
+    "dueDate": "2026-01-15T17:00:00",
+    "chatHistoryId": "uuid",
     "createdAt": "2026-01-15T18:00:00.000Z",
     "updatedAt": "2026-01-15T18:00:00.000Z",
     "events": [
       {
         "id": "uuid",
+        "userId": "user@example.com",
         "goalId": "uuid",
         "title": "Event title",
+        "start": "2026-01-15T09:00:00.000Z",
+        "end": "2026-01-15T10:00:00.000Z",
+        "kind": "task",
         "completed": false,
         "minutesEstimate": 30,
-        "order": 0,
-        "createdAt": "2026-01-15T18:00:00.000Z",
-        "updatedAt": "2026-01-15T18:00:00.000Z"
+        "order": 0
       }
     ],
     "infoTags": [
@@ -85,10 +174,40 @@ Create a new goal.
 {
   "title": "Goal title",
   "description": "Goal description",
-  "dueDate": "2026-01-15T17:00:00" | null,
+  "dueDate": "2026-01-15T17:00:00",
+  "infoTags": [
+    {
+      "title": "Owner",
+      "info": "Patrick Li"
+    }
+  ]
+}
+```
+
+**Response** (201 Created): Returns the created goal with all nested data.
+
+#### GET /api/goals/:id
+
+Get a specific goal by ID.
+
+**Response:** Returns a single goal object (same structure as GET /api/goals items).
+
+#### PUT /api/goals/:id
+
+Update a goal. Replaces all events and info tags.
+
+**Request Body:**
+
+```json
+{
+  "title": "Goal title",
+  "description": "Goal description",
+  "dueDate": "2026-01-15T17:00:00",
   "events": [
     {
       "title": "Event title",
+      "start": "2026-01-15T09:00:00",
+      "end": "2026-01-15T10:00:00",
       "completed": false,
       "minutesEstimate": 30
     }
@@ -101,20 +220,6 @@ Create a new goal.
   ]
 }
 ```
-
-**Response:** Returns the created goal with all nested data (same structure as GET response).
-
-#### GET /api/goals/:id
-
-Get a specific goal by ID.
-
-**Response:** Returns a single goal object (same structure as GET /api/goals items).
-
-#### PUT /api/goals/:id
-
-Update a goal. Replaces all events and info tags.
-
-**Request Body:** Same as POST /api/goals
 
 **Response:** Returns the updated goal with all nested data.
 
@@ -132,41 +237,11 @@ Delete a goal (cascades to events and info tags).
 
 ### Events
 
-#### PATCH /api/events/:id
-
-Update a event (e.g., toggle completion status).
-
-**Request Body:**
-
-```json
-{
-  "title": "Updated title",
-  "completed": true,
-  "minutesEstimate": 45
-}
-```
-
-All fields are optional. Only provided fields will be updated.
-
-**Response:** Returns the updated event object.
-
-#### DELETE /api/events/:id
-
-Delete a specific event.
-
-**Response:**
-
-```json
-{
-  "message": "Event deleted successfully"
-}
-```
-
-### Calendar Events
+All events endpoints require authentication. The Event model is unified — it serves both as goal tasks (linked via `goalId`) and standalone calendar events.
 
 #### GET /api/events
 
-Get all calendar events.
+Get all events for the authenticated user.
 
 **Response:**
 
@@ -178,7 +253,7 @@ Get all calendar events.
     "start": "2026-01-15T09:00:00.000Z",
     "end": "2026-01-15T10:00:00.000Z",
     "extendedProps": {
-      "kind": "task" | "break"
+      "kind": "task"
     }
   }
 ]
@@ -188,7 +263,7 @@ The response format is compatible with FullCalendar.
 
 #### POST /api/events
 
-Create a new calendar event.
+Create a new event.
 
 **Request Body:**
 
@@ -198,23 +273,28 @@ Create a new calendar event.
   "start": "2026-01-15T09:00:00",
   "end": "2026-01-15T10:00:00",
   "kind": "task",
+  "goalId": "uuid",
+  "completed": false,
+  "minutesEstimate": 30,
   "metadata": {
     "customField": "value"
   }
 }
 ```
 
-**Response:** Returns the created event in FullCalendar format.
+All fields except `title`, `start`, and `end` are optional.
+
+**Response** (201 Created): Returns the created event.
 
 #### GET /api/events/:id
 
 Get a specific event by ID.
 
-**Response:** Returns a single event object (same structure as GET /api/events items).
+**Response:** Returns a single event object.
 
 #### PATCH /api/events/:id
 
-Update an event (useful for drag-and-drop rescheduling).
+Update an event (useful for drag-and-drop rescheduling or toggling completion).
 
 **Request Body:**
 
@@ -224,6 +304,8 @@ Update an event (useful for drag-and-drop rescheduling).
   "start": "2026-01-15T10:00:00",
   "end": "2026-01-15T11:00:00",
   "kind": "break",
+  "completed": true,
+  "minutesEstimate": 45,
   "metadata": {
     "customField": "new value"
   }
@@ -236,7 +318,7 @@ All fields are optional. Only provided fields will be updated.
 
 #### DELETE /api/events/:id
 
-Delete a calendar event.
+Delete an event.
 
 **Response:**
 
@@ -246,12 +328,51 @@ Delete a calendar event.
 }
 ```
 
+### Providers
+
+Manage AI provider configurations. All endpoints require authentication.
+
+- `GET /api/providers` — List all providers for the authenticated user
+- `POST /api/providers` — Create a new provider configuration
+- `GET /api/providers/:id` — Get a specific provider
+- `PUT /api/providers/:id` — Update a provider
+- `DELETE /api/providers/:id` — Delete a provider
+
+### Provider Models
+
+Manage AI models within a provider. All endpoints require authentication.
+
+- `GET /api/providers/:id/models` — List models for a provider
+- `POST /api/providers/:id/models` — Add a model to a provider
+- `PUT /api/providers/:id/models/:modelId` — Update a model
+- `DELETE /api/providers/:id/models/:modelId` — Delete a model
+
+### ICS Subscriptions
+
+Manage external ICS calendar subscriptions. All endpoints require authentication.
+
+- `GET /api/ics-subscriptions` — List all ICS subscriptions
+- `POST /api/ics-subscriptions` — Create a new subscription
+- `GET /api/ics-subscriptions/:id` — Get a specific subscription
+- `PUT /api/ics-subscriptions/:id` — Update a subscription
+- `DELETE /api/ics-subscriptions/:id` — Delete a subscription
+- `POST /api/ics-subscriptions/:id/sync` — Trigger sync for a subscription
+
+### Chat
+
+- `POST /api/chat` — Send a message to the AI chat (streaming response)
+
+### Chat History
+
+- `GET /api/chat-history/:id` — Get chat history by ID
+
 ## Error Handling
 
 All endpoints return appropriate HTTP status codes:
 
 - `200 OK`: Successful GET, PUT, PATCH, or DELETE
 - `201 Created`: Successful POST
+- `401 Unauthorized`: Authentication required
 - `404 Not Found`: Resource not found
 - `500 Internal Server Error`: Server error
 
@@ -272,7 +393,7 @@ Error responses include an error message:
 rm prisma/dev.db
 
 # Recreate and seed
-npx prisma migrate dev
+npm run db:init
 npm run db:seed
 ```
 

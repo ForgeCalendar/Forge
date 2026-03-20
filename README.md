@@ -35,9 +35,11 @@ Instead of micromanaging todo lists, Forge helps you answer "what should I work 
 ### AI Integration
 
 - **@assistant-ui/react** - Chat interface components
-- **Anthropic SDK** - AI-powered planning and task assistance
+- **Vercel AI SDK** - Multi-provider AI integration
+- **Supported Providers** - Anthropic, OpenAI, Google AI, Mistral
 - Custom system prompts for goal breakdown and scheduling
 - Real-time streaming responses
+- Per-goal chat history persistence
 
 ### Key Components
 
@@ -83,8 +85,11 @@ Reusable AI assistant component with:
 ### API Layer
 
 - `/api/chat/route.ts` - Streaming chat endpoint using Vercel AI SDK
-- Anthropic Claude model integration
-- Support for system instructions and custom prompts
+- Multi-provider AI integration (Anthropic, OpenAI, Google, Mistral)
+- `/api/goals/`, `/api/events/` - Full REST CRUD endpoints
+- `/api/auth/` - Session-based authentication
+- `/api/providers/` - AI provider management
+- `/api/ics-subscriptions/` - External calendar subscription sync
 
 ### Styling
 

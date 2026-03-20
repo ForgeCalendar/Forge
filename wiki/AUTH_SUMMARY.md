@@ -10,15 +10,15 @@ Complete user authentication system with secure password storage and session man
 
 - Email as unique identifier (primary key)
 - Bcrypt-hashed password storage
-- Relationships to Goals and CalendarEvents
+- Relationships to Goals, Events, Providers, ChatHistories, and IcsSubscriptions
 - Automatic timestamps (createdAt, updatedAt)
 
 **Updated Models**:
 
-- `Goal` - Added `userId` foreign key with cascade delete
-- `CalendarEvent` - Added `userId` foreign key with cascade delete
+- `Goal` — Added `userId` foreign key with cascade delete
+- `Event` — Unified model with `userId` foreign key (replaces old separate CalendarEvent model)
 
-**Migration**: Database schema updated with `add_users_and_auth` migration
+**Migrations**: Database schema versioned through multiple migrations in `prisma/migrations/`
 
 ### 2. Authentication Library
 
@@ -26,16 +26,16 @@ Complete user authentication system with secure password storage and session man
 
 Core authentication functions:
 
-- `hashPassword(password)` - Hash passwords with bcrypt (10 salt rounds)
-- `verifyPassword(password, hash)` - Verify passwords
-- `setAuthCookie(email)` - Create HTTP-only session cookie (7 day expiry)
-- `clearAuthCookie()` - Remove session cookie
-- `getCurrentUser()` - Get authenticated user's email from cookie
-- `requireAuth()` - Middleware to enforce authentication
+- `hashPassword(password)` — Hash passwords with bcrypt (10 salt rounds)
+- `verifyPassword(password, hash)` — Verify passwords
+- `setAuthCookie(email)` — Create HTTP-only session cookie (7 day expiry)
+- `clearAuthCookie()` — Remove session cookie
+- `getCurrentUser()` — Get authenticated user's email from cookie
+- `requireAuth()` — Middleware to enforce authentication
 
 ### 3. Authentication API Routes
 
-**Registration** - `POST /api/auth/register`
+**Registration** — `POST /api/auth/register`
 
 - Validates email format
 - Enforces 8+ character password requirement
@@ -43,25 +43,25 @@ Core authentication functions:
 - Hashes password with bcrypt
 - Auto-logs in user after registration
 
-**Login** - `POST /api/auth/login`
+**Login** — `POST /api/auth/login`
 
 - Verifies email and password
 - Sets secure HTTP-only session cookie
 - Returns user info (email, createdAt)
 
-**Logout** - `POST /api/auth/logout`
+**Logout** — `POST /api/auth/logout`
 
 - Clears session cookie
 - Simple and secure logout
 
-**Current User** - `GET /api/auth/me`
+**Current User** — `GET /api/auth/me`
 
 - Returns authenticated user's info
 - Used for checking auth status
 
 ### 4. Protected Data Endpoints
 
-All existing endpoints now require authentication:
+All existing endpoints require authentication:
 
 **Goals API** (`/api/goals/*`):
 
@@ -79,9 +79,13 @@ All existing endpoints now require authentication:
 - ✅ Returns 401 if not authenticated
 - ✅ Returns 404 if accessing another user's event
 
-**Events API** (`/api/events/*`):
+**Providers API** (`/api/providers/*`):
 
-- ✅ Inherits protection through parent Goal relationship
+- ✅ Scoped to authenticated user
+
+**ICS Subscriptions API** (`/api/ics-subscriptions/*`):
+
+- ✅ Scoped to authenticated user
 
 ### 5. Seed Data
 
@@ -90,6 +94,7 @@ All existing endpoints now require authentication:
 - Creates test user: `test@example.com` / `password123`
 - Associates all sample goals with test user
 - Associates all sample events with test user
+- Creates AI provider configurations from environment variables
 - Clears users table on reseed
 
 ### 6. Documentation
@@ -146,56 +151,49 @@ Password: password123
 
 ```bash
 # Login and save cookie
-curl -X POST http://localhost:3001/api/auth/login \
+curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"password123"}' \
   -c cookies.txt
 
 # Check authentication
-curl http://localhost:3001/api/auth/me -b cookies.txt
+curl http://localhost:3000/api/auth/me -b cookies.txt
 
 # Fetch user's goals (should return 3 sample goals)
-curl http://localhost:3001/api/goals -b cookies.txt
+curl http://localhost:3000/api/goals -b cookies.txt
 
 # Try without auth (should return 401)
-curl http://localhost:3001/api/goals
+curl http://localhost:3000/api/goals
 
 # Logout
-curl -X POST http://localhost:3001/api/auth/logout -b cookies.txt
+curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
 ```
 
-## File Changes Summary
+## Key Files
 
-**New Files**:
+**Authentication Files**:
 
-- `lib/auth.ts` - Authentication utilities
-- `app/api/auth/register/route.ts` - User registration
-- `app/api/auth/login/route.ts` - User login
-- `app/api/auth/logout/route.ts` - User logout
-- `app/api/auth/me/route.ts` - Get current user
-- `AUTH_DOCUMENTATION.md` - Complete auth guide
-- `AUTH_SUMMARY.md` - This file
+- `lib/auth.ts` — Authentication utilities
+- `app/api/auth/register/route.ts` — User registration
+- `app/api/auth/login/route.ts` — User login
+- `app/api/auth/logout/route.ts` — User logout
+- `app/api/auth/me/route.ts` — Get current user
 
-**Modified Files**:
+**Protected Route Files**:
 
-- `prisma/schema.prisma` - Added User model, updated Goal and CalendarEvent
-- `app/api/goals/route.ts` - Added auth middleware, user filtering
-- `app/api/goals/[id]/route.ts` - Added auth middleware, ownership verification
-- `app/api/events/route.ts` - Added auth middleware, user filtering
-- `app/api/events/[id]/route.ts` - Added auth middleware, ownership verification
-- `prisma/seed.ts` - Added user creation, associate data with user
-- `package.json` - Added bcryptjs dependency
+- `app/api/goals/route.ts` — Goals list/create with user filtering
+- `app/api/goals/[id]/route.ts` — Goal CRUD with ownership verification
+- `app/api/events/route.ts` — Events list/create with user filtering
+- `app/api/events/[id]/route.ts` — Event CRUD with ownership verification
+- `app/api/providers/route.ts` — Providers with user filtering
+- `app/api/ics-subscriptions/route.ts` — ICS subscriptions with user filtering
 
-**New Migrations**:
-
-- `prisma/migrations/20260115183211_add_users_and_auth/migration.sql`
-
-## Dependencies Added
+## Dependencies
 
 ```json
 {
   "dependencies": {
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6"
@@ -212,64 +210,28 @@ curl -X POST http://localhost:3001/api/auth/logout -b cookies.txt
 5. **Ownership Verification**: Database queries filter by userId to prevent data leaks
 6. **Cascade Delete**: Automatic cleanup when user is deleted
 
-## Migration Notes
-
-⚠️ **Breaking Change**: Database was reset because existing data had no userId.
-
-To preserve data in future migrations:
-
-1. Create migration with `--create-only` flag
-2. Manually edit migration to add default userId
-3. Apply migration
-4. Update data to correct userId values
-
-## Next Steps for Production
-
-1. **Add Email Verification**: Send verification emails on registration
-2. **Implement Password Reset**: Add forgot password flow
-3. **Add Rate Limiting**: Prevent brute force attacks on login
-4. **Enable HTTPS**: Set `NODE_ENV=production` for secure cookies
-5. **Add Refresh Tokens**: Implement token refresh for better security
-6. **Add 2FA**: Optional two-factor authentication
-7. **Add Login History**: Track user login attempts
-8. **Add Account Deletion**: Allow users to delete their accounts
-9. **Add Password Change**: Allow users to update passwords
-10. **Frontend Integration**: Build login/register UI components
-
 ## API Endpoint Summary
 
 **Public Endpoints** (no auth required):
 
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
+- `POST /api/auth/register` — Register new user
+- `POST /api/auth/login` — Login user
 
 **Authenticated Endpoints** (session cookie required):
 
-- `POST /api/auth/logout` - Logout user
-- `GET /api/auth/me` - Get current user
-- `GET /api/goals` - List user's goals
-- `POST /api/goals` - Create goal
-- `GET /api/goals/:id` - Get specific goal
-- `PUT /api/goals/:id` - Update goal
-- `DELETE /api/goals/:id` - Delete goal
-- `GET /api/events` - List user's events
-- `POST /api/events` - Create event
-- `GET /api/events/:id` - Get specific event
-- `PATCH /api/events/:id` - Update event
-- `DELETE /api/events/:id` - Delete event
-- `PATCH /api/events/:id` - Update event
-- `DELETE /api/events/:id` - Delete event
-
-## Status
-
-✅ **Complete and Tested**:
-
-- User model and database migration
-- Authentication API routes (register, login, logout, me)
-- Protected data endpoints with user filtering
-- Secure password hashing with bcrypt
-- HTTP-only session cookies
-- Seed data with test user
-- Comprehensive documentation
-
-🚀 **Ready for Integration**: The backend is fully secured and ready for frontend integration.
+- `POST /api/auth/logout` — Logout user
+- `GET /api/auth/me` — Get current user
+- `GET /api/goals` — List user's goals
+- `POST /api/goals` — Create goal
+- `GET /api/goals/:id` — Get specific goal
+- `PUT /api/goals/:id` — Update goal
+- `DELETE /api/goals/:id` — Delete goal
+- `GET /api/events` — List user's events
+- `POST /api/events` — Create event
+- `GET /api/events/:id` — Get specific event
+- `PATCH /api/events/:id` — Update event
+- `DELETE /api/events/:id` — Delete event
+- `GET /api/providers` — List AI providers
+- `POST /api/providers` — Create provider
+- `GET /api/ics-subscriptions` — List ICS subscriptions
+- `POST /api/ics-subscriptions` — Create subscription
