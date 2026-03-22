@@ -13,6 +13,7 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import rrulePlugin from "@fullcalendar/rrule";
 import type React from "react";
 import { useState, useEffect } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
@@ -73,7 +74,12 @@ export default function CalendarView({
         <Box minHeight={0} height="100%">
           <FullCalendar
             ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            plugins={[
+              rrulePlugin,
+              dayGridPlugin,
+              timeGridPlugin,
+              interactionPlugin,
+            ]}
             initialView="timeGridDay"
             headerToolbar={false}
             nowIndicator={true}
