@@ -71,6 +71,7 @@ model Event {
   // ICS-specific fields (nullable for user-created events)
   subscriptionId   String?          // Links to IcsSubscription if this is an ICS event
   uid              String?          // ICS UID field (unique per subscription)
+  recurid          String           @default("") // RECURRENCE-ID: "" = master event, ISO string = modified occurrence
   description      String?          // DESCRIPTION (also useful for user events)
   location         String?          // LOCATION
   startTimezone    String?          // Timezone of DTSTART
@@ -79,6 +80,7 @@ model Event {
   status           String?          // STATUS (CONFIRMED, TENTATIVE, CANCELLED)
   organizer        String?          // ORGANIZER
   recurrenceRule   String?          // RRULE as raw string
+  exdates          String?          // JSON array of ISO date strings to exclude from recurrence expansion
   transparency     String?          // TRANSP (TRANSPARENT/OPAQUE)
   categories       String?          // CATEGORIES as JSON array string
   url              String?          // URL
@@ -91,7 +93,7 @@ model Event {
   goal             Goal?             @relation(fields: [goalId], references: [id], onDelete: Cascade)
   subscription     IcsSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
-  @@unique([subscriptionId, uid])
+  @@unique([subscriptionId, uid, recurid])
   @@index([userId])
   @@index([goalId])
   @@index([subscriptionId])
