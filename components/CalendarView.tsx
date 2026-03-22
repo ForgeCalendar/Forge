@@ -24,11 +24,15 @@ export default function CalendarView({
   currentView,
   setCurrentView,
   onTitleChange,
+  initialDate,
+  onCalendarChange,
 }: {
   calendarRef: React.RefObject<FullCalendar | null>;
   currentView: string[];
   setCurrentView: (v: string[]) => void;
   onTitleChange: (title: string) => void;
+  initialDate: string;
+  onCalendarChange: (date: string, view: string) => void;
 }) {
   const {
     events: calendarEvents,
@@ -80,7 +84,8 @@ export default function CalendarView({
               timeGridPlugin,
               interactionPlugin,
             ]}
-            initialView="timeGridDay"
+            initialView={currentView[0]}
+            initialDate={initialDate}
             headerToolbar={false}
             nowIndicator={true}
             height="100%"
@@ -95,6 +100,8 @@ export default function CalendarView({
             events={calendarEvents}
             datesSet={(info) => {
               onTitleChange(info.view.title);
+              const dateStr = info.view.currentStart.toISOString().slice(0, 10);
+              onCalendarChange(dateStr, info.view.type);
             }}
             dateClick={(info) => {
               if (currentView[0] === "dayGridMonth") {

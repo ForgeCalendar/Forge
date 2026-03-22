@@ -9,6 +9,7 @@ import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import GoalDecomposeDialog from "@/components/GoalDecomposeDialog";
 import { useState, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
 import { useGoals } from "@/storage/hooks";
@@ -28,9 +29,30 @@ export default function App() {
     chatHistoryId?: string | null;
     mode: "create" | "update";
   } | null>(null);
-  const [currentView, setCurrentView] = useState<string[]>(["timeGridDay"]);
   const [calendarTitle, setCalendarTitle] = useState("");
   const calendarRef = useRef<FullCalendar | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [currentView, setCurrentViewState] = useState<string[]>([
+    searchParams.get("view") ?? "timeGridDay",
+  ]);
+  const [currentDate] = useState<string>(
+    searchParams.get("date") ?? new Date().toISOString().slice(0, 10)
+  );
+
+  const setCurrentView = (v: string[]) => {
+    setCurrentViewState(v);
+  };
+
+  const handleCalendarChange = (date: string, view: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", view);
+    params.set("date", date);
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   if (authLoading) {
     return null;
@@ -120,6 +142,8 @@ export default function App() {
           currentView={currentView}
           setCurrentView={setCurrentView}
           onTitleChange={setCalendarTitle}
+          initialDate={currentDate}
+          onCalendarChange={handleCalendarChange}
         />
       </Flex>
 
