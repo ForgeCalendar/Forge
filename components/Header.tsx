@@ -60,11 +60,22 @@ export default function Header({
         px={4}
         py={2}
       >
+        {/* Disappear when window too small</Box> */}
         <Flex align="center" gap={3}>
-          <Heading as="h1" size="xl" m={0} color={headingColor}>
+          <Heading
+            as="h1"
+            size="xl"
+            m={0}
+            color={headingColor}
+            display={{ base: "none", md: "block" }}
+          >
             Forge
           </Heading>
-          <Text opacity={0.7} color={subheadingColor}>
+          <Text
+            opacity={0.7}
+            color={subheadingColor}
+            display={{ base: "none", md: "block" }}
+          >
             Calendar
           </Text>
 
@@ -124,7 +135,11 @@ export default function Header({
           <Flex ml="auto" align="center" gap={2}>
             {user ? (
               <>
-                <Text fontSize="sm" color={subheadingColor}>
+                <Text
+                  fontSize="sm"
+                  color={subheadingColor}
+                  display={{ base: "none", lg: "block" }}
+                >
                   {user.email}
                 </Text>
                 <Button
