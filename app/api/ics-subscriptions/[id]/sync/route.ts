@@ -120,6 +120,7 @@ export async function POST(
     }
 
     let synced = 0;
+    const seenUids = new Set<string>();
 
     for (const calendar of calendarData.calendars) {
       // Pass 1: group events by UID into masters and modifications
@@ -129,6 +130,7 @@ export async function POST(
       for (const event of calendar.events) {
         if (!event.dtstart) continue;
         const uid = event.uid;
+        seenUids.add(uid);
 
         if (event.recurid) {
           // Modified occurrence of a recurring event
@@ -350,6 +352,14 @@ export async function POST(
         }
       }
     }
+
+    // Delete events that are no longer present in the feed
+    await prisma.event.deleteMany({
+      where: {
+        subscriptionId: subscription.id,
+        uid: { notIn: Array.from(seenUids) },
+      },
+    });
 
     await prisma.icsSubscription.update({
       where: { id: subscription.id },
