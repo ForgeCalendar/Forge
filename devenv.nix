@@ -28,6 +28,7 @@ in
     prisma
     engines
     pkgs.pre-commit
+    pkgs.claude-code
   ];
 
   # Make sure Prisma CLI uses Nix-provided engines instead of trying to download
