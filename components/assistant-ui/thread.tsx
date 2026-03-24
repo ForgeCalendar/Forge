@@ -23,14 +23,11 @@ import {
   CheckIcon,
   CopyIcon,
   DownloadIcon,
-  FileTextIcon,
   PencilIcon,
   RefreshCwIcon,
   SquareIcon,
 } from "lucide-react";
 import type { FC } from "react";
-import { useCallback } from "react";
-import { useSummaryPrompt } from "./summary-context";
 
 export const Thread: FC = () => {
   return (
@@ -120,8 +117,6 @@ const ComposerAction: FC = () => {
     <div className="aui-composer-action-wrapper relative mx-2 mb-2 flex items-center justify-between">
       <ComposerAddAttachment />
 
-      <SummarizeButton />
-
       <AssistantIf condition={({ thread }) => !thread.isRunning}>
         <ComposerPrimitive.Send asChild>
           <TooltipIconButton
@@ -152,42 +147,6 @@ const ComposerAction: FC = () => {
         </ComposerPrimitive.Cancel>
       </AssistantIf>
     </div>
-  );
-};
-
-const SummarizeButton: FC = () => {
-  const api = useAssistantApi();
-  const isRunning = useAssistantState((state) => state.thread.isRunning);
-  const summaryPrompt = useSummaryPrompt();
-
-  const handleSummarize = useCallback(() => {
-    if (isRunning) return;
-
-    const threadApi = api.thread();
-    const composerApi = threadApi.composer;
-    const previousText = composerApi.getState().text;
-
-    composerApi.setText(summaryPrompt);
-    composerApi.send();
-
-    if (previousText) {
-      setTimeout(() => composerApi.setText(previousText), 0);
-    }
-  }, [api, isRunning, summaryPrompt]);
-
-  return (
-    <TooltipIconButton
-      tooltip="Summarize"
-      variant="outline"
-      size="icon"
-      className="aui-composer-summarize size-8 rounded-full"
-      type="button"
-      aria-label="Summarize chat"
-      disabled={isRunning}
-      onClick={handleSummarize}
-    >
-      <FileTextIcon className="size-4" />
-    </TooltipIconButton>
   );
 };
 

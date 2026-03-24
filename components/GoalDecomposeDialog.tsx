@@ -7,7 +7,6 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { ChatboxComponent } from "@/components/Chatbox";
-import { goalDecomposePrompt } from "@/components/prompts";
 import { useQueryClient } from "@tanstack/react-query";
 import { goalKeys } from "@/storage/useGoalsQuery";
 import { eventKeys } from "@/storage/useEventsQuery";
@@ -40,11 +39,6 @@ export default function GoalDecomposeDialog({
   const { textSecondary: subtitleColor } = useThemeTokens();
 
   const isUpdate = mode === "update";
-
-  const systemPrompt = useMemo(
-    () => goalDecomposePrompt(goalTitle, goalDescription, dueDate),
-    [goalTitle, goalDescription, dueDate]
-  );
 
   const extraParams = useMemo(() => ({ goalId }), [goalId]);
 
@@ -104,8 +98,6 @@ export default function GoalDecomposeDialog({
                 <ChatboxComponent
                   name={`decompose-${goalId}`}
                   chatHistoryId={isUpdate ? chatHistoryId : undefined}
-                  systemPrompt={systemPrompt}
-                  summaryPrompt="Summarize the tasks we agreed on for this goal."
                   extraParams={extraParams}
                   initialMessage={
                     isUpdate && chatHistoryId
