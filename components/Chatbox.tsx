@@ -29,7 +29,7 @@ type ChatboxProps = {
   systemPrompt?: string;
   summaryPrompt?: string;
   extraParams?: Record<string, string>;
-  initialMessage?: string;
+  autoStart?: boolean;
   initialMessages?: ChatMessage[];
 };
 
@@ -40,18 +40,18 @@ const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
   return null;
 };
 
-const AutoSendMessage: FC<{ message: string }> = ({ message }) => {
+const AutoStartRun: FC = () => {
   const api = useAssistantApi();
   const isEmpty = useAssistantState((state) => state.thread.isEmpty);
   const isRunning = useAssistantState((state) => state.thread.isRunning);
-  const sent = useRef(false);
+  const started = useRef(false);
 
   useEffect(() => {
-    if (isEmpty && !isRunning && !sent.current) {
-      sent.current = true;
-      api.thread().append(message);
+    if (isEmpty && !isRunning && !started.current) {
+      started.current = true;
+      api.thread().startRun({ parentId: null });
     }
-  }, [api, isEmpty, isRunning, message]);
+  }, [api, isEmpty, isRunning]);
 
   return null;
 };
@@ -128,7 +128,7 @@ export function ChatboxComponent({
   systemPrompt,
   summaryPrompt = DEFAULT_SUMMARY_PROMPT,
   extraParams,
-  initialMessage,
+  autoStart,
 }: ChatboxProps): React.ReactElement {
   const { data: providers } = useProvidersQuery();
   const defaultPM = useDefaultProviderModel();
@@ -234,9 +234,7 @@ export function ChatboxComponent({
       />
       <AssistantRuntimeProvider key={providerKey} runtime={runtime}>
         <SystemPromptRegistrar prompt={systemPrompt} />
-        {initialMessage && !hasHistory && (
-          <AutoSendMessage message={initialMessage} />
-        )}
+        {autoStart && !hasHistory && <AutoStartRun />}
         <SummaryPromptContext.Provider value={summaryPrompt}>
           <Thread />
         </SummaryPromptContext.Provider>

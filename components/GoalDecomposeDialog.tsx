@@ -107,11 +107,7 @@ export default function GoalDecomposeDialog({
                   systemPrompt={systemPrompt}
                   summaryPrompt="Summarize the tasks we agreed on for this goal."
                   extraParams={extraParams}
-                  initialMessage={
-                    isUpdate && chatHistoryId
-                      ? undefined
-                      : "Break down this goal into tasks and save them to my calendar."
-                  }
+                  autoStart={!isUpdate || !chatHistoryId}
                 />
               </Box>
             </Dialog.Body>
