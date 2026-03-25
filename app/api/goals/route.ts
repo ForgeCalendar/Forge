@@ -56,6 +56,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       const chatHistory = await tx.chatHistory.create({
         data: {
           userId,
+          title: `Goal: ${title}`,
           role: "GoalDecomposer",
         },
       });

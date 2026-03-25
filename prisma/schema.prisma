@@ -137,6 +137,7 @@ enum ChatHistoryRole {
 model ChatHistory {
   id         String           @id @default(uuid())
   userId     String
+  title      String           @default("Untitled Chat")
   role       ChatHistoryRole  // Determines system prompt and available tools
   providerId String?          // nullable FK — which provider was used
   modelId    String?          // model identifier used for this chat

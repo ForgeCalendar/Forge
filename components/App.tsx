@@ -140,6 +140,11 @@ export default function App() {
           onAddGoal={handleAddGoal}
           onRemoveGoal={handleRemoveGoal}
           onUpdateGoal={handleUpdateGoal}
+          onChatSelect={(chatHistoryId) => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("chatId", chatHistoryId);
+            router.push(`${pathname}?${params.toString()}`);
+          }}
         />
         {/* Center region - hidden on screens smaller than lg or when no chatId */}
         {chatId && (
