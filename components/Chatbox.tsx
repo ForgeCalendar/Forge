@@ -24,7 +24,8 @@ type ChatboxProps = {
   onClose?: () => void;
 };
 
-function ProviderModelSelector({
+function ChatHeader({
+  title,
   providers,
   selectedProviderId,
   selectedModelId,
@@ -32,6 +33,7 @@ function ProviderModelSelector({
   onModelChange,
   onClose,
 }: {
+  title?: string;
   providers: ProviderWithModels[];
   selectedProviderId: string;
   selectedModelId: string;
@@ -41,11 +43,55 @@ function ProviderModelSelector({
 }): React.ReactElement | null {
   if (providers.length === 0) {
     return (
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background/50">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-col border-b border-border bg-background/50">
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="text-sm font-medium truncate flex-1">
+            {title || "Untitled Chat"}
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="ml-2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              aria-label="Close"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        <div className="px-3 py-2 text-sm text-muted-foreground">
           No providers configured.{" "}
           <span className="font-medium">Go to Settings → Account</span> to add
           one.
+        </div>
+      </div>
+    );
+  }
+
+  const selectedProvider = providers.find((p) => p.id === selectedProviderId);
+  const models = selectedProvider?.models ?? [];
+
+  return (
+    <div className="flex flex-col border-b border-border bg-background/50">
+      {/* First row: Title + Close button */}
+      <div className="flex items-center justify-between px-3 py-2">
+        <div
+          className="truncate flex-1"
+          style={{ fontSize: "1.125rem", fontWeight: 700 }}
+        >
+          {title || "Untitled Chat"}
         </div>
         {onClose && (
           <button
@@ -70,71 +116,44 @@ function ProviderModelSelector({
           </button>
         )}
       </div>
-    );
-  }
 
-  const selectedProvider = providers.find((p) => p.id === selectedProviderId);
-  const models = selectedProvider?.models ?? [];
-
-  return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background/50">
-      <label className="text-xs font-medium text-muted-foreground shrink-0">
-        Provider
-      </label>
-      <select
-        className="h-6 rounded-md border border-input bg-background px-1 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
-        value={selectedProviderId}
-        onChange={(e) => onProviderChange(e.target.value)}
-      >
-        {providers.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-
-      <label className="text-xs font-medium text-muted-foreground shrink-0 ml-1">
-        Model
-      </label>
-      <select
-        className="h-6 rounded-md border border-input bg-background px-1 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
-        value={selectedModelId}
-        onChange={(e) => onModelChange(e.target.value)}
-      >
-        {models.map((m) => (
-          <option key={m.id} value={m.modelId}>
-            {m.name}
-          </option>
-        ))}
-        {models.length === 0 && (
-          <option value="" disabled>
-            No models
-          </option>
-        )}
-      </select>
-
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-          aria-label="Close"
+      {/* Second row: Provider/Model selectors */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <label className="text-xs font-medium text-muted-foreground shrink-0">
+          Provider
+        </label>
+        <select
+          className="h-6 rounded-md border border-input bg-background px-1 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
+          value={selectedProviderId}
+          onChange={(e) => onProviderChange(e.target.value)}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
-        </button>
-      )}
+          {providers.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+
+        <label className="text-xs font-medium text-muted-foreground shrink-0 ml-1">
+          Model
+        </label>
+        <select
+          className="h-6 rounded-md border border-input bg-background px-1 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
+          value={selectedModelId}
+          onChange={(e) => onModelChange(e.target.value)}
+        >
+          {models.map((m) => (
+            <option key={m.id} value={m.modelId}>
+              {m.name}
+            </option>
+          ))}
+          {models.length === 0 && (
+            <option value="" disabled>
+              No models
+            </option>
+          )}
+        </select>
+      </div>
     </div>
   );
 }
@@ -237,7 +256,8 @@ export function ChatboxComponent({
       className="flex flex-1 min-h-0 w-full flex-col"
       aria-label={`Chat with ${name}`}
     >
-      <ProviderModelSelector
+      <ChatHeader
+        title={historyData?.title}
         providers={providers ?? []}
         selectedProviderId={selectedProviderId}
         selectedModelId={selectedModelId}

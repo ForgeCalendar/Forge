@@ -5,6 +5,7 @@ type ChatMessage = any;
 
 export type ChatHistoryResponse = {
   id: string;
+  title: string;
   providerId: string | null;
   modelId: string | null;
   messages: ChatMessage[];
