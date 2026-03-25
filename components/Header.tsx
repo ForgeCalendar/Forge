@@ -145,7 +145,11 @@ export default function Header({
 
           <Flex ml="auto" align="center" gap={2}>
             {user ? (
-              <>
+              <Box
+                display={{ base: "none", md: "flex" }}
+                alignItems="center"
+                gap={2}
+              >
                 <Text
                   fontSize="sm"
                   color={subheadingColor}
@@ -161,7 +165,7 @@ export default function Header({
                 >
                   Logout
                 </Button>
-              </>
+              </Box>
             ) : (
               <Button
                 size="sm"
@@ -172,8 +176,10 @@ export default function Header({
                 Login
               </Button>
             )}
-            <ColorModeButton aria-label="Toggle dark mode" />
-            <SettingsDialog />
+            <Box display={{ base: "none", md: "flex" }} gap={2}>
+              <ColorModeButton aria-label="Toggle dark mode" />
+              <SettingsDialog />
+            </Box>
           </Flex>
         </Flex>
       </Box>

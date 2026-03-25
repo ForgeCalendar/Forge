@@ -1,8 +1,17 @@
 "use client";
-import { Box, Flex, Drawer, Portal, CloseButton } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  Drawer,
+  Portal,
+  CloseButton,
+  Button,
+} from "@chakra-ui/react";
 import type FullCalendar from "@fullcalendar/react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import SettingsDialog from "@/components/SettingsDialog";
+import { ColorModeButton } from "@/components/ui/color-mode";
 import CalendarView from "@/components/CalendarView";
 import LoginDialog from "@/components/LoginDialog";
 import RegisterDialog from "@/components/RegisterDialog";
@@ -17,7 +26,7 @@ import type { CreateGoalInput, GoalWithId } from "@/storage/types";
 
 export default function App() {
   const { bgApp: appBg } = useThemeTokens();
-  const { user, isLoading: authLoading, login } = useAuth();
+  const { user, isLoading: authLoading, login, logout } = useAuth();
   const { goals, create, delete: deleteGoal } = useGoals();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
@@ -163,20 +172,45 @@ export default function App() {
                   <CloseButton size="sm" />
                 </Drawer.CloseTrigger>
               </Drawer.Header>
-              <Drawer.Body p={0}>
-                <Sidebar
-                  goals={goals}
-                  onAddGoal={handleAddGoal}
-                  onRemoveGoal={handleRemoveGoal}
-                  onUpdateGoal={handleUpdateGoal}
-                  onChatSelect={(chatHistoryId) => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set("chatId", chatHistoryId);
-                    router.push(`${pathname}?${params.toString()}`);
-                    setDrawerOpen(false);
-                  }}
-                  selectedChatId={chatId}
-                />
+              <Drawer.Body p={0} display="flex" flexDirection="column">
+                <Box flex={1} minH={0} overflowY="auto">
+                  <Sidebar
+                    goals={goals}
+                    onAddGoal={handleAddGoal}
+                    onRemoveGoal={handleRemoveGoal}
+                    onUpdateGoal={handleUpdateGoal}
+                    onChatSelect={(chatHistoryId) => {
+                      const params = new URLSearchParams(
+                        searchParams.toString()
+                      );
+                      params.set("chatId", chatHistoryId);
+                      router.push(`${pathname}?${params.toString()}`);
+                      setDrawerOpen(false);
+                    }}
+                    selectedChatId={chatId}
+                  />
+                </Box>
+                <Box
+                  p={4}
+                  borderTopWidth="1px"
+                  borderColor="border"
+                  flexShrink={0}
+                  display="flex"
+                  gap={2}
+                >
+                  <SettingsDialog />
+                  <ColorModeButton aria-label="Toggle dark mode" />
+                  {user && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={logout}
+                      aria-label="Logout"
+                    >
+                      Logout
+                    </Button>
+                  )}
+                </Box>
               </Drawer.Body>
             </Drawer.Content>
           </Drawer.Positioner>
