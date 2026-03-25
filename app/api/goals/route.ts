@@ -52,10 +52,11 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     // Create goal with its chat history in a single transaction
     const goal = await prisma.$transaction(async (tx) => {
-      // First create the chat history
+      // First create the chat history with GoalDecomposer role
       const chatHistory = await tx.chatHistory.create({
         data: {
           userId,
+          role: "GoalDecomposer",
         },
       });
 

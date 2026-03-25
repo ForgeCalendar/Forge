@@ -36,17 +36,23 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
 
     const { messages } = await req.json();
 
-    // Look up the goal from chatHistoryId if provided
-    let goal = null;
-    if (chatHistoryId) {
-      goal = await prisma.goal.findFirst({
-        where: { chatHistoryId, userId },
-      });
-    }
+    // Look up the chat history and its role
+    const chatHistory = chatHistoryId
+      ? await prisma.chatHistory.findFirst({
+          where: { id: chatHistoryId, userId },
+          include: { goal: true },
+        })
+      : null;
 
     const model = createLanguageModel(provider, modelId);
-    const tools = goal ? buildGoalTools(goal.id, userId) : undefined;
-    const system = goal ? buildGoalSystemPrompt(goal) : undefined;
+
+    // Only provide system prompt and tools for GoalDecomposer role
+    let tools = undefined;
+    let system = undefined;
+    if (chatHistory?.role === "GoalDecomposer" && chatHistory.goal) {
+      tools = buildGoalTools(chatHistory.goal.id, userId);
+      system = buildGoalSystemPrompt(chatHistory.goal);
+    }
 
     const result = streamText({
       model,

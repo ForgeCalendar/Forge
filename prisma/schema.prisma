@@ -130,13 +130,18 @@ model AIModel {
   @@index([providerId])
 }
 
+enum ChatHistoryRole {
+  GoalDecomposer
+}
+
 model ChatHistory {
-  id         String   @id @default(uuid())
+  id         String           @id @default(uuid())
   userId     String
-  providerId String?  // nullable FK — which provider was used
-  modelId    String?  // model identifier used for this chat
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  role       ChatHistoryRole  // Determines system prompt and available tools
+  providerId String?          // nullable FK — which provider was used
+  modelId    String?          // model identifier used for this chat
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider  Provider?  @relation(fields: [providerId], references: [id], onDelete: SetNull)
