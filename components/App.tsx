@@ -203,12 +203,13 @@ export default function App() {
             selectedChatId={chatId}
           />
         </Box>
-        {/* Center region - hidden when no chatId */}
+        {/* Center region - shows when chatId present */}
         {chatId && (
           <Box
             display="flex"
             flex={1}
-            borderX="1px"
+            borderX={{ base: "none", md: "1px" }}
+            borderBottom={{ base: "1px", md: "none" }}
             borderColor="border"
             minW={0}
             minH={0}
@@ -227,14 +228,16 @@ export default function App() {
             />
           </Box>
         )}
-        <CalendarView
-          calendarRef={calendarRef}
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          onTitleChange={setCalendarTitle}
-          initialDate={currentDate}
-          onCalendarChange={handleCalendarChange}
-        />
+        <Box flex={1} minH={0} minW={0}>
+          <CalendarView
+            calendarRef={calendarRef}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            onTitleChange={setCalendarTitle}
+            initialDate={currentDate}
+            onCalendarChange={handleCalendarChange}
+          />
+        </Box>
       </Flex>
     </Box>
   );
