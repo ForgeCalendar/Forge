@@ -9,19 +9,24 @@ import {
   CloseButton,
   Dialog,
   Portal,
+  Flex,
 } from "@chakra-ui/react";
+import { ChatRoleBadge } from "./ChatRoleBadge";
 import { InfoTagComponent } from "./InfoTagComponent";
 import WorkDialog from "./WorkDialog";
 import type { Goal } from "../states/goals";
 import type { GoalWithId, CreateGoalInput } from "@/storage/types";
 import { useState, useRef } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
+import { useChatHistoriesQuery } from "@/storage/useChatHistoryQuery";
 
 type Props = {
   goals: (Goal | GoalWithId)[];
   onAddGoal?: (g: CreateGoalInput) => void;
   onRemoveGoal?: (index: number) => void;
   onUpdateGoal?: (goal: GoalWithId) => void;
+  onChatSelect?: (chatHistoryId: string) => void;
+  selectedChatId?: string | null;
 };
 
 function DeleteGoalDialog({
@@ -180,6 +185,8 @@ export default function Sidebar({
   onAddGoal,
   onRemoveGoal,
   onUpdateGoal,
+  onChatSelect,
+  selectedChatId,
 }: Props) {
   const initialRef = useRef<HTMLInputElement | null>(null);
   const [title, setTitle] = useState("");
@@ -189,7 +196,10 @@ export default function Sidebar({
     bgSurface: sidebarBg,
     border: sidebarBorder,
     textMuted: emptyStateColor,
+    bgCard: chatCardBg,
   } = useThemeTokens();
+
+  const { data: chatHistories } = useChatHistoriesQuery();
 
   function resetForm() {
     setTitle("");
@@ -214,7 +224,8 @@ export default function Sidebar({
   return (
     <Box
       as="aside"
-      w={{ base: "100%", md: "350px", lg: "600px" }}
+      w={{ base: "100%", md: "300px" }}
+      flex={{ lg: 1 }}
       bg={sidebarBg}
       borderRightWidth={{ base: 0, md: "1px" }}
       borderBottomWidth={{ base: "1px", md: 0 }}
@@ -317,6 +328,44 @@ export default function Sidebar({
               </Dialog.Positioner>
             </Portal>
           </Dialog.Root>
+        </Box>
+
+        {/* Chat Histories */}
+        <Box pt={4} borderTop="1px" borderColor={sidebarBorder}>
+          <Heading as="h2" size="md" mb={3}>
+            Chats
+          </Heading>
+
+          {!chatHistories || chatHistories.length === 0 ? (
+            <Text color={emptyStateColor}>No chats yet</Text>
+          ) : (
+            chatHistories.map((chat) => {
+              const isSelected = chat.id === selectedChatId;
+              return (
+                <Box
+                  key={chat.id}
+                  p={2}
+                  mb={2}
+                  bg={isSelected ? "gray.200" : chatCardBg}
+                  _dark={{ bg: isSelected ? "gray.600" : chatCardBg }}
+                  borderRadius="md"
+                  cursor="pointer"
+                  _hover={{ opacity: 0.8 }}
+                  onClick={() => onChatSelect?.(chat.id)}
+                >
+                  <Text fontSize="sm" fontWeight="medium" truncate>
+                    {chat.title}
+                  </Text>
+                  <Flex align="center" gap={2}>
+                    <Text fontSize="xs" color={emptyStateColor}>
+                      {new Date(chat.updatedAt).toLocaleDateString()}
+                    </Text>
+                    <ChatRoleBadge role={chat.role} size="xs" />
+                  </Flex>
+                </Box>
+              );
+            })
+          )}
         </Box>
       </VStack>
     </Box>

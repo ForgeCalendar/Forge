@@ -5,12 +5,23 @@ type ChatMessage = any;
 
 export type ChatHistoryResponse = {
   id: string;
+  title: string;
+  role: string;
   providerId: string | null;
   modelId: string | null;
   messages: ChatMessage[];
 };
 
+export type ChatHistoryListItem = {
+  id: string;
+  title: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export const chatHistoryKeys = {
+  all: ["chatHistories"] as const,
   detail: (id: string) => ["chatHistory", id] as const,
 };
 
@@ -35,5 +46,18 @@ export function useChatHistoryQuery(chatHistoryId: string | null | undefined) {
     queryKey: chatHistoryKeys.detail(chatHistoryId ?? ""),
     queryFn: () => fetchChatHistory(chatHistoryId!),
     enabled: !!chatHistoryId,
+  });
+}
+
+async function fetchChatHistories(): Promise<ChatHistoryListItem[]> {
+  const response = await fetch("/api/chat-history");
+  if (!response.ok) throw new Error("Failed to fetch chat histories");
+  return response.json();
+}
+
+export function useChatHistoriesQuery() {
+  return useQuery({
+    queryKey: chatHistoryKeys.all,
+    queryFn: fetchChatHistories,
   });
 }

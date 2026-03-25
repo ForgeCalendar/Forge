@@ -46,11 +46,11 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
 
     const model = createLanguageModel(provider, modelId);
 
-    // Only provide system prompt and tools for GoalDecomposer role
+    // Only provide system prompt and tools for GoalPlanner role
     let tools = undefined;
     let system = undefined;
-    if (chatHistory?.role === "GoalDecomposer" && chatHistory.goal) {
-      tools = buildGoalTools(chatHistory.goal.id, userId);
+    if (chatHistory?.role === "GoalPlanner" && chatHistory.goal) {
+      tools = buildGoalTools(chatHistory.goal.id, chatHistory.id, userId);
       system = buildGoalSystemPrompt(chatHistory.goal);
     }
 

@@ -31,11 +31,13 @@ export default function Header({
   calendarTitle,
   currentView,
   setCurrentView,
+  onMenuClick,
 }: {
   calendarRef: React.RefObject<FullCalendar | null>;
   calendarTitle: string;
   currentView: string[];
   setCurrentView: (v: string[]) => void;
+  onMenuClick?: () => void;
 }) {
   const {
     bgSurface: headerBg,
@@ -62,6 +64,15 @@ export default function Header({
       >
         {/* Disappear when window too small</Box> */}
         <Flex align="center" gap={3}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onMenuClick}
+            aria-label="Open menu"
+            display={{ base: "flex", md: "none" }}
+          >
+            ☰
+          </Button>
           <Heading
             as="h1"
             size="xl"
@@ -110,31 +121,37 @@ export default function Header({
             {calendarTitle}
           </Text>
 
-          <Select.Root
-            collection={viewOptions}
-            value={currentView}
-            onValueChange={(e) => setCurrentView(e.value)}
-            width="130px"
-            size="sm"
-            positioning={{ sameWidth: true }}
-          >
-            <Select.Trigger>
-              <Select.ValueText placeholder="Select view" />
-            </Select.Trigger>
-            <Select.Positioner>
-              <Select.Content>
-                {viewOptions.items.map((option) => (
-                  <Select.Item item={option} key={option.value}>
-                    {option.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Positioner>
-          </Select.Root>
+          <Box display={{ base: "none", md: "block" }}>
+            <Select.Root
+              collection={viewOptions}
+              value={currentView}
+              onValueChange={(e) => setCurrentView(e.value)}
+              width="130px"
+              size="sm"
+              positioning={{ sameWidth: true }}
+            >
+              <Select.Trigger>
+                <Select.ValueText placeholder="Select view" />
+              </Select.Trigger>
+              <Select.Positioner>
+                <Select.Content>
+                  {viewOptions.items.map((option) => (
+                    <Select.Item item={option} key={option.value}>
+                      {option.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Positioner>
+            </Select.Root>
+          </Box>
 
           <Flex ml="auto" align="center" gap={2}>
             {user ? (
-              <>
+              <Box
+                display={{ base: "none", md: "flex" }}
+                alignItems="center"
+                gap={2}
+              >
                 <Text
                   fontSize="sm"
                   color={subheadingColor}
@@ -150,7 +167,7 @@ export default function Header({
                 >
                   Logout
                 </Button>
-              </>
+              </Box>
             ) : (
               <Button
                 size="sm"
@@ -161,8 +178,10 @@ export default function Header({
                 Login
               </Button>
             )}
-            <ColorModeButton aria-label="Toggle dark mode" />
-            <SettingsDialog />
+            <Box display={{ base: "none", md: "flex" }} gap={2}>
+              <ColorModeButton aria-label="Toggle dark mode" />
+              <SettingsDialog />
+            </Box>
           </Flex>
         </Flex>
       </Box>

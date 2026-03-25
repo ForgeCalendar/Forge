@@ -16,6 +16,8 @@ export async function GET(
       where: { id, userId },
       select: {
         id: true,
+        title: true,
+        role: true,
         providerId: true,
         modelId: true,
         messages: { orderBy: { order: "asc" } },
@@ -39,6 +41,8 @@ export async function GET(
 
     return NextResponse.json({
       id: chatHistory.id,
+      title: chatHistory.title,
+      role: chatHistory.role,
       providerId: chatHistory.providerId,
       modelId: chatHistory.modelId,
       messages,
