@@ -4,8 +4,9 @@ import {
   Flex,
   Drawer,
   Portal,
-  CloseButton,
   Button,
+  Select,
+  createListCollection,
 } from "@chakra-ui/react";
 import type FullCalendar from "@fullcalendar/react";
 import Sidebar from "@/components/Sidebar";
@@ -23,6 +24,14 @@ import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
 import { useGoals } from "@/storage/hooks";
 import type { CreateGoalInput, GoalWithId } from "@/storage/types";
+
+const viewOptions = createListCollection({
+  items: [
+    { label: "Month", value: "dayGridMonth" },
+    { label: "Week", value: "timeGridWeek" },
+    { label: "Day", value: "timeGridDay" },
+  ],
+});
 
 export default function App() {
   const { bgApp: appBg } = useThemeTokens();
@@ -162,15 +171,30 @@ export default function App() {
           <Drawer.Positioner>
             <Drawer.Content>
               <Drawer.Header borderBottomWidth="1px">
-                <Drawer.Title>Menu</Drawer.Title>
-                <Drawer.CloseTrigger
-                  asChild
-                  position="absolute"
-                  top={2}
-                  right={2}
-                >
-                  <CloseButton size="sm" />
-                </Drawer.CloseTrigger>
+                <Flex align="center" gap={3} flex={1}>
+                  <Drawer.Title>Menu</Drawer.Title>
+                  <Select.Root
+                    collection={viewOptions}
+                    value={currentView}
+                    onValueChange={(e) => setCurrentView(e.value)}
+                    width="110px"
+                    size="sm"
+                    positioning={{ sameWidth: true }}
+                  >
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="View" />
+                    </Select.Trigger>
+                    <Select.Positioner>
+                      <Select.Content>
+                        {viewOptions.items.map((option) => (
+                          <Select.Item item={option} key={option.value}>
+                            {option.label}
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Positioner>
+                  </Select.Root>
+                </Flex>
               </Drawer.Header>
               <Drawer.Body p={0} display="flex" flexDirection="column">
                 <Box flex={1} minH={0} overflowY="auto">

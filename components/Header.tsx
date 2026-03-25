@@ -121,27 +121,29 @@ export default function Header({
             {calendarTitle}
           </Text>
 
-          <Select.Root
-            collection={viewOptions}
-            value={currentView}
-            onValueChange={(e) => setCurrentView(e.value)}
-            width="130px"
-            size="sm"
-            positioning={{ sameWidth: true }}
-          >
-            <Select.Trigger>
-              <Select.ValueText placeholder="Select view" />
-            </Select.Trigger>
-            <Select.Positioner>
-              <Select.Content>
-                {viewOptions.items.map((option) => (
-                  <Select.Item item={option} key={option.value}>
-                    {option.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Positioner>
-          </Select.Root>
+          <Box display={{ base: "none", md: "block" }}>
+            <Select.Root
+              collection={viewOptions}
+              value={currentView}
+              onValueChange={(e) => setCurrentView(e.value)}
+              width="130px"
+              size="sm"
+              positioning={{ sameWidth: true }}
+            >
+              <Select.Trigger>
+                <Select.ValueText placeholder="Select view" />
+              </Select.Trigger>
+              <Select.Positioner>
+                <Select.Content>
+                  {viewOptions.items.map((option) => (
+                    <Select.Item item={option} key={option.value}>
+                      {option.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Positioner>
+            </Select.Root>
+          </Box>
 
           <Flex ml="auto" align="center" gap={2}>
             {user ? (
