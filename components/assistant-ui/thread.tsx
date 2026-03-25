@@ -120,11 +120,7 @@ const AssistantMessage: FC = () => {
 
 const AssistantActionBar: FC = () => {
   return (
-    <ActionBarPrimitive.Root
-      hideWhenRunning
-      autohide="not-last"
-      className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-    >
+    <ActionBarPrimitive.Root hideWhenRunning className="flex gap-1">
       <ActionBarPrimitive.Copy asChild>
         <TooltipIconButton tooltip="Copy" variant="ghost" className="size-7">
           <MessagePrimitive.If copied>
