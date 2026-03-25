@@ -1,13 +1,10 @@
+"use client";
+
 import { useMemo, useEffect, useRef, useState } from "react";
+import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import {
-  AssistantRuntimeProvider,
-  useAssistantInstructions,
-  useAssistantApi,
-  useAssistantState,
-} from "@assistant-ui/react";
-import {
-  AssistantChatTransport,
   useChatRuntime,
+  AssistantChatTransport,
 } from "@assistant-ui/react-ai-sdk";
 import { Thread } from "./assistant-ui/thread";
 import {
@@ -18,39 +15,12 @@ import { useChatHistoryQuery } from "@/storage/useChatHistoryQuery";
 import type { ProviderWithModels } from "@/storage/useProvidersQuery";
 import type { FC } from "react";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ChatMessage = any;
-
 type ChatboxProps = {
   name: string;
   chatHistoryId?: string | null;
   systemPrompt?: string;
   extraParams?: Record<string, string>;
   initialMessage?: string;
-  initialMessages?: ChatMessage[];
-};
-
-const SystemPromptRegistrar: FC<{ prompt?: string }> = ({ prompt }) => {
-  useAssistantInstructions(
-    prompt ? { instruction: prompt } : { instruction: "", disabled: true }
-  );
-  return null;
-};
-
-const AutoSendMessage: FC<{ message: string }> = ({ message }) => {
-  const api = useAssistantApi();
-  const isEmpty = useAssistantState((state) => state.thread.isEmpty);
-  const isRunning = useAssistantState((state) => state.thread.isRunning);
-  const sent = useRef(false);
-
-  useEffect(() => {
-    if (isEmpty && !isRunning && !sent.current) {
-      sent.current = true;
-      api.thread().append(message);
-    }
-  }, [api, isEmpty, isRunning, message]);
-
-  return null;
 };
 
 function ProviderModelSelector({
@@ -122,9 +92,7 @@ function ProviderModelSelector({
 export function ChatboxComponent({
   name,
   chatHistoryId,
-  systemPrompt,
   extraParams,
-  initialMessage,
 }: ChatboxProps): React.ReactElement {
   const { data: providers } = useProvidersQuery();
   const defaultPM = useDefaultProviderModel();
@@ -203,9 +171,7 @@ export function ChatboxComponent({
     ...(hasHistory ? { messages: initialMessages } : {}),
   });
 
-  const providerKey = `${name}-${systemPrompt ?? "default"}-${extraParamsKey}-${
-    chatHistoryId ?? "new"
-  }`;
+  const providerKey = `${name}-${extraParamsKey}-${chatHistoryId ?? "new"}`;
 
   if (chatHistoryId && historyLoading) {
     return (
@@ -228,10 +194,6 @@ export function ChatboxComponent({
         onModelChange={handleModelChange}
       />
       <AssistantRuntimeProvider key={providerKey} runtime={runtime}>
-        <SystemPromptRegistrar prompt={systemPrompt} />
-        {initialMessage && !hasHistory && (
-          <AutoSendMessage message={initialMessage} />
-        )}
         <Thread />
       </AssistantRuntimeProvider>
     </div>

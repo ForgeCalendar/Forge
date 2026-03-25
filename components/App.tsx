@@ -8,6 +8,7 @@ import LoginDialog from "@/components/LoginDialog";
 import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import GoalDecomposeDialog from "@/components/GoalDecomposeDialog";
+import { ChatboxComponent } from "@/components/Chatbox";
 import { useState, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useThemeTokens } from "@/lib/theme-tokens";
@@ -116,14 +117,10 @@ export default function App() {
       console.error("Cannot update goal without chatHistoryId");
       return;
     }
-    setDecomposeGoal({
-      id: goal.id,
-      title: goal.title,
-      description: goal.description,
-      dueDate: goal.dueDate,
-      chatHistoryId: goal.chatHistoryId,
-      mode: "update",
-    });
+    // Navigate to the chat in the center region
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("chatId", goal.chatHistoryId);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   return (
@@ -155,10 +152,15 @@ export default function App() {
             borderX="1px"
             borderColor="border"
             minW={0}
-            alignItems="center"
-            justifyContent="center"
+            minH={0}
+            overflow="hidden"
+            p={4}
           >
-            {chatId}
+            <ChatboxComponent
+              name={`chat-${chatId}`}
+              chatHistoryId={chatId}
+              extraParams={{ chatHistoryId: chatId }}
+            />
           </Box>
         )}
         <CalendarView
