@@ -26,7 +26,7 @@ export default function App() {
     title: string;
     description: string;
     dueDate: string | null;
-    chatHistoryId?: string | null;
+    chatHistoryId: string;
     mode: "create" | "update";
   } | null>(null);
   const [calendarTitle, setCalendarTitle] = useState("");
@@ -82,11 +82,16 @@ export default function App() {
   const handleAddGoal = async (goal: CreateGoalInput) => {
     try {
       const created = await create(goal);
+      if (!created.chatHistoryId) {
+        console.error("Goal created without chatHistoryId");
+        return;
+      }
       setDecomposeGoal({
         id: created.id,
         title: created.title,
         description: created.description,
         dueDate: created.dueDate,
+        chatHistoryId: created.chatHistoryId,
         mode: "create",
       });
     } catch (error) {
@@ -106,6 +111,10 @@ export default function App() {
   };
 
   const handleUpdateGoal = (goal: GoalWithId) => {
+    if (!goal.chatHistoryId) {
+      console.error("Cannot update goal without chatHistoryId");
+      return;
+    }
     setDecomposeGoal({
       id: goal.id,
       title: goal.title,

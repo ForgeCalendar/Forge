@@ -19,7 +19,7 @@ type Props = {
   goalTitle: string;
   goalDescription: string;
   dueDate: string | null;
-  chatHistoryId?: string | null;
+  chatHistoryId: string;
   open: boolean;
   onClose: () => void;
   mode?: "create" | "update";
@@ -40,16 +40,14 @@ export default function GoalDecomposeDialog({
 
   const isUpdate = mode === "update";
 
-  const extraParams = useMemo(() => ({ goalId }), [goalId]);
+  const extraParams = useMemo(() => ({ chatHistoryId }), [chatHistoryId]);
 
   function handleClose() {
     queryClient.invalidateQueries({ queryKey: goalKeys.all });
     queryClient.invalidateQueries({ queryKey: eventKeys.all });
-    if (chatHistoryId) {
-      queryClient.invalidateQueries({
-        queryKey: chatHistoryKeys.detail(chatHistoryId),
-      });
-    }
+    queryClient.invalidateQueries({
+      queryKey: chatHistoryKeys.detail(chatHistoryId),
+    });
     onClose();
   }
 
@@ -97,10 +95,10 @@ export default function GoalDecomposeDialog({
               >
                 <ChatboxComponent
                   name={`decompose-${goalId}`}
-                  chatHistoryId={isUpdate ? chatHistoryId : undefined}
+                  chatHistoryId={chatHistoryId}
                   extraParams={extraParams}
                   initialMessage={
-                    isUpdate && chatHistoryId
+                    isUpdate
                       ? undefined
                       : "Break down this goal into tasks and save them to my calendar."
                   }

@@ -19,6 +19,7 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     const url = new URL(req.url);
     const providerId = url.searchParams.get("providerId");
     const modelId = url.searchParams.get("modelId");
+    const chatHistoryId = url.searchParams.get("chatHistoryId");
 
     if (!providerId || !modelId) {
       return NextResponse.json(
@@ -33,21 +34,19 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     );
     if (provider instanceof NextResponse) return provider;
 
-    const goalId = url.searchParams.get("goalId");
     const { messages } = await req.json();
 
-    const model = createLanguageModel(provider, modelId);
-    const tools = goalId ? buildGoalTools(goalId, userId) : undefined;
-
-    let system: string | undefined;
-    if (goalId) {
-      const goal = await prisma.goal.findFirst({
-        where: { id: goalId, userId },
+    // Look up the goal from chatHistoryId if provided
+    let goal = null;
+    if (chatHistoryId) {
+      goal = await prisma.goal.findFirst({
+        where: { chatHistoryId, userId },
       });
-      if (goal) {
-        system = buildGoalSystemPrompt(goal);
-      }
     }
+
+    const model = createLanguageModel(provider, modelId);
+    const tools = goal ? buildGoalTools(goal.id, userId) : undefined;
+    const system = goal ? buildGoalSystemPrompt(goal) : undefined;
 
     const result = streamText({
       model,
@@ -59,9 +58,9 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       onFinish: async ({ messages: allMessages }) => {
-        if (goalId) {
+        if (chatHistoryId) {
           await saveChatHistory(
-            goalId,
+            chatHistoryId,
             userId,
             provider.id,
             modelId,
