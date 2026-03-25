@@ -134,7 +134,7 @@ export default function App() {
   };
 
   return (
-    <Box minH="100vh" bg={appBg}>
+    <Box h="100vh" bg={appBg} overflow="hidden">
       <Header
         calendarRef={calendarRef}
         calendarTitle={calendarTitle}
@@ -188,6 +188,7 @@ export default function App() {
         mx="auto"
         gap={0}
         height="calc(100vh - 53px)"
+        overflow="hidden"
       >
         <Box display={{ base: "none", md: "block" }} height="100%">
           <Sidebar
@@ -228,7 +229,7 @@ export default function App() {
             />
           </Box>
         )}
-        <Box flex={1} minH={0} minW={0}>
+        <Box flex={1} minH={0} minW={0} overflow="hidden">
           <CalendarView
             calendarRef={calendarRef}
             currentView={currentView}
