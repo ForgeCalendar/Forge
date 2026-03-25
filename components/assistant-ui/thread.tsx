@@ -88,7 +88,10 @@ const Composer: FC = () => {
 const UserMessage: FC = () => {
   return (
     <MessagePrimitive.Root className="mb-6 flex justify-end">
-      <div className="max-w-[80%] rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
+      <div
+        className="max-w-[80%] rounded-2xl bg-gray-200 dark:bg-gray-700 text-foreground"
+        style={{ padding: "2px 10px" }}
+      >
         <MessagePrimitive.Content />
       </div>
     </MessagePrimitive.Root>
