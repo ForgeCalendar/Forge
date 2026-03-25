@@ -42,6 +42,7 @@ export default function App() {
   const [currentDate] = useState<string>(
     searchParams.get("date") ?? new Date().toISOString().slice(0, 10)
   );
+  const chatId = searchParams.get("chatId");
 
   const setCurrentView = (v: string[]) => {
     setCurrentViewState(v);
@@ -146,14 +147,20 @@ export default function App() {
           onRemoveGoal={handleRemoveGoal}
           onUpdateGoal={handleUpdateGoal}
         />
-        {/* Center region - hidden on screens smaller than lg */}
-        <Box
-          display={{ base: "none", lg: "flex" }}
-          flex={1}
-          borderX="1px"
-          borderColor="border"
-          minW={0}
-        />
+        {/* Center region - hidden on screens smaller than lg or when no chatId */}
+        {chatId && (
+          <Box
+            display={{ base: "none", lg: "flex" }}
+            flex={1}
+            borderX="1px"
+            borderColor="border"
+            minW={0}
+            alignItems="center"
+            justifyContent="center"
+          >
+            {chatId}
+          </Box>
+        )}
         <CalendarView
           calendarRef={calendarRef}
           currentView={currentView}
