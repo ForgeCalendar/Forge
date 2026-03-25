@@ -21,6 +21,7 @@ type ChatboxProps = {
   systemPrompt?: string;
   extraParams?: Record<string, string>;
   initialMessage?: string;
+  onClose?: () => void;
 };
 
 function ProviderModelSelector({
@@ -29,19 +30,45 @@ function ProviderModelSelector({
   selectedModelId,
   onProviderChange,
   onModelChange,
+  onClose,
 }: {
   providers: ProviderWithModels[];
   selectedProviderId: string;
   selectedModelId: string;
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelId: string) => void;
+  onClose?: () => void;
 }): React.ReactElement | null {
   if (providers.length === 0) {
     return (
-      <div className="px-3 py-2 text-sm text-muted-foreground">
-        No providers configured.{" "}
-        <span className="font-medium">Go to Settings → Account</span> to add
-        one.
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background/50">
+        <div className="text-sm text-muted-foreground">
+          No providers configured.{" "}
+          <span className="font-medium">Go to Settings → Account</span> to add
+          one.
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="ml-2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            aria-label="Close"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        )}
       </div>
     );
   }
@@ -55,7 +82,7 @@ function ProviderModelSelector({
         Provider
       </label>
       <select
-        className="h-7 rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
+        className="h-6 rounded-md border border-input bg-background px-1 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
         value={selectedProviderId}
         onChange={(e) => onProviderChange(e.target.value)}
       >
@@ -66,11 +93,11 @@ function ProviderModelSelector({
         ))}
       </select>
 
-      <label className="text-xs font-medium text-muted-foreground shrink-0 ml-2">
+      <label className="text-xs font-medium text-muted-foreground shrink-0 ml-1">
         Model
       </label>
       <select
-        className="h-7 rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
+        className="h-6 rounded-md border border-input bg-background px-1 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
         value={selectedModelId}
         onChange={(e) => onModelChange(e.target.value)}
       >
@@ -85,6 +112,29 @@ function ProviderModelSelector({
           </option>
         )}
       </select>
+
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+          aria-label="Close"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -93,6 +143,7 @@ export function ChatboxComponent({
   name,
   chatHistoryId,
   extraParams,
+  onClose,
 }: ChatboxProps): React.ReactElement {
   const { data: providers } = useProvidersQuery();
   const defaultPM = useDefaultProviderModel();
@@ -192,6 +243,7 @@ export function ChatboxComponent({
         selectedModelId={selectedModelId}
         onProviderChange={handleProviderChange}
         onModelChange={handleModelChange}
+        onClose={onClose}
       />
       <AssistantRuntimeProvider key={providerKey} runtime={runtime}>
         <Thread />

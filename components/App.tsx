@@ -1,5 +1,5 @@
 "use client";
-import { Box, Flex, CloseButton } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import type FullCalendar from "@fullcalendar/react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -160,6 +160,11 @@ export default function App() {
               name={`chat-${chatId}`}
               chatHistoryId={chatId}
               extraParams={{ chatHistoryId: chatId }}
+              onClose={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete("chatId");
+                router.push(`${pathname}?${params.toString()}`);
+              }}
             />
           </Box>
         )}
