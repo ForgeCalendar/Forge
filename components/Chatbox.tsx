@@ -10,8 +10,6 @@ import {
   useChatRuntime,
 } from "@assistant-ui/react-ai-sdk";
 import { Thread } from "./assistant-ui/thread";
-import { DEFAULT_SUMMARY_PROMPT } from "./prompts";
-import { SummaryPromptContext } from "./assistant-ui/summary-context";
 import {
   useProvidersQuery,
   useDefaultProviderModel,
@@ -27,7 +25,6 @@ type ChatboxProps = {
   name: string;
   chatHistoryId?: string | null;
   systemPrompt?: string;
-  summaryPrompt?: string;
   extraParams?: Record<string, string>;
   initialMessage?: string;
   initialMessages?: ChatMessage[];
@@ -126,7 +123,6 @@ export function ChatboxComponent({
   name,
   chatHistoryId,
   systemPrompt,
-  summaryPrompt = DEFAULT_SUMMARY_PROMPT,
   extraParams,
   initialMessage,
 }: ChatboxProps): React.ReactElement {
@@ -186,7 +182,6 @@ export function ChatboxComponent({
   const extraParamsKey = extraParams ? JSON.stringify(extraParams) : "";
   const transport = useMemo(() => {
     const params = new URLSearchParams();
-    if (summaryPrompt) params.set("summaryPrompt", summaryPrompt);
     if (selectedProviderId) params.set("providerId", selectedProviderId);
     if (selectedModelId) params.set("modelId", selectedModelId);
     if (extraParams) {
@@ -198,7 +193,7 @@ export function ChatboxComponent({
     return new AssistantChatTransport({
       api: `/api/chat?${params.toString()}`,
     });
-  }, [summaryPrompt, extraParamsKey, selectedProviderId, selectedModelId]);
+  }, [extraParamsKey, selectedProviderId, selectedModelId]);
 
   const initialMessages = historyData?.messages;
   const hasHistory = initialMessages && initialMessages.length > 0;
@@ -237,9 +232,7 @@ export function ChatboxComponent({
         {initialMessage && !hasHistory && (
           <AutoSendMessage message={initialMessage} />
         )}
-        <SummaryPromptContext.Provider value={summaryPrompt}>
-          <Thread />
-        </SummaryPromptContext.Provider>
+        <Thread />
       </AssistantRuntimeProvider>
     </div>
   );

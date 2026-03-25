@@ -120,67 +120,52 @@ Guidelines:
 }
 
 export async function saveChatHistory(
-  goalId: string,
+  chatHistoryId: string,
   userId: string,
   providerId: string,
   modelId: string,
   allMessages: UIMessage[]
 ): Promise<void> {
   try {
-    const goal = await prisma.goal.findUnique({
-      where: { id: goalId },
-      select: { chatHistoryId: true, userId: true },
+    // Verify the chat history belongs to this user
+    const chatHistory = await prisma.chatHistory.findUnique({
+      where: { id: chatHistoryId },
+      select: { userId: true },
     });
-    if (!goal) return;
 
-    if (goal.userId !== userId) {
-      console.warn("Unauthorized attempt to modify goal chat history", {
-        goalId,
+    if (!chatHistory) return;
+
+    if (chatHistory.userId !== userId) {
+      console.warn("Unauthorized attempt to modify chat history", {
+        chatHistoryId,
         userId,
       });
       return;
     }
 
-    if (goal.chatHistoryId) {
-      await prisma.$transaction(async (tx) => {
-        await tx.message.deleteMany({
-          where: { chatHistoryId: goal.chatHistoryId! },
-        });
-
-        if (allMessages.length > 0) {
-          await tx.message.createMany({
-            data: allMessages.map((msg, idx) => ({
-              chatHistoryId: goal.chatHistoryId!,
-              role: msg.role ?? "user",
-              content: JSON.stringify(msg),
-              order: idx,
-            })),
-          });
-        }
+    await prisma.$transaction(async (tx) => {
+      // Update provider/model info if not set
+      await tx.chatHistory.update({
+        where: { id: chatHistoryId },
+        data: { providerId, modelId },
       });
-    } else {
-      await prisma.$transaction(async (tx) => {
-        const chatHistory = await tx.chatHistory.create({
-          data: {
-            userId: goal.userId,
-            providerId,
-            modelId,
-            messages: {
-              create: allMessages.map((msg, idx) => ({
-                role: msg.role ?? "user",
-                content: JSON.stringify(msg),
-                order: idx,
-              })),
-            },
-          },
-        });
 
-        await tx.goal.update({
-          where: { id: goalId },
-          data: { chatHistoryId: chatHistory.id },
-        });
+      // Replace all messages
+      await tx.message.deleteMany({
+        where: { chatHistoryId },
       });
-    }
+
+      if (allMessages.length > 0) {
+        await tx.message.createMany({
+          data: allMessages.map((msg, idx) => ({
+            chatHistoryId,
+            role: msg.role ?? "user",
+            content: JSON.stringify(msg),
+            order: idx,
+          })),
+        });
+      }
+    });
   } catch (e) {
     console.error("Failed to save chat history:", e);
   }

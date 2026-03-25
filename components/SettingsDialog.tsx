@@ -80,11 +80,6 @@ function InfoTagSettingsPane() {
                   <ChatboxComponent
                     name={selectedTag.title}
                     systemPrompt={tagEditorPrompt(selectedTag.title)}
-                    summaryPrompt={
-                      "Please summarize the key points about " +
-                      selectedTag.title +
-                      " from our conversation."
-                    }
                   />
                 </Box>
               </>

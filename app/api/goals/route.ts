@@ -50,24 +50,37 @@ export async function POST(req: Request): Promise<NextResponse> {
     const body = await req.json();
     const { title, description, dueDate, infoTags } = body;
 
-    const goal = await prisma.goal.create({
-      data: {
-        userId,
-        title,
-        description,
-        dueDate,
-        infoTags: {
-          create:
-            infoTags?.map((tag: InfoTagInput) => ({
-              title: tag.title,
-              info: tag.info,
-            })) ?? [],
+    // Create goal with its chat history in a single transaction
+    const goal = await prisma.$transaction(async (tx) => {
+      // First create the chat history with GoalDecomposer role
+      const chatHistory = await tx.chatHistory.create({
+        data: {
+          userId,
+          role: "GoalDecomposer",
         },
-      },
-      include: {
-        events: true,
-        infoTags: true,
-      },
+      });
+
+      // Then create the goal linked to the chat history
+      return tx.goal.create({
+        data: {
+          userId,
+          title,
+          description,
+          dueDate,
+          chatHistoryId: chatHistory.id,
+          infoTags: {
+            create:
+              infoTags?.map((tag: InfoTagInput) => ({
+                title: tag.title,
+                info: tag.info,
+              })) ?? [],
+          },
+        },
+        include: {
+          events: true,
+          infoTags: true,
+        },
+      });
     });
 
     return NextResponse.json(goal, { status: 201 });

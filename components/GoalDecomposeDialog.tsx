@@ -7,7 +7,6 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { ChatboxComponent } from "@/components/Chatbox";
-import { goalDecomposePrompt } from "@/components/prompts";
 import { useQueryClient } from "@tanstack/react-query";
 import { goalKeys } from "@/storage/useGoalsQuery";
 import { eventKeys } from "@/storage/useEventsQuery";
@@ -20,7 +19,7 @@ type Props = {
   goalTitle: string;
   goalDescription: string;
   dueDate: string | null;
-  chatHistoryId?: string | null;
+  chatHistoryId: string;
   open: boolean;
   onClose: () => void;
   mode?: "create" | "update";
@@ -41,21 +40,14 @@ export default function GoalDecomposeDialog({
 
   const isUpdate = mode === "update";
 
-  const systemPrompt = useMemo(
-    () => goalDecomposePrompt(goalTitle, goalDescription, dueDate),
-    [goalTitle, goalDescription, dueDate]
-  );
-
-  const extraParams = useMemo(() => ({ goalId }), [goalId]);
+  const extraParams = useMemo(() => ({ chatHistoryId }), [chatHistoryId]);
 
   function handleClose() {
     queryClient.invalidateQueries({ queryKey: goalKeys.all });
     queryClient.invalidateQueries({ queryKey: eventKeys.all });
-    if (chatHistoryId) {
-      queryClient.invalidateQueries({
-        queryKey: chatHistoryKeys.detail(chatHistoryId),
-      });
-    }
+    queryClient.invalidateQueries({
+      queryKey: chatHistoryKeys.detail(chatHistoryId),
+    });
     onClose();
   }
 
@@ -103,12 +95,10 @@ export default function GoalDecomposeDialog({
               >
                 <ChatboxComponent
                   name={`decompose-${goalId}`}
-                  chatHistoryId={isUpdate ? chatHistoryId : undefined}
-                  systemPrompt={systemPrompt}
-                  summaryPrompt="Summarize the tasks we agreed on for this goal."
+                  chatHistoryId={chatHistoryId}
                   extraParams={extraParams}
                   initialMessage={
-                    isUpdate && chatHistoryId
+                    isUpdate
                       ? undefined
                       : "Break down this goal into tasks and save them to my calendar."
                   }

@@ -19,6 +19,7 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     const url = new URL(req.url);
     const providerId = url.searchParams.get("providerId");
     const modelId = url.searchParams.get("modelId");
+    const chatHistoryId = url.searchParams.get("chatHistoryId");
 
     if (!providerId || !modelId) {
       return NextResponse.json(
@@ -33,20 +34,24 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     );
     if (provider instanceof NextResponse) return provider;
 
-    const goalId = url.searchParams.get("goalId");
     const { messages } = await req.json();
 
-    const model = createLanguageModel(provider, modelId);
-    const tools = goalId ? buildGoalTools(goalId, userId) : undefined;
+    // Look up the chat history and its role
+    const chatHistory = chatHistoryId
+      ? await prisma.chatHistory.findFirst({
+          where: { id: chatHistoryId, userId },
+          include: { goal: true },
+        })
+      : null;
 
-    let system: string | undefined;
-    if (goalId) {
-      const goal = await prisma.goal.findFirst({
-        where: { id: goalId, userId },
-      });
-      if (goal) {
-        system = buildGoalSystemPrompt(goal);
-      }
+    const model = createLanguageModel(provider, modelId);
+
+    // Only provide system prompt and tools for GoalDecomposer role
+    let tools = undefined;
+    let system = undefined;
+    if (chatHistory?.role === "GoalDecomposer" && chatHistory.goal) {
+      tools = buildGoalTools(chatHistory.goal.id, userId);
+      system = buildGoalSystemPrompt(chatHistory.goal);
     }
 
     const result = streamText({
@@ -59,9 +64,9 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       onFinish: async ({ messages: allMessages }) => {
-        if (goalId) {
+        if (chatHistoryId) {
           await saveChatHistory(
-            goalId,
+            chatHistoryId,
             userId,
             provider.id,
             modelId,
