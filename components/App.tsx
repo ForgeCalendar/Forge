@@ -135,21 +135,23 @@ export default function App() {
         gap={0}
         height="calc(100vh - 53px)"
       >
-        <Sidebar
-          goals={goals}
-          onAddGoal={handleAddGoal}
-          onRemoveGoal={handleRemoveGoal}
-          onUpdateGoal={handleUpdateGoal}
-          onChatSelect={(chatHistoryId) => {
-            const params = new URLSearchParams(searchParams.toString());
-            params.set("chatId", chatHistoryId);
-            router.push(`${pathname}?${params.toString()}`);
-          }}
-        />
-        {/* Center region - hidden on screens smaller than lg or when no chatId */}
+        <Box display={{ base: "none", md: "block" }} height="100%">
+          <Sidebar
+            goals={goals}
+            onAddGoal={handleAddGoal}
+            onRemoveGoal={handleRemoveGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onChatSelect={(chatHistoryId) => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("chatId", chatHistoryId);
+              router.push(`${pathname}?${params.toString()}`);
+            }}
+          />
+        </Box>
+        {/* Center region - hidden when no chatId */}
         {chatId && (
           <Box
-            display={{ base: "none", lg: "flex" }}
+            display="flex"
             flex={1}
             borderX="1px"
             borderColor="border"
