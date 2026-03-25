@@ -14,6 +14,7 @@ import {
 import { useChatHistoryQuery } from "@/storage/useChatHistoryQuery";
 import type { ProviderWithModels } from "@/storage/useProvidersQuery";
 import type { FC } from "react";
+import { ChatRoleBadge } from "./ChatRoleBadge";
 
 type ChatboxProps = {
   name: string;
@@ -26,6 +27,7 @@ type ChatboxProps = {
 
 function ChatHeader({
   title,
+  role,
   providers,
   selectedProviderId,
   selectedModelId,
@@ -34,6 +36,7 @@ function ChatHeader({
   onClose,
 }: {
   title?: string;
+  role?: string;
   providers: ProviderWithModels[];
   selectedProviderId: string;
   selectedModelId: string;
@@ -117,7 +120,14 @@ function ChatHeader({
         )}
       </div>
 
-      {/* Second row: Provider/Model selectors */}
+      {/* Second row: Role badge */}
+      {role && (
+        <div className="px-3 pb-2">
+          <ChatRoleBadge role={role} size="sm" />
+        </div>
+      )}
+
+      {/* Third row: Provider/Model selectors */}
       <div className="flex items-center gap-2 px-3 py-2">
         <label className="text-xs font-medium text-muted-foreground shrink-0">
           Provider
@@ -258,6 +268,7 @@ export function ChatboxComponent({
     >
       <ChatHeader
         title={historyData?.title}
+        role={historyData?.role}
         providers={providers ?? []}
         selectedProviderId={selectedProviderId}
         selectedModelId={selectedModelId}

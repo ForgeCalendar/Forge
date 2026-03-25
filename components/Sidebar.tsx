@@ -9,7 +9,9 @@ import {
   CloseButton,
   Dialog,
   Portal,
+  Flex,
 } from "@chakra-ui/react";
+import { ChatRoleBadge } from "./ChatRoleBadge";
 import { InfoTagComponent } from "./InfoTagComponent";
 import WorkDialog from "./WorkDialog";
 import type { Goal } from "../states/goals";
@@ -354,9 +356,12 @@ export default function Sidebar({
                   <Text fontSize="sm" fontWeight="medium" truncate>
                     {chat.title}
                   </Text>
-                  <Text fontSize="xs" color={emptyStateColor}>
-                    {new Date(chat.updatedAt).toLocaleDateString()}
-                  </Text>
+                  <Flex align="center" gap={2}>
+                    <Text fontSize="xs" color={emptyStateColor}>
+                      {new Date(chat.updatedAt).toLocaleDateString()}
+                    </Text>
+                    <ChatRoleBadge role={chat.role} size="xs" />
+                  </Flex>
                 </Box>
               );
             })

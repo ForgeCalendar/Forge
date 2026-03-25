@@ -131,7 +131,7 @@ model AIModel {
 }
 
 enum ChatHistoryRole {
-  GoalDecomposer
+  GoalPlanner
 }
 
 model ChatHistory {
