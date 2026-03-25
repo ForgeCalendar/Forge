@@ -214,7 +214,8 @@ export default function Sidebar({
   return (
     <Box
       as="aside"
-      w={{ base: "100%", md: "350px", lg: "600px" }}
+      w={{ base: "100%", md: "300px" }}
+      flex={{ lg: 1 }}
       bg={sidebarBg}
       borderRightWidth={{ base: 0, md: "1px" }}
       borderBottomWidth={{ base: "1px", md: 0 }}

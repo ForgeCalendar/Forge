@@ -146,6 +146,14 @@ export default function App() {
           onRemoveGoal={handleRemoveGoal}
           onUpdateGoal={handleUpdateGoal}
         />
+        {/* Center region - hidden on screens smaller than lg */}
+        <Box
+          display={{ base: "none", lg: "flex" }}
+          flex={1}
+          borderX="1px"
+          borderColor="border"
+          minW={0}
+        />
         <CalendarView
           calendarRef={calendarRef}
           currentView={currentView}
