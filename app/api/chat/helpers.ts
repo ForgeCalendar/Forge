@@ -4,8 +4,34 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { Goal } from "@/lib/generated/prisma";
 
-export function buildGoalTools(goalId: string, userId: string) {
+export function buildGoalTools(
+  goalId: string,
+  chatHistoryId: string,
+  userId: string
+) {
   return {
+    setChatTitle: tool({
+      description:
+        "Update the title of the current chat session. Use this to give the conversation a meaningful name based on what was discussed.",
+      inputSchema: z.object({
+        title: z
+          .string()
+          .min(1)
+          .max(100)
+          .describe("New title for the chat session"),
+      }),
+      execute: async ({ title }) => {
+        try {
+          await prisma.chatHistory.update({
+            where: { id: chatHistoryId, userId },
+            data: { title },
+          });
+          return { success: true, title };
+        } catch {
+          return { success: false, error: "Failed to update chat title" };
+        }
+      },
+    }),
     saveTasks: tool({
       description:
         "Save the proposed tasks for the goal as calendar events. Each task must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",

@@ -50,7 +50,7 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     let tools = undefined;
     let system = undefined;
     if (chatHistory?.role === "GoalDecomposer" && chatHistory.goal) {
-      tools = buildGoalTools(chatHistory.goal.id, userId);
+      tools = buildGoalTools(chatHistory.goal.id, chatHistory.id, userId);
       system = buildGoalSystemPrompt(chatHistory.goal);
     }
 
