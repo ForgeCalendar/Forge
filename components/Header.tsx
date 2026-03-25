@@ -31,11 +31,13 @@ export default function Header({
   calendarTitle,
   currentView,
   setCurrentView,
+  onMenuClick,
 }: {
   calendarRef: React.RefObject<FullCalendar | null>;
   calendarTitle: string;
   currentView: string[];
   setCurrentView: (v: string[]) => void;
+  onMenuClick?: () => void;
 }) {
   const {
     bgSurface: headerBg,
@@ -62,6 +64,15 @@ export default function Header({
       >
         {/* Disappear when window too small</Box> */}
         <Flex align="center" gap={3}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onMenuClick}
+            aria-label="Open menu"
+            display={{ base: "flex", md: "none" }}
+          >
+            ☰
+          </Button>
           <Heading
             as="h1"
             size="xl"

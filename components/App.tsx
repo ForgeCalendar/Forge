@@ -1,5 +1,5 @@
 "use client";
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Flex, Drawer, Portal, CloseButton } from "@chakra-ui/react";
 import type FullCalendar from "@fullcalendar/react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -8,7 +8,7 @@ import LoginDialog from "@/components/LoginDialog";
 import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import { ChatboxComponent } from "@/components/Chatbox";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +22,20 @@ export default function App() {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [calendarTitle, setCalendarTitle] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const calendarRef = useRef<FullCalendar | null>(null);
+
+  // Close drawer when screen becomes md or larger (sidebar visible)
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        setDrawerOpen(false);
+      }
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -127,7 +140,48 @@ export default function App() {
         calendarTitle={calendarTitle}
         currentView={currentView}
         setCurrentView={setCurrentView}
+        onMenuClick={() => setDrawerOpen(true)}
       />
+
+      <Drawer.Root
+        open={drawerOpen}
+        onOpenChange={(e) => setDrawerOpen(e.open)}
+        placement="start"
+      >
+        <Portal>
+          <Drawer.Backdrop />
+          <Drawer.Positioner>
+            <Drawer.Content>
+              <Drawer.Header borderBottomWidth="1px">
+                <Drawer.Title>Menu</Drawer.Title>
+                <Drawer.CloseTrigger
+                  asChild
+                  position="absolute"
+                  top={2}
+                  right={2}
+                >
+                  <CloseButton size="sm" />
+                </Drawer.CloseTrigger>
+              </Drawer.Header>
+              <Drawer.Body p={0}>
+                <Sidebar
+                  goals={goals}
+                  onAddGoal={handleAddGoal}
+                  onRemoveGoal={handleRemoveGoal}
+                  onUpdateGoal={handleUpdateGoal}
+                  onChatSelect={(chatHistoryId) => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("chatId", chatHistoryId);
+                    router.push(`${pathname}?${params.toString()}`);
+                    setDrawerOpen(false);
+                  }}
+                  selectedChatId={chatId}
+                />
+              </Drawer.Body>
+            </Drawer.Content>
+          </Drawer.Positioner>
+        </Portal>
+      </Drawer.Root>
 
       <Flex
         direction={{ base: "column", md: "row" }}
