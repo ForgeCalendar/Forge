@@ -146,6 +146,7 @@ export default function App() {
               params.set("chatId", chatHistoryId);
               router.push(`${pathname}?${params.toString()}`);
             }}
+            selectedChatId={chatId}
           />
         </Box>
         {/* Center region - hidden when no chatId */}

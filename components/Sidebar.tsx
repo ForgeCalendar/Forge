@@ -24,6 +24,7 @@ type Props = {
   onRemoveGoal?: (index: number) => void;
   onUpdateGoal?: (goal: GoalWithId) => void;
   onChatSelect?: (chatHistoryId: string) => void;
+  selectedChatId?: string | null;
 };
 
 function DeleteGoalDialog({
@@ -183,6 +184,7 @@ export default function Sidebar({
   onRemoveGoal,
   onUpdateGoal,
   onChatSelect,
+  selectedChatId,
 }: Props) {
   const initialRef = useRef<HTMLInputElement | null>(null);
   const [title, setTitle] = useState("");
@@ -335,25 +337,29 @@ export default function Sidebar({
           {!chatHistories || chatHistories.length === 0 ? (
             <Text color={emptyStateColor}>No chats yet</Text>
           ) : (
-            chatHistories.map((chat) => (
-              <Box
-                key={chat.id}
-                p={2}
-                mb={2}
-                bg={chatCardBg}
-                borderRadius="md"
-                cursor="pointer"
-                _hover={{ opacity: 0.8 }}
-                onClick={() => onChatSelect?.(chat.id)}
-              >
-                <Text fontSize="sm" fontWeight="medium" truncate>
-                  {chat.title}
-                </Text>
-                <Text fontSize="xs" color={emptyStateColor}>
-                  {new Date(chat.updatedAt).toLocaleDateString()}
-                </Text>
-              </Box>
-            ))
+            chatHistories.map((chat) => {
+              const isSelected = chat.id === selectedChatId;
+              return (
+                <Box
+                  key={chat.id}
+                  p={2}
+                  mb={2}
+                  bg={isSelected ? "gray.200" : chatCardBg}
+                  _dark={{ bg: isSelected ? "gray.600" : chatCardBg }}
+                  borderRadius="md"
+                  cursor="pointer"
+                  _hover={{ opacity: 0.8 }}
+                  onClick={() => onChatSelect?.(chat.id)}
+                >
+                  <Text fontSize="sm" fontWeight="medium" truncate>
+                    {chat.title}
+                  </Text>
+                  <Text fontSize="xs" color={emptyStateColor}>
+                    {new Date(chat.updatedAt).toLocaleDateString()}
+                  </Text>
+                </Box>
+              );
+            })
           )}
         </Box>
       </VStack>
