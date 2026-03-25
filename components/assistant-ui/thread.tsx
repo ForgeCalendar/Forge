@@ -8,13 +8,8 @@ import {
   MessagePrimitive,
   ThreadPrimitive,
 } from "@assistant-ui/react";
-import {
-  ArrowUpIcon,
-  CheckIcon,
-  CopyIcon,
-  RefreshCwIcon,
-  SquareIcon,
-} from "lucide-react";
+import { ArrowUpIcon, CheckIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
+import { Spinner } from "@chakra-ui/react";
 import type { FC } from "react";
 
 export const Thread: FC = () => {
@@ -85,15 +80,7 @@ const Composer: FC = () => {
           </ComposerPrimitive.Send>
         </ThreadPrimitive.If>
         <ThreadPrimitive.If running>
-          <ComposerPrimitive.Cancel asChild>
-            <TooltipIconButton
-              tooltip="Stop"
-              variant="default"
-              className="size-8 rounded-full"
-            >
-              <SquareIcon className="size-3 fill-current" />
-            </TooltipIconButton>
-          </ComposerPrimitive.Cancel>
+          <Spinner size="sm" color="gray.500" />
         </ThreadPrimitive.If>
       </div>
     </ComposerPrimitive.Root>
