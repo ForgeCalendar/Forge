@@ -49,7 +49,7 @@ export function useChatHistoryQuery(chatHistoryId: string | null | undefined) {
 }
 
 async function fetchChatHistories(): Promise<ChatHistoryListItem[]> {
-  const response = await fetch("/api/chat-histories");
+  const response = await fetch("/api/chat-history");
   if (!response.ok) throw new Error("Failed to fetch chat histories");
   return response.json();
 }
