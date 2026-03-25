@@ -7,7 +7,6 @@ import CalendarView from "@/components/CalendarView";
 import LoginDialog from "@/components/LoginDialog";
 import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
-import GoalDecomposeDialog from "@/components/GoalDecomposeDialog";
 import { ChatboxComponent } from "@/components/Chatbox";
 import { useState, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -22,14 +21,6 @@ export default function App() {
   const { goals, create, delete: deleteGoal } = useGoals();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
-  const [decomposeGoal, setDecomposeGoal] = useState<{
-    id: string;
-    title: string;
-    description: string;
-    dueDate: string | null;
-    chatHistoryId: string;
-    mode: "create" | "update";
-  } | null>(null);
   const [calendarTitle, setCalendarTitle] = useState("");
   const calendarRef = useRef<FullCalendar | null>(null);
 
@@ -88,14 +79,10 @@ export default function App() {
         console.error("Goal created without chatHistoryId");
         return;
       }
-      setDecomposeGoal({
-        id: created.id,
-        title: created.title,
-        description: created.description,
-        dueDate: created.dueDate,
-        chatHistoryId: created.chatHistoryId,
-        mode: "create",
-      });
+      // Navigate to the chat in the center region
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("chatId", created.chatHistoryId);
+      router.push(`${pathname}?${params.toString()}`);
     } catch (error) {
       console.error("Failed to create goal:", error);
     }
@@ -105,6 +92,16 @@ export default function App() {
     try {
       const goalToDelete = goals[index];
       if ("id" in goalToDelete) {
+        // If the current chatId is associated with this goal, remove it from URL
+        if (
+          chatId &&
+          "chatHistoryId" in goalToDelete &&
+          goalToDelete.chatHistoryId === chatId
+        ) {
+          const params = new URLSearchParams(searchParams.toString());
+          params.delete("chatId");
+          router.push(`${pathname}?${params.toString()}`);
+        }
         await deleteGoal(goalToDelete.id);
       }
     } catch (error) {
@@ -177,19 +174,6 @@ export default function App() {
           onCalendarChange={handleCalendarChange}
         />
       </Flex>
-
-      {decomposeGoal && (
-        <GoalDecomposeDialog
-          goalId={decomposeGoal.id}
-          goalTitle={decomposeGoal.title}
-          goalDescription={decomposeGoal.description}
-          dueDate={decomposeGoal.dueDate}
-          chatHistoryId={decomposeGoal.chatHistoryId}
-          open={true}
-          onClose={() => setDecomposeGoal(null)}
-          mode={decomposeGoal.mode}
-        />
-      )}
     </Box>
   );
 }
