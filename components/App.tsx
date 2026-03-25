@@ -1,5 +1,5 @@
 "use client";
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Flex, CloseButton } from "@chakra-ui/react";
 import type FullCalendar from "@fullcalendar/react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";

@@ -50,13 +50,18 @@ export const Thread: FC = () => {
 
 const Composer: FC = () => {
   return (
-    <ComposerPrimitive.Root className="relative flex w-full items-end rounded-2xl border border-input bg-background shadow-sm">
+    <ComposerPrimitive.Root className="relative flex w-full items-end rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-background shadow-sm">
       <ComposerPrimitive.Input
         placeholder="Message..."
         rows={1}
         autoFocus
-        className="flex-1 resize-none bg-transparent px-4 py-3 text-sm placeholder:text-muted-foreground min-h-[48px] max-h-[200px]"
-        style={{ outline: "none", boxShadow: "none" }}
+        className="flex-1 resize-none bg-transparent text-sm placeholder:text-muted-foreground min-h-[48px] max-h-[200px]"
+        style={{
+          outline: "none",
+          boxShadow: "none",
+          padding: "12px 16px",
+          resize: "none",
+        }}
       />
       <div className="flex items-center gap-2 pr-2 pb-2">
         <ThreadPrimitive.If running={false}>
