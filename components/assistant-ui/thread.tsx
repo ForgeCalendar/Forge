@@ -21,7 +21,7 @@ export const Thread: FC = () => {
   return (
     <ThreadPrimitive.Root className="flex h-full flex-col bg-background">
       <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mx-auto px-4 py-8">
           <ThreadPrimitive.Empty>
             <div className="flex h-full flex-col items-center justify-center py-20">
               <h1 className="text-2xl font-semibold text-foreground">
@@ -40,7 +40,7 @@ export const Thread: FC = () => {
       </ThreadPrimitive.Viewport>
 
       <div className="border-t border-border bg-background px-4 py-4">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto">
           <Composer />
         </div>
       </div>
