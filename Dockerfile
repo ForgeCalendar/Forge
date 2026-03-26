@@ -38,6 +38,12 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
+# Migration image - runs prisma migrations
+FROM builder AS migration
+ENV DATABASE_URL=file:/data/prod.db
+RUN mkdir -p /data
+CMD ["npx", "prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -62,10 +68,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy prisma schema, migrations, and CLI for running migrations at startup
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+# Copy prisma client for runtime (required for database access)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 USER nextjs
 
@@ -76,4 +81,4 @@ ENV PORT=3000
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/schema.prisma && node server.js"]
+CMD ["node", "server.js"]
