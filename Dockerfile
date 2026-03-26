@@ -41,7 +41,9 @@ RUN \
 # Migration image - runs prisma migrations
 FROM builder AS migration
 ENV DATABASE_URL=file:/data/prod.db
-RUN mkdir -p /data
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+RUN mkdir -p /data && chown nextjs:nodejs /data
+USER nextjs
 CMD ["npx", "prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
 
 # Production image, copy all the files and run next
