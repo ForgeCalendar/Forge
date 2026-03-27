@@ -58,22 +58,29 @@ export const Thread: FC = () => {
   );
 };
 
+const CUSTOM_OPTION = "__custom__";
+
 const ComposerWithChoices: FC = () => {
   const pending = useChoiceStore((s) => s.pending);
   const setPending = useChoiceStore((s) => s.setPending);
   const runtime = useThreadRuntime();
   const [selected, setSelected] = useState<string | null>(null);
+  const [customText, setCustomText] = useState("");
+
+  const answer = selected === CUSTOM_OPTION ? customText : selected;
+  const canSend = answer && answer.trim().length > 0;
 
   const handleSend = () => {
-    if (!selected || !pending) return;
-    const message = `Q: ${pending.question}\nA: ${selected}`;
-    pending.addResult(selected);
+    if (!canSend || !pending) return;
+    const message = `Q: ${pending.question}\nA: ${answer}`;
+    pending.addResult(answer!);
     runtime.append({
       role: "user",
       content: [{ type: "text", text: message }],
     });
     setPending(null);
     setSelected(null);
+    setCustomText("");
   };
 
   if (pending) {
@@ -102,6 +109,33 @@ const ComposerWithChoices: FC = () => {
                 <span className="text-sm">{choice}</span>
               </label>
             ))}
+            <label
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                selected === CUSTOM_OPTION
+                  ? "bg-primary/10 border border-primary"
+                  : "hover:bg-muted border border-transparent"
+              }`}
+            >
+              <input
+                type="radio"
+                name="choice"
+                value={CUSTOM_OPTION}
+                checked={selected === CUSTOM_OPTION}
+                onChange={() => setSelected(CUSTOM_OPTION)}
+                className="w-4 h-4 accent-primary"
+              />
+              <input
+                type="text"
+                placeholder="Other (type your answer)..."
+                value={customText}
+                onChange={(e) => {
+                  setCustomText(e.target.value);
+                  setSelected(CUSTOM_OPTION);
+                }}
+                onFocus={() => setSelected(CUSTOM_OPTION)}
+                className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
+              />
+            </label>
           </div>
         </div>
         <div className="flex items-center gap-2 pl-2 pb-1">
@@ -109,7 +143,7 @@ const ComposerWithChoices: FC = () => {
             tooltip="Send"
             variant="default"
             className="size-8 rounded-full"
-            disabled={!selected}
+            disabled={!canSend}
             onClick={handleSend}
           >
             <ArrowUpIcon className="size-4" />
