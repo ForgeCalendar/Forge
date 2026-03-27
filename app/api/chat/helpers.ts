@@ -25,6 +25,42 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
       }),
       // No execute function - result is provided by the frontend UI
     }),
+    saveMemory: tool({
+      description:
+        "Save a Q&A memory about the user. Use this when you learn something notable about the user — their preferences, habits, occupation, constraints, or any personal detail that would help personalize future conversations. The question should be a general key (e.g. 'What is your occupation?') and the answer should capture what you learned. If a memory for the same question already exists, it will be updated.",
+      inputSchema: z.object({
+        question: z
+          .string()
+          .describe(
+            "A short key question describing the characteristic, e.g. 'What is your occupation?'"
+          ),
+        answer: z
+          .string()
+          .describe(
+            "The user's answer or characteristic you observed from the conversation"
+          ),
+      }),
+      execute: async ({ question, answer }) => {
+        try {
+          const existing = await prisma.memory.findFirst({
+            where: { userId, question },
+          });
+          if (existing) {
+            await prisma.memory.update({
+              where: { id: existing.id },
+              data: { answer },
+            });
+            return { success: true, action: "updated", question, answer };
+          }
+          await prisma.memory.create({
+            data: { userId, question, answer },
+          });
+          return { success: true, action: "created", question, answer };
+        } catch {
+          return { success: false, error: "Failed to save memory" };
+        }
+      },
+    }),
     setChatTitle: tool({
       description:
         "Update the title of the current chat session. Use this to give the conversation a meaningful name based on what was discussed.",
@@ -189,7 +225,8 @@ export function buildTools(context: ToolContext) {
 
 const BASE_GUIDELINES = `
 - Ask questions one by one. When presenting multiple choice questions, use the askUserChoice tool to let the user select from options. The UI automatically includes an "Other" option where users can type a custom answer if none of the choices fit.
-- Be conversational and helpful.`.trim();
+- Be conversational and helpful.
+- When you learn something notable about the user (e.g. their occupation, work schedule, preferences, constraints, hobbies), use the saveMemory tool to remember it for future conversations. Only save information that would be useful across sessions — do not save trivial or one-off details.`.trim();
 
 export function buildGoalSystemPrompt(goal: Goal): string {
   const dueDateContext = goal.dueDate
