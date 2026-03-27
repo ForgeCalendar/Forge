@@ -41,6 +41,14 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
           ),
       }),
       execute: async ({ question, answer }) => {
+        console.log(
+          "[saveMemory] userId:",
+          userId,
+          "question:",
+          question,
+          "answer:",
+          answer
+        );
         try {
           const existing = await prisma.memory.findFirst({
             where: { userId, question },
@@ -50,14 +58,112 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
               where: { id: existing.id },
               data: { answer },
             });
+            console.log("[saveMemory] Updated existing memory:", existing.id);
             return { success: true, action: "updated", question, answer };
           }
-          await prisma.memory.create({
+          const created = await prisma.memory.create({
             data: { userId, question, answer },
           });
+          console.log("[saveMemory] Created new memory:", created.id);
           return { success: true, action: "created", question, answer };
-        } catch {
+        } catch (e) {
+          console.error("[saveMemory] Error:", e);
           return { success: false, error: "Failed to save memory" };
+        }
+      },
+    }),
+    readMemories: tool({
+      description:
+        "Retrieve stored memories about the user. Use this at the start of a conversation or whenever you need context about the user's preferences, habits, or characteristics to give a more personalized response. You can optionally filter by a keyword to find specific memories.",
+      inputSchema: z.object({
+        keyword: z
+          .string()
+          .optional()
+          .describe(
+            "Optional keyword to filter memories by question content. If omitted, all memories are returned."
+          ),
+      }),
+      execute: async ({ keyword }) => {
+        console.log("[readMemories] userId:", userId, "keyword:", keyword);
+        try {
+          const memories = await prisma.memory.findMany({
+            where: {
+              userId,
+              ...(keyword ? { question: { contains: keyword } } : {}),
+            },
+            select: { question: true, answer: true, updatedAt: true },
+            orderBy: { updatedAt: "desc" },
+          });
+          console.log("[readMemories] Found", memories.length, "memories");
+          return { success: true, memories, count: memories.length };
+        } catch (e) {
+          console.error("[readMemories] Error:", e);
+          return { success: false, error: "Failed to read memories" };
+        }
+      },
+    }),
+    listMemoryQuestions: tool({
+      description:
+        "List all stored memory questions (keys) about the user, without their answers. Use this at the start of a conversation to quickly see what you already know about the user, then selectively fetch specific answers with searchMemoryAnswer.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        console.log("[listMemoryQuestions] userId:", userId);
+        try {
+          const memories = await prisma.memory.findMany({
+            where: { userId },
+            select: { question: true },
+            orderBy: { updatedAt: "desc" },
+          });
+          console.log(
+            "[listMemoryQuestions] Found",
+            memories.length,
+            "questions"
+          );
+          return {
+            success: true,
+            questions: memories.map((m) => m.question),
+            count: memories.length,
+          };
+        } catch (e) {
+          console.error("[listMemoryQuestions] Error:", e);
+          return { success: false, error: "Failed to list memory questions" };
+        }
+      },
+    }),
+    searchMemoryAnswer: tool({
+      description:
+        "Look up the stored answer for a specific memory question. Use this after calling listMemoryQuestions to retrieve the answer for a question that is relevant to the current conversation.",
+      inputSchema: z.object({
+        question: z
+          .string()
+          .describe(
+            "The exact question string to look up, as returned by listMemoryQuestions"
+          ),
+      }),
+      execute: async ({ question }) => {
+        console.log(
+          "[searchMemoryAnswer] userId:",
+          userId,
+          "question:",
+          question
+        );
+        try {
+          const memory = await prisma.memory.findFirst({
+            where: { userId, question },
+            select: { question: true, answer: true, updatedAt: true },
+          });
+          if (!memory) {
+            console.log("[searchMemoryAnswer] No memory found for:", question);
+            return {
+              success: false,
+              error: "No memory found for that question",
+            };
+          }
+          console.log("[searchMemoryAnswer] Found answer for:", question);
+          return { success: true, ...memory };
+        } catch (e) {
+          console.error("[searchMemoryAnswer] Error:", e);
+          return { success: false, error: "Failed to search memory" };
         }
       },
     }),
@@ -226,7 +332,8 @@ export function buildTools(context: ToolContext) {
 const BASE_GUIDELINES = `
 - Ask questions one by one. When presenting multiple choice questions, use the askUserChoice tool to let the user select from options. The UI automatically includes an "Other" option where users can type a custom answer if none of the choices fit.
 - Be conversational and helpful.
-- When you learn something notable about the user (e.g. their occupation, work schedule, preferences, constraints, hobbies), use the saveMemory tool to remember it for future conversations. Only save information that would be useful across sessions — do not save trivial or one-off details.`.trim();
+- When you learn something notable about the user (e.g. their occupation, work schedule, preferences, constraints, hobbies), use the saveMemory tool to remember it for future conversations. Only save information that would be useful across sessions — do not save trivial or one-off details.
+- At any point in the conversation when you need context about the user, call listMemoryQuestions to see what you already know, then call searchMemoryAnswer for the specific questions relevant to the topic at hand. Use readMemories when you need a broad overview of all stored knowledge about the user.`.trim();
 
 export function buildGoalSystemPrompt(goal: Goal): string {
   const dueDateContext = goal.dueDate
