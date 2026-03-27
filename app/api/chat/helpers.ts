@@ -10,6 +10,19 @@ export function buildGoalTools(
   userId: string
 ) {
   return {
+    askUserChoice: tool({
+      description:
+        "Ask the user to select from a list of choices. Use this when you need the user to make a decision between multiple options. The UI will render interactive buttons for the user to click. Wait for the user's selection before proceeding.",
+      inputSchema: z.object({
+        question: z.string().describe("The question to ask the user"),
+        choices: z
+          .array(z.string())
+          .min(2)
+          .max(6)
+          .describe("List of choices for the user to select from"),
+      }),
+      // No execute function - result is provided by the frontend UI
+    }),
     setChatTitle: tool({
       description:
         "Update the title of the current chat session. Use this to give the conversation a meaningful name based on what was discussed.",
@@ -143,7 +156,7 @@ Phase 3 Decision mode:
 2. If everything is good to go, call the saveTask tool to submit the decision to the database.
 
 Guidelines:
-- Ask questions one by one.
+- Ask questions one by one. When presenting multiple choice questions, use the askUserChoice tool to let the user click their selection.
 - Keep tasks short and actionable.
 - Avoid collisions with existing calendar events.
 - Each task should need less than 2 hours.

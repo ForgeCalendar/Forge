@@ -3,6 +3,10 @@
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import {
+  usePendingUserChoice,
+  ChoiceComposer,
+} from "@/components/assistant-ui/tool-ui";
+import {
   ActionBarPrimitive,
   ComposerPrimitive,
   MessagePrimitive,
@@ -45,11 +49,25 @@ export const Thread: FC = () => {
         style={{ flexShrink: 0 }}
       >
         <div className="mx-auto">
-          <Composer />
+          <ComposerWithChoices />
         </div>
       </div>
     </ThreadPrimitive.Root>
   );
+};
+
+const ComposerWithChoices: FC = () => {
+  const pendingChoice = usePendingUserChoice();
+
+  if (pendingChoice) {
+    return (
+      <div className="rounded-xl border-2 border-primary bg-background shadow-sm p-4">
+        <ChoiceComposer pendingChoice={pendingChoice} />
+      </div>
+    );
+  }
+
+  return <Composer />;
 };
 
 const Composer: FC = () => {
