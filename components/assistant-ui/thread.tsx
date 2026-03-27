@@ -3,14 +3,19 @@
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import {
+  useChoiceStore,
+  AskUserChoiceUI,
+} from "@/components/assistant-ui/tool-ui";
+import {
   ActionBarPrimitive,
   ComposerPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
+  useThreadRuntime,
 } from "@assistant-ui/react";
 import { ArrowUpIcon, CheckIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
 import { Spinner } from "@chakra-ui/react";
-import type { FC } from "react";
+import { useState, type FC } from "react";
 
 export const Thread: FC = () => {
   return (
@@ -18,6 +23,7 @@ export const Thread: FC = () => {
       className="flex h-full flex-col bg-background"
       style={{ minHeight: 0, overflow: "hidden" }}
     >
+      <AskUserChoiceUI />
       <ThreadPrimitive.Viewport
         className="flex-1 overflow-y-auto"
         style={{ minHeight: 0 }}
@@ -45,11 +51,109 @@ export const Thread: FC = () => {
         style={{ flexShrink: 0 }}
       >
         <div className="mx-auto">
-          <Composer />
+          <ComposerWithChoices />
         </div>
       </div>
     </ThreadPrimitive.Root>
   );
+};
+
+const CUSTOM_OPTION = "__custom__";
+
+const ComposerWithChoices: FC = () => {
+  const pending = useChoiceStore((s) => s.pending);
+  const setPending = useChoiceStore((s) => s.setPending);
+  const runtime = useThreadRuntime();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [customText, setCustomText] = useState("");
+
+  const answer = selected === CUSTOM_OPTION ? customText : selected;
+  const canSend = answer && answer.trim().length > 0;
+
+  const handleSend = () => {
+    if (!canSend || !pending) return;
+    const message = `Q: ${pending.question}\nA: ${answer}`;
+    pending.addResult(answer!);
+    runtime.append({
+      role: "user",
+      content: [{ type: "text", text: message }],
+    });
+    setPending(null);
+    setSelected(null);
+    setCustomText("");
+  };
+
+  if (pending) {
+    return (
+      <div className="relative flex w-full items-end rounded-xl border-2 border-primary bg-background shadow-sm p-4">
+        <div className="flex flex-col gap-3 flex-1">
+          <p className="text-sm text-muted-foreground">{pending.question}</p>
+          <div className="flex flex-col gap-2">
+            {pending.choices.map((choice) => (
+              <label
+                key={choice}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                  selected === choice
+                    ? "bg-primary/10 border border-primary"
+                    : "hover:bg-muted border border-transparent"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="choice"
+                  value={choice}
+                  checked={selected === choice}
+                  onChange={() => setSelected(choice)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm">{choice}</span>
+              </label>
+            ))}
+            <label
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                selected === CUSTOM_OPTION
+                  ? "bg-primary/10 border border-primary"
+                  : "hover:bg-muted border border-transparent"
+              }`}
+            >
+              <input
+                type="radio"
+                name="choice"
+                value={CUSTOM_OPTION}
+                checked={selected === CUSTOM_OPTION}
+                onChange={() => setSelected(CUSTOM_OPTION)}
+                className="w-4 h-4 accent-primary"
+              />
+              <input
+                type="text"
+                placeholder="Other (type your answer)..."
+                value={customText}
+                onChange={(e) => {
+                  setCustomText(e.target.value);
+                  setSelected(CUSTOM_OPTION);
+                }}
+                onFocus={() => setSelected(CUSTOM_OPTION)}
+                className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
+              />
+            </label>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pl-2 pb-1">
+          <TooltipIconButton
+            tooltip="Send"
+            variant="default"
+            className="size-8 rounded-full"
+            disabled={!canSend}
+            onClick={handleSend}
+          >
+            <ArrowUpIcon className="size-4" />
+          </TooltipIconButton>
+        </div>
+      </div>
+    );
+  }
+
+  return <Composer />;
 };
 
 const Composer: FC = () => {
