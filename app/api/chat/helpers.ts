@@ -2,13 +2,13 @@ import { tool } from "ai";
 import type { UIMessage } from "ai";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import type { Goal } from "@/lib/generated/prisma";
+import type { Goal, ChatHistoryRole } from "@/lib/generated/prisma";
 
-export function buildGoalTools(
-  goalId: string,
-  chatHistoryId: string,
-  userId: string
-) {
+// =============================================================================
+// Base Tools - Shared by all AI agents
+// =============================================================================
+
+function buildBaseTools(chatHistoryId: string, userId: string) {
   return {
     askUserChoice: tool({
       description:
@@ -47,6 +47,15 @@ export function buildGoalTools(
         }
       },
     }),
+  };
+}
+
+// =============================================================================
+// GoalPlanner Tools
+// =============================================================================
+
+function buildGoalPlannerTools(goalId: string, userId: string) {
+  return {
     saveTasks: tool({
       description:
         "Save the proposed tasks for the goal as calendar events. Each task must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",
@@ -130,6 +139,58 @@ export function buildGoalTools(
   };
 }
 
+// =============================================================================
+// Assistant Tools
+// =============================================================================
+
+function buildAssistantTools() {
+  // Assistant-specific tools can be added here
+  return {};
+}
+
+// =============================================================================
+// Tool Builder - Combines base + role-specific tools
+// =============================================================================
+
+type ToolContext = {
+  chatHistoryId: string;
+  userId: string;
+  role: ChatHistoryRole;
+  goalId?: string;
+};
+
+export function buildTools(context: ToolContext) {
+  const baseTools = buildBaseTools(context.chatHistoryId, context.userId);
+
+  switch (context.role) {
+    case "GoalPlanner":
+      if (!context.goalId) {
+        throw new Error("GoalPlanner requires a goalId");
+      }
+      return {
+        ...baseTools,
+        ...buildGoalPlannerTools(context.goalId, context.userId),
+      };
+
+    case "Assistant":
+      return {
+        ...baseTools,
+        ...buildAssistantTools(),
+      };
+
+    default:
+      return baseTools;
+  }
+}
+
+// =============================================================================
+// System Prompts
+// =============================================================================
+
+const BASE_GUIDELINES = `
+- Ask questions one by one. When presenting multiple choice questions, use the askUserChoice tool to let the user select from options. The UI automatically includes an "Other" option where users can type a custom answer if none of the choices fit.
+- Be conversational and helpful.`.trim();
+
 export function buildGoalSystemPrompt(goal: Goal): string {
   const dueDateContext = goal.dueDate
     ? `The goal is due on ${new Date(goal.dueDate).toLocaleString()}.`
@@ -158,7 +219,7 @@ Phase 3 Decision mode:
 2. If everything is good to go, call the saveTask tool to submit the decision to the database.
 
 Guidelines:
-- Ask questions one by one. When presenting multiple choice questions, use the askUserChoice tool to let the user select from options. The UI automatically includes an "Other" option where users can type a custom answer if none of the choices fit.
+${BASE_GUIDELINES}
 - Keep tasks short and actionable.
 - Avoid collisions with existing calendar events.
 - Each task should need less than 2 hours.
@@ -166,9 +227,52 @@ Guidelines:
 - Spread tasks across available days before the due date.
 - Each task should be 15-120 minutes.
 - Order tasks in the sequence they should be done.
-- Be conversational and helpful. If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call saveTasks again with the updated list.
+- If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call saveTasks again with the updated list.
 - Always call saveTasks proactively — do not wait for explicit user approval on the first proposal.`;
 }
+
+export function buildAssistantSystemPrompt(): string {
+  const nowContext = `The current date/time is ${new Date().toLocaleString()}.`;
+
+  return `You are a helpful AI assistant for a calendar and task management application.
+
+${nowContext}
+
+You can help users with:
+- Answering questions about their schedule and tasks
+- Providing advice on time management and productivity
+- General assistance and conversation
+
+Guidelines:
+${BASE_GUIDELINES}
+- Be concise and helpful.
+- If the user asks about specific calendar events or tasks, let them know you can help manage their schedule.`;
+}
+
+type SystemPromptContext = {
+  role: ChatHistoryRole;
+  goal?: Goal;
+};
+
+export function buildSystemPrompt(context: SystemPromptContext): string {
+  switch (context.role) {
+    case "GoalPlanner":
+      if (!context.goal) {
+        throw new Error("GoalPlanner requires a goal");
+      }
+      return buildGoalSystemPrompt(context.goal);
+
+    case "Assistant":
+      return buildAssistantSystemPrompt();
+
+    default:
+      return buildAssistantSystemPrompt();
+  }
+}
+
+// =============================================================================
+// Chat History Persistence
+// =============================================================================
 
 export async function saveChatHistory(
   chatHistoryId: string,
