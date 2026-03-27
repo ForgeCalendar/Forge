@@ -10,7 +10,7 @@ import {
   saveChatHistory,
 } from "./helpers";
 
-export const maxDuration = 30;
+export const maxDuration = 120;
 
 export async function POST(req: Request): Promise<NextResponse | Response> {
   try {
@@ -59,6 +59,15 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
       messages: await convertToModelMessages(messages),
       ...(system ? { system } : {}),
       ...(tools ? { tools, maxSteps: 10 } : {}),
+      ...(provider.type === "anthropic"
+        ? {
+            providerOptions: {
+              anthropic: {
+                thinking: { type: "enabled", budgetTokens: 10000 },
+              },
+            },
+          }
+        : {}),
     });
 
     return result.toUIMessageStreamResponse({
