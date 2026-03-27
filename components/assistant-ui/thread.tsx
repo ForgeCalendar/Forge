@@ -15,7 +15,7 @@ import {
 } from "@assistant-ui/react";
 import { ArrowUpIcon, CheckIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
 import { Spinner } from "@chakra-ui/react";
-import type { FC } from "react";
+import { useState, type FC } from "react";
 
 export const Thread: FC = () => {
   return (
@@ -62,35 +62,58 @@ const ComposerWithChoices: FC = () => {
   const pending = useChoiceStore((s) => s.pending);
   const setPending = useChoiceStore((s) => s.setPending);
   const runtime = useThreadRuntime();
+  const [selected, setSelected] = useState<string | null>(null);
 
-  const handleSelect = (choice: string) => {
-    const message = `Q: ${pending!.question}\nA: ${choice}`;
-    // Complete the tool call first
-    pending!.addResult(choice);
-    // Then send as user message
+  const handleSend = () => {
+    if (!selected || !pending) return;
+    const message = `Q: ${pending.question}\nA: ${selected}`;
+    pending.addResult(selected);
     runtime.append({
       role: "user",
       content: [{ type: "text", text: message }],
     });
     setPending(null);
+    setSelected(null);
   };
 
   if (pending) {
     return (
-      <div className="rounded-xl border-2 border-primary bg-background shadow-sm p-4">
-        <div className="flex flex-col gap-3 w-full">
+      <div className="relative flex w-full items-end rounded-xl border-2 border-primary bg-background shadow-sm p-4">
+        <div className="flex flex-col gap-3 flex-1">
           <p className="text-sm text-muted-foreground">{pending.question}</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {pending.choices.map((choice) => (
-              <button
+              <label
                 key={choice}
-                onClick={() => handleSelect(choice)}
-                className="px-4 py-2 text-sm rounded-lg border-2 border-border bg-background hover:bg-muted hover:border-primary transition-colors"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                  selected === choice
+                    ? "bg-primary/10 border border-primary"
+                    : "hover:bg-muted border border-transparent"
+                }`}
               >
-                {choice}
-              </button>
+                <input
+                  type="radio"
+                  name="choice"
+                  value={choice}
+                  checked={selected === choice}
+                  onChange={() => setSelected(choice)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm">{choice}</span>
+              </label>
             ))}
           </div>
+        </div>
+        <div className="flex items-center gap-2 pl-2 pb-1">
+          <TooltipIconButton
+            tooltip="Send"
+            variant="default"
+            className="size-8 rounded-full"
+            disabled={!selected}
+            onClick={handleSend}
+          >
+            <ArrowUpIcon className="size-4" />
+          </TooltipIconButton>
         </div>
       </div>
     );
