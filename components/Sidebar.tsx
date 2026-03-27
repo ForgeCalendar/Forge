@@ -18,7 +18,11 @@ import type { Goal } from "../states/goals";
 import type { GoalWithId, CreateGoalInput } from "@/storage/types";
 import { useState, useRef } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
-import { useChatHistoriesQuery } from "@/storage/useChatHistoryQuery";
+import {
+  useChatHistoriesQuery,
+  useCreateChatHistory,
+  useDeleteChatHistory,
+} from "@/storage/useChatHistoryQuery";
 
 type Props = {
   goals: (Goal | GoalWithId)[];
@@ -63,6 +67,67 @@ function DeleteGoalDialog({
             <Dialog.Body>
               <Text color={dialogTextColor}>
                 Are you sure you want to delete &quot;{goalTitle}&quot;? This
+                action cannot be undone.
+              </Text>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Dialog.ActionTrigger asChild>
+                <Button variant="ghost">Cancel</Button>
+              </Dialog.ActionTrigger>
+              <Dialog.ActionTrigger asChild>
+                <Button
+                  colorScheme="red"
+                  onClick={() => {
+                    onDelete();
+                  }}
+                >
+                  Delete
+                </Button>
+              </Dialog.ActionTrigger>
+            </Dialog.Footer>
+
+            <Dialog.CloseTrigger asChild>
+              <CloseButton size="sm" />
+            </Dialog.CloseTrigger>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
+  );
+}
+
+function DeleteChatDialog({
+  chatTitle,
+  onDelete,
+}: {
+  chatTitle: string;
+  onDelete: () => void;
+}) {
+  const { textMuted: dialogTextColor } = useThemeTokens();
+
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger asChild>
+        <Button
+          size="xs"
+          variant="ghost"
+          aria-label={`Delete ${chatTitle}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          ✕
+        </Button>
+      </Dialog.Trigger>
+
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>Delete chat?</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Text color={dialogTextColor}>
+                Are you sure you want to delete &quot;{chatTitle}&quot;? This
                 action cannot be undone.
               </Text>
             </Dialog.Body>
@@ -200,6 +265,8 @@ export default function Sidebar({
   } = useThemeTokens();
 
   const { data: chatHistories } = useChatHistoriesQuery();
+  const createChatMutation = useCreateChatHistory();
+  const deleteChatMutation = useDeleteChatHistory();
 
   function resetForm() {
     setTitle("");
@@ -352,20 +419,47 @@ export default function Sidebar({
                   cursor="pointer"
                   _hover={{ opacity: 0.8 }}
                   onClick={() => onChatSelect?.(chat.id)}
+                  position="relative"
                 >
-                  <Text fontSize="sm" fontWeight="medium" truncate>
-                    {chat.title}
-                  </Text>
-                  <Flex align="center" gap={2}>
-                    <Text fontSize="xs" color={emptyStateColor}>
-                      {new Date(chat.updatedAt).toLocaleDateString()}
-                    </Text>
-                    <ChatRoleBadge role={chat.role} size="xs" />
+                  <Flex justify="space-between" align="start">
+                    <Box flex={1} minW={0}>
+                      <Text fontSize="sm" fontWeight="medium" truncate>
+                        {chat.title}
+                      </Text>
+                      <Flex align="center" gap={2}>
+                        <Text fontSize="xs" color={emptyStateColor}>
+                          {new Date(chat.updatedAt).toLocaleDateString()}
+                        </Text>
+                        <ChatRoleBadge role={chat.role} size="xs" />
+                      </Flex>
+                    </Box>
+                    <DeleteChatDialog
+                      chatTitle={chat.title}
+                      onDelete={() => {
+                        deleteChatMutation.mutate(chat.id);
+                      }}
+                    />
                   </Flex>
                 </Box>
               );
             })
           )}
+
+          <Box pt={2}>
+            <Button
+              width="100%"
+              onClick={() =>
+                createChatMutation.mutate(undefined, {
+                  onSuccess: (newChat) => {
+                    onChatSelect?.(newChat.id);
+                  },
+                })
+              }
+              loading={createChatMutation.isPending}
+            >
+              + New Chat
+            </Button>
+          </Box>
         </Box>
       </VStack>
     </Box>
