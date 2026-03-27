@@ -3,14 +3,15 @@
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import {
-  usePendingUserChoice,
-  ChoiceComposer,
+  useChoiceStore,
+  AskUserChoiceUI,
 } from "@/components/assistant-ui/tool-ui";
 import {
   ActionBarPrimitive,
   ComposerPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
+  useThreadRuntime,
 } from "@assistant-ui/react";
 import { ArrowUpIcon, CheckIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
 import { Spinner } from "@chakra-ui/react";
@@ -22,6 +23,7 @@ export const Thread: FC = () => {
       className="flex h-full flex-col bg-background"
       style={{ minHeight: 0, overflow: "hidden" }}
     >
+      <AskUserChoiceUI />
       <ThreadPrimitive.Viewport
         className="flex-1 overflow-y-auto"
         style={{ minHeight: 0 }}
@@ -57,12 +59,39 @@ export const Thread: FC = () => {
 };
 
 const ComposerWithChoices: FC = () => {
-  const pendingChoice = usePendingUserChoice();
+  const pending = useChoiceStore((s) => s.pending);
+  const setPending = useChoiceStore((s) => s.setPending);
+  const runtime = useThreadRuntime();
 
-  if (pendingChoice) {
+  const handleSelect = (choice: string) => {
+    const message = `Q: ${pending!.question}\nA: ${choice}`;
+    // Complete the tool call first
+    pending!.addResult(choice);
+    // Then send as user message
+    runtime.append({
+      role: "user",
+      content: [{ type: "text", text: message }],
+    });
+    setPending(null);
+  };
+
+  if (pending) {
     return (
       <div className="rounded-xl border-2 border-primary bg-background shadow-sm p-4">
-        <ChoiceComposer pendingChoice={pendingChoice} />
+        <div className="flex flex-col gap-3 w-full">
+          <p className="text-sm text-muted-foreground">{pending.question}</p>
+          <div className="flex flex-wrap gap-2">
+            {pending.choices.map((choice) => (
+              <button
+                key={choice}
+                onClick={() => handleSelect(choice)}
+                className="px-4 py-2 text-sm rounded-lg border-2 border-border bg-background hover:bg-muted hover:border-primary transition-colors"
+              >
+                {choice}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
