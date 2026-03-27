@@ -61,3 +61,43 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  ctx: RouteContext
+): Promise<NextResponse> {
+  try {
+    const userId = await requireAuth();
+    const { id } = await ctx.params;
+
+    const chatHistory = await prisma.chatHistory.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
+
+    if (!chatHistory) {
+      return NextResponse.json(
+        { error: "Chat history not found" },
+        { status: 404 }
+      );
+    }
+
+    await prisma.chatHistory.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    console.error("Error deleting chat history:", error);
+    return NextResponse.json(
+      { error: "Failed to delete chat history" },
+      { status: 500 }
+    );
+  }
+}

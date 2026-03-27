@@ -4,11 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { createLanguageModel } from "@/lib/ai-providers";
 import { verifyOwnership } from "@/lib/verify-ownership";
-import {
-  buildGoalTools,
-  buildGoalSystemPrompt,
-  saveChatHistory,
-} from "./helpers";
+import { buildTools, buildSystemPrompt, saveChatHistory } from "./helpers";
 
 export const maxDuration = 120;
 
@@ -46,12 +42,22 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
 
     const model = createLanguageModel(provider, modelId);
 
-    // Only provide system prompt and tools for GoalPlanner role
+    // Build tools and system prompt based on role
     let tools = undefined;
     let system = undefined;
-    if (chatHistory?.role === "GoalPlanner" && chatHistory.goal) {
-      tools = buildGoalTools(chatHistory.goal.id, chatHistory.id, userId);
-      system = buildGoalSystemPrompt(chatHistory.goal);
+
+    if (chatHistory?.role) {
+      tools = buildTools({
+        chatHistoryId: chatHistory.id,
+        userId,
+        role: chatHistory.role,
+        goalId: chatHistory.goal?.id,
+      });
+
+      system = buildSystemPrompt({
+        role: chatHistory.role,
+        goal: chatHistory.goal ?? undefined,
+      });
     }
 
     const result = streamText({

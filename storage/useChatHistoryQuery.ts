@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ChatMessage = any;
@@ -59,5 +59,42 @@ export function useChatHistoriesQuery() {
   return useQuery({
     queryKey: chatHistoryKeys.all,
     queryFn: fetchChatHistories,
+  });
+}
+
+async function createChatHistory(): Promise<ChatHistoryListItem> {
+  const response = await fetch("/api/chat-history", {
+    method: "POST",
+  });
+  if (!response.ok) throw new Error("Failed to create chat history");
+  return response.json();
+}
+
+export function useCreateChatHistory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createChatHistory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: chatHistoryKeys.all });
+    },
+  });
+}
+
+async function deleteChatHistory(id: string): Promise<void> {
+  const response = await fetch(`/api/chat-history/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error("Failed to delete chat history");
+}
+
+export function useDeleteChatHistory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteChatHistory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: chatHistoryKeys.all });
+    },
   });
 }
