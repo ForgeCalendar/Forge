@@ -27,7 +27,7 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
     }),
     saveMemory: tool({
       description:
-        "Save a Q&A memory about the user. Use this when you learn something notable about the user — their preferences, habits, occupation, constraints, or any personal detail that would help personalize future conversations. The question should be a general key (e.g. 'What is your occupation?') and the answer should capture what you learned. If a memory for the same question already exists, it will be updated.",
+        "Save a Q&A memory about the user. Use this when you learn something notable about the user — their preferences, habits, occupation, constraints, or any personal detail that would help personalize future conversations. The question should be a general key (e.g. 'What is your occupation?') and the answer should capture what you learned. If a memory for the same question already exists, it will be updated. IMPORTANT: This tool does not send any visible response to the user. You MUST include a text message (e.g. 'I'll remember that for next time.') when calling this tool.",
       inputSchema: z.object({
         question: z
           .string()
@@ -74,7 +74,7 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
     }),
     readMemories: tool({
       description:
-        "Retrieve stored memories about the user. Use this at the start of a conversation or whenever you need context about the user's preferences, habits, or characteristics to give a more personalized response. You can optionally filter by a keyword to find specific memories.",
+        "Retrieve stored memories about the user. Use this at the start of a conversation or whenever you need context about the user's preferences, habits, or characteristics to give a more personalized response. You can optionally filter by a keyword to find specific memories. IMPORTANT: This tool does not send any visible response to the user. You MUST include a text message that incorporates what you learned naturally into your response.",
       inputSchema: z.object({
         keyword: z
           .string()
@@ -104,7 +104,7 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
     }),
     listMemoryQuestions: tool({
       description:
-        "List all stored memory questions (keys) about the user, without their answers. Use this at the start of a conversation to quickly see what you already know about the user, then selectively fetch specific answers with searchMemoryAnswer.",
+        "List all stored memory questions (keys) about the user, without their answers. Use this at the start of a conversation to quickly see what you already know about the user, then selectively fetch specific answers with searchMemoryAnswer. IMPORTANT: This tool does not send any visible response to the user. You MUST include a text message when calling this tool.",
       inputSchema: z.object({}),
       execute: async () => {
         console.log("[listMemoryQuestions] userId:", userId);
@@ -132,7 +132,7 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
     }),
     searchMemoryAnswer: tool({
       description:
-        "Look up the stored answer for a specific memory question. Use this after calling listMemoryQuestions to retrieve the answer for a question that is relevant to the current conversation.",
+        "Look up the stored answer for a specific memory question. Use this after calling listMemoryQuestions to retrieve the answer for a question that is relevant to the current conversation. IMPORTANT: This tool does not send any visible response to the user. You MUST include a text message that incorporates what you learned naturally into your response.",
       inputSchema: z.object({
         question: z
           .string()
