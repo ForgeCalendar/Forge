@@ -260,6 +260,7 @@ function buildGoalPlannerTools(goalId: string, userId: string) {
               minutesEstimate,
               order: i,
               completed: false,
+              confirmed: false, // AI-proposed tasks require user confirmation
             },
           });
 
