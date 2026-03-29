@@ -122,6 +122,13 @@ export default function CalendarView({
                 end: info.event.end,
               });
             }}
+            eventDidMount={(info) => {
+              const confirmed = info.event.extendedProps?.confirmed ?? true;
+              if (!confirmed) {
+                info.el.style.border = "2px dashed #f97316";
+                info.el.style.backgroundColor = "rgba(249, 115, 22, 0.6)";
+              }
+            }}
             eventDrop={async (info) => {
               try {
                 await updateCalendarEvent(info.event.id, {

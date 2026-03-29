@@ -18,6 +18,7 @@ export interface EventWithId extends Event {
   goalId: string | null;
   userId: string;
   kind: string | null;
+  confirmed: boolean;
   order: number;
   metadata: string | null;
   createdAt: string;
@@ -62,7 +63,9 @@ export type CreateCalendarEventInput = {
   };
 };
 
-export type UpdateCalendarEventInput = Partial<CreateCalendarEventInput>;
+export type UpdateCalendarEventInput = Partial<CreateCalendarEventInput> & {
+  confirmed?: boolean;
+};
 
 export type CreateInfoTagInput = {
   title: string;

@@ -80,6 +80,7 @@ export function toCalendarEvent(event: Event): Record<string, unknown> {
     kind: event.kind || (isIcsEvent ? "ics" : undefined),
     goalId: event.goalId,
     completed: event.completed,
+    confirmed: event.confirmed,
     minutesEstimate: event.minutesEstimate,
     subscriptionId: event.subscriptionId,
     isReadOnly: isIcsEvent,

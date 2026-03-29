@@ -44,8 +44,16 @@ export async function PATCH(
     const userId = await requireAuth();
     const { id } = await ctx.params;
     const body = await req.json();
-    const { title, start, end, kind, metadata, completed, minutesEstimate } =
-      body;
+    const {
+      title,
+      start,
+      end,
+      kind,
+      metadata,
+      completed,
+      confirmed,
+      minutesEstimate,
+    } = body;
 
     const existingEvent = await verifyOwnership(
       prisma.event.findFirst({ where: { id, userId } }),
@@ -61,6 +69,7 @@ export async function PATCH(
         ...(end !== undefined && { end: new Date(end).toISOString() }),
         ...(kind !== undefined && { kind }),
         ...(completed !== undefined && { completed }),
+        ...(confirmed !== undefined && { confirmed }),
         ...(minutesEstimate !== undefined && { minutesEstimate }),
         ...(metadata !== undefined && {
           metadata: metadata ? JSON.stringify(metadata) : null,
