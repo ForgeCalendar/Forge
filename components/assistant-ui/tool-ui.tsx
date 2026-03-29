@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import type { ToolCallMessagePartProps } from "@assistant-ui/react";
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { eventKeys } from "@/storage/useEventsQuery";
 import {
   Loader2Icon,
   CheckCircle2Icon,
@@ -121,10 +123,17 @@ export const SuggestEventsUI = makeAssistantToolUI<
 >({
   toolName: "suggestEvents",
   render: function SuggestEventsRender({ args, status }) {
+    const queryClient = useQueryClient();
     const tasks = args.tasks || [];
     const isRunning =
       status.type === "running" || status.type === "requires-action";
     const isComplete = status.type === "complete";
+
+    useEffect(() => {
+      if (isComplete) {
+        queryClient.invalidateQueries({ queryKey: eventKeys.all });
+      }
+    }, [isComplete, queryClient]);
 
     if (tasks.length === 0) {
       return null;
