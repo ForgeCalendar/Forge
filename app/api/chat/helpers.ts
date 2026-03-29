@@ -357,7 +357,7 @@ Phase 1 Detective mode:
 
 Phase 2 Draft mode:
 1. Propose concrete and actionable tasks. For each task, assign a specific scheduled time period (start and end) spread across the days between now and the due date.
-2. Present the tasks in a clear list showing: task title, scheduled date, time range, and duration.
+2. Call suggestEvents to display the proposed events. Do NOT list out the events in text — the tool will render them visually for the user.
 
 Phase 3 Decision mode:
 1. Ask the user for confirmation. If there is any problem, you can ask more question for further information and go back to Draft mode.
