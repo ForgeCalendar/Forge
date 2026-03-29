@@ -8,6 +8,7 @@ import { useThemeTokens } from "@/lib/theme-tokens";
 import { tagEditorPrompt } from "@/components/prompts";
 import AccountSettingsPane from "./AccountSettingsPane";
 import CalendarSettingsPane from "./CalendarSettingsPane";
+import MemorySettingsPane from "./MemorySettingsPane";
 
 function InfoTagSettingsPane() {
   const [selectedTag, setSelectedTag] = useState<
@@ -137,6 +138,7 @@ export default function SettingsDialog() {
       </Box>
     ),
     Calendars: <CalendarSettingsPane />,
+    Memory: <MemorySettingsPane />,
     Account: <AccountSettingsPane />,
   };
 
