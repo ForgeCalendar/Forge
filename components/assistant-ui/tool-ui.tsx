@@ -54,7 +54,7 @@ export const AskUserChoiceUI = makeAssistantToolUI<AskUserChoiceArgs, string>({
 });
 
 const toolDisplayNames: Record<string, string> = {
-  saveTasks: "Saving Tasks",
+  suggestEvents: "Suggesting Events",
   saveMemory: "Saving Memory",
   readMemories: "Reading Memories",
   listMemoryQuestions: "Listing Memories",
