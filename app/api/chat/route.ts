@@ -1,4 +1,4 @@
-import { convertToModelMessages, streamText } from "ai";
+import { convertToModelMessages, streamText, type StepResult } from "ai";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
@@ -7,6 +7,16 @@ import { verifyOwnership } from "@/lib/verify-ownership";
 import { buildTools, buildSystemPrompt, saveChatHistory } from "./helpers";
 
 export const maxDuration = 120;
+
+// Custom stop condition: stop when the last step has no tool calls
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hasNoToolCall() {
+  return ({ steps }: { steps: Array<StepResult<any>> }) => {
+    if (steps.length === 0) return false;
+    const lastStep = steps[steps.length - 1];
+    return lastStep.toolCalls.length === 0;
+  };
+}
 
 export async function POST(req: Request): Promise<NextResponse | Response> {
   try {
@@ -64,7 +74,7 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
       model,
       messages: await convertToModelMessages(messages),
       ...(system ? { system } : {}),
-      ...(tools ? { tools, maxSteps: 10 } : {}),
+      ...(tools ? { tools, maxSteps: 10, stopWhen: hasNoToolCall() } : {}),
       ...(provider.type === "anthropic"
         ? {
             providerOptions: {
