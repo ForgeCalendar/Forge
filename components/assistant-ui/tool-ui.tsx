@@ -9,6 +9,7 @@ import {
   CheckCircle2Icon,
   XCircleIcon,
   WrenchIcon,
+  CalendarIcon,
 } from "lucide-react";
 
 type AskUserChoiceArgs = {
@@ -50,6 +51,111 @@ export const AskUserChoiceUI = makeAssistantToolUI<AskUserChoiceArgs, string>({
     }, [args.question, args.choices, status.type, setPending]);
 
     return null;
+  },
+});
+
+type SuggestEventsArgs = {
+  tasks: Array<{
+    title: string;
+    start: string;
+    end: string;
+  }>;
+};
+
+type SuggestEventsResult = {
+  success: boolean;
+  taskCount?: number;
+  savedEvents?: Array<{
+    title: string;
+    start: string;
+    end: string;
+    minutesEstimate: number;
+  }>;
+  error?: string;
+};
+
+function EventThumbnail({
+  title,
+  start,
+  end,
+}: {
+  title: string;
+  start: string;
+  end: string;
+}) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  const dateStr = startDate.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+  const startTime = startDate.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const endTime = endDate.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return (
+    <div
+      className="flex items-center gap-2 px-2 py-1 rounded border border-border bg-background text-xs"
+      title={`${title}: ${dateStr} ${startTime}-${endTime}`}
+    >
+      <span className="text-orange-500 font-medium whitespace-nowrap">
+        {dateStr}
+      </span>
+      <span className="truncate max-w-24">{title}</span>
+      <span className="text-muted-foreground whitespace-nowrap">
+        {startTime}
+      </span>
+    </div>
+  );
+}
+
+export const SuggestEventsUI = makeAssistantToolUI<
+  SuggestEventsArgs,
+  SuggestEventsResult
+>({
+  toolName: "suggestEvents",
+  render: function SuggestEventsRender({ args, status }) {
+    const tasks = args.tasks || [];
+    const isRunning =
+      status.type === "running" || status.type === "requires-action";
+    const isComplete = status.type === "complete";
+
+    if (tasks.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 mb-2 min-w-0">
+        <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+          <CalendarIcon className="size-4 shrink-0" />
+          <span>Suggested Events ({tasks.length})</span>
+          {isRunning && (
+            <Loader2Icon className="size-3.5 animate-spin text-blue-500 shrink-0" />
+          )}
+          {isComplete && (
+            <CheckCircle2Icon className="size-3.5 text-green-500 shrink-0" />
+          )}
+        </div>
+        <div className="rounded border border-border p-2 bg-muted/30 overflow-x-hidden overflow-y-auto max-h-28">
+          <div className="flex flex-col gap-1">
+            {tasks.map((task, idx) => (
+              <EventThumbnail
+                key={idx}
+                title={task.title}
+                start={task.start}
+                end={task.end}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   },
 });
 

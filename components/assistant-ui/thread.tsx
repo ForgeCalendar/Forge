@@ -5,6 +5,7 @@ import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button
 import {
   useChoiceStore,
   AskUserChoiceUI,
+  SuggestEventsUI,
   ToolCallBox,
 } from "@/components/assistant-ui/tool-ui";
 import {
@@ -25,6 +26,7 @@ export const Thread: FC = () => {
       style={{ minHeight: 0, overflow: "hidden" }}
     >
       <AskUserChoiceUI />
+      <SuggestEventsUI />
       <ThreadPrimitive.Viewport
         className="flex-1 overflow-y-auto"
         style={{ minHeight: 0 }}
