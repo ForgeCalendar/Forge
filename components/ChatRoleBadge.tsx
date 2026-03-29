@@ -10,6 +10,10 @@ const roleConfig: Record<string, { label: string; colorPalette: string }> = {
     label: "Goal Planner",
     colorPalette: "purple",
   },
+  Assistant: {
+    label: "Assistant",
+    colorPalette: "blue",
+  },
 };
 
 export function ChatRoleBadge({

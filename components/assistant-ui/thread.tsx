@@ -5,6 +5,7 @@ import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button
 import {
   useChoiceStore,
   AskUserChoiceUI,
+  ToolCallBox,
 } from "@/components/assistant-ui/tool-ui";
 import {
   ActionBarPrimitive,
@@ -213,7 +214,12 @@ const AssistantMessage: FC = () => {
         </div>
         <div className="flex-1 space-y-2">
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <MessagePrimitive.Content components={{ Text: MarkdownText }} />
+            <MessagePrimitive.Content
+              components={{
+                Text: MarkdownText,
+                tools: { Fallback: ToolCallBox },
+              }}
+            />
           </div>
           <AssistantActionBar />
         </div>
