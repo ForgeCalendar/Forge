@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Provider } from "@/components/ui/provider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { QueryProvider } from "@/components/QueryProvider";
@@ -11,14 +12,16 @@ export default function RootLayout(props: { children: ReactNode }) {
   return (
     <html suppressHydrationWarning>
       <body>
-        <Provider>
-          <QueryProvider>
-            <AuthProvider>
-              <VibeKanbanWrapper />
-              {children}
-            </AuthProvider>
-          </QueryProvider>
-        </Provider>
+        <NuqsAdapter>
+          <Provider>
+            <QueryProvider>
+              <AuthProvider>
+                <VibeKanbanWrapper />
+                {children}
+              </AuthProvider>
+            </QueryProvider>
+          </Provider>
+        </NuqsAdapter>
       </body>
     </html>
   );

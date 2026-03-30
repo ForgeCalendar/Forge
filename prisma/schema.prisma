@@ -65,6 +65,7 @@ model Event {
   end             String   // ISO datetime string
   kind            String?  // 'task', 'break', 'ics', etc.
   completed       Boolean  @default(false)
+  confirmed       Boolean  @default(true) // Whether user confirmed this event (AI-proposed tasks start as false)
   minutesEstimate Int?
   order           Int      @default(0)
   metadata        String?  // JSON string for extensibility

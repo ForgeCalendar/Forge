@@ -128,3 +128,28 @@
 .fc .fc-timegrid-slot {
   height: 1.2em !important;
 }
+
+/* Pending (unconfirmed) events - dashed border, lower opacity */
+.fc .fc-event.fc-event-pending,
+.fc-event-pending {
+  opacity: 0.7 !important;
+  border: 2px dashed #f97316 !important;
+  background-color: rgba(249, 115, 22, 0.3) !important;
+  color: #000000 !important;
+}
+
+.fc .fc-event.fc-event-pending *,
+.fc-event-pending * {
+  color: #000000 !important;
+}
+
+.dark .fc .fc-event.fc-event-pending,
+.dark .fc-event-pending {
+  background-color: rgba(249, 115, 22, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.dark .fc .fc-event.fc-event-pending *,
+.dark .fc-event-pending * {
+  color: #ffffff !important;
+}

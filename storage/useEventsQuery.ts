@@ -74,6 +74,7 @@ async function updateEvent(
       ...input,
       start: input.start ? input.start.toISOString() : undefined,
       end: input.end ? input.end.toISOString() : undefined,
+      confirmed: input.confirmed,
     }),
   });
   if (!response.ok) throw new Error("Failed to update event");

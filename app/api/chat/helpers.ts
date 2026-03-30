@@ -198,9 +198,9 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
 
 function buildGoalPlannerTools(goalId: string, userId: string) {
   return {
-    saveTasks: tool({
+    suggestEvents: tool({
       description:
-        "Save the proposed tasks for the goal as calendar events. Each task must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",
+        "Suggest events for the goal as calendar events. Each event must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",
       inputSchema: z.object({
         tasks: z
           .array(
@@ -260,6 +260,7 @@ function buildGoalPlannerTools(goalId: string, userId: string) {
               minutesEstimate,
               order: i,
               completed: false,
+              confirmed: false, // AI-proposed tasks require user confirmation
             },
           });
 
@@ -356,11 +357,11 @@ Phase 1 Detective mode:
 
 Phase 2 Draft mode:
 1. Propose concrete and actionable tasks. For each task, assign a specific scheduled time period (start and end) spread across the days between now and the due date.
-2. Present the tasks in a clear list showing: task title, scheduled date, time range, and duration.
+2. Call suggestEvents to display the proposed events. Do NOT list out the events in text — the tool will render them visually for the user.
 
 Phase 3 Decision mode:
 1. Ask the user for confirmation. If there is any problem, you can ask more question for further information and go back to Draft mode.
-2. If everything is good to go, call the saveTask tool to submit the decision to the database.
+2. If everything is good to go, call the suggestEvents tool to submit the decision to the database.
 
 Guidelines:
 ${BASE_GUIDELINES}
@@ -371,8 +372,8 @@ ${BASE_GUIDELINES}
 - Spread tasks across available days before the due date.
 - Each task should be 15-120 minutes.
 - Order tasks in the sequence they should be done.
-- If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call saveTasks again with the updated list.
-- Always call saveTasks proactively — do not wait for explicit user approval on the first proposal.`;
+- If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call suggestEvents again with the updated list.
+- Always call suggestEvents proactively — do not wait for explicit user approval on the first proposal.`;
 }
 
 export function buildAssistantSystemPrompt(): string {

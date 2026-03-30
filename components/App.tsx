@@ -19,7 +19,7 @@ import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import { ChatboxComponent } from "@/components/Chatbox";
 import { useState, useRef, useEffect } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useQueryState } from "nuqs";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
 import { useGoals } from "@/storage/hooks";
@@ -55,27 +55,30 @@ export default function App() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [view, setView] = useQueryState("view", {
+    defaultValue: "timeGridDay",
+  });
+  const [date, setDate] = useQueryState("date", {
+    defaultValue: new Date().toISOString().slice(0, 10),
+  });
+  const [chatId, setChatId] = useQueryState("chatId");
 
-  const [currentView, setCurrentViewState] = useState<string[]>([
-    searchParams.get("view") ?? "timeGridDay",
-  ]);
-  const [currentDate] = useState<string>(
-    searchParams.get("date") ?? new Date().toISOString().slice(0, 10)
-  );
-  const chatId = searchParams.get("chatId");
+  // Wrap view in array for Select component compatibility
+  const currentView = [view];
+  const setCurrentView = (v: string[]) => setView(v[0]);
 
-  const setCurrentView = (v: string[]) => {
-    setCurrentViewState(v);
-  };
+  // Sync calendar when URL params change
+  useEffect(() => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      calendarApi.changeView(view);
+      calendarApi.gotoDate(date);
+    }
+  }, [view, date]);
 
-  const handleCalendarChange = (date: string, view: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("view", view);
-    params.set("date", date);
-    router.replace(`${pathname}?${params.toString()}`);
+  const handleCalendarChange = (newDate: string, newView: string) => {
+    setView(newView);
+    setDate(newDate);
   };
 
   if (authLoading) {
@@ -110,10 +113,7 @@ export default function App() {
         console.error("Goal created without chatHistoryId");
         return;
       }
-      // Navigate to the chat in the center region
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("chatId", created.chatHistoryId);
-      router.push(`${pathname}?${params.toString()}`);
+      setChatId(created.chatHistoryId);
     } catch (error) {
       console.error("Failed to create goal:", error);
     }
@@ -129,9 +129,7 @@ export default function App() {
           "chatHistoryId" in goalToDelete &&
           goalToDelete.chatHistoryId === chatId
         ) {
-          const params = new URLSearchParams(searchParams.toString());
-          params.delete("chatId");
-          router.push(`${pathname}?${params.toString()}`);
+          setChatId(null);
         }
         await deleteGoal(goalToDelete.id);
       }
@@ -145,10 +143,7 @@ export default function App() {
       console.error("Cannot update goal without chatHistoryId");
       return;
     }
-    // Navigate to the chat in the center region
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("chatId", goal.chatHistoryId);
-    router.push(`${pathname}?${params.toString()}`);
+    setChatId(goal.chatHistoryId);
   };
 
   return (
@@ -203,12 +198,8 @@ export default function App() {
                     onAddGoal={handleAddGoal}
                     onRemoveGoal={handleRemoveGoal}
                     onUpdateGoal={handleUpdateGoal}
-                    onChatSelect={(chatHistoryId) => {
-                      const params = new URLSearchParams(
-                        searchParams.toString()
-                      );
-                      params.set("chatId", chatHistoryId);
-                      router.push(`${pathname}?${params.toString()}`);
+                    onChatSelect={(newChatId) => {
+                      setChatId(newChatId);
                       setDrawerOpen(false);
                     }}
                     selectedChatId={chatId}
@@ -254,10 +245,8 @@ export default function App() {
             onAddGoal={handleAddGoal}
             onRemoveGoal={handleRemoveGoal}
             onUpdateGoal={handleUpdateGoal}
-            onChatSelect={(chatHistoryId) => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("chatId", chatHistoryId);
-              router.push(`${pathname}?${params.toString()}`);
+            onChatSelect={(newChatId) => {
+              setChatId(newChatId);
             }}
             selectedChatId={chatId}
           />
@@ -279,11 +268,7 @@ export default function App() {
               name={`chat-${chatId}`}
               chatHistoryId={chatId}
               extraParams={{ chatHistoryId: chatId }}
-              onClose={() => {
-                const params = new URLSearchParams(searchParams.toString());
-                params.delete("chatId");
-                router.push(`${pathname}?${params.toString()}`);
-              }}
+              onClose={() => setChatId(null)}
             />
           </Box>
         )}
@@ -293,7 +278,7 @@ export default function App() {
             currentView={currentView}
             setCurrentView={setCurrentView}
             onTitleChange={setCalendarTitle}
-            initialDate={currentDate}
+            initialDate={date}
             onCalendarChange={handleCalendarChange}
           />
         </Box>
