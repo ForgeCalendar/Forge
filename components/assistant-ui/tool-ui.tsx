@@ -5,6 +5,7 @@ import { makeAssistantToolUI } from "@assistant-ui/react";
 import type { ToolCallMessagePartProps } from "@assistant-ui/react";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useQueryState } from "nuqs";
 import { eventKeys } from "@/storage/useEventsQuery";
 import {
   Loader2Icon,
@@ -85,6 +86,9 @@ function EventThumbnail({
   start: string;
   end: string;
 }) {
+  const [, setView] = useQueryState("view");
+  const [, setDate] = useQueryState("date");
+
   const startDate = new Date(start);
   const endDate = new Date(end);
 
@@ -101,10 +105,16 @@ function EventThumbnail({
     minute: "2-digit",
   });
 
+  const handleClick = () => {
+    setView("timeGridDay");
+    setDate(startDate.toISOString().slice(0, 10));
+  };
+
   return (
     <div
-      className="flex items-center gap-2 px-2 py-1 rounded border border-border bg-background text-xs"
+      className="flex items-center gap-2 px-2 py-1 rounded border border-border bg-background text-xs cursor-pointer hover:bg-muted transition-colors"
       title={`${title}: ${dateStr} ${startTime}-${endTime}`}
+      onClick={handleClick}
     >
       <span className="text-orange-500 font-medium whitespace-nowrap">
         {dateStr}
