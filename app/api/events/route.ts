@@ -51,8 +51,8 @@ export async function POST(req: Request): Promise<NextResponse> {
       data: {
         userId,
         title,
-        start: new Date(start).toISOString(),
-        end: new Date(end).toISOString(),
+        start: new Date(start),
+        end: new Date(end),
         kind,
         goalId: goalId || null,
         completed: completed ?? false,

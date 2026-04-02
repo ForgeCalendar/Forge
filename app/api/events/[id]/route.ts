@@ -65,8 +65,8 @@ export async function PATCH(
       where: { id },
       data: {
         ...(title !== undefined && { title }),
-        ...(start !== undefined && { start: new Date(start).toISOString() }),
-        ...(end !== undefined && { end: new Date(end).toISOString() }),
+        ...(start !== undefined && { start: new Date(start) }),
+        ...(end !== undefined && { end: new Date(end) }),
         ...(kind !== undefined && { kind }),
         ...(completed !== undefined && { completed }),
         ...(confirmed !== undefined && { confirmed }),

@@ -108,14 +108,14 @@ async function main() {
       title: "Finish pre-commit setup",
       description:
         "Finalize and install the repository pre-commit hooks; run autoupdate and fix any reported issues.",
-      dueDate: "2026-01-15T17:00:00",
+      dueDate: new Date("2026-01-15T17:00:00Z"),
       events: {
         create: [
           {
             userId: user.id,
             title: "Add .pre-commit-config.yaml",
-            start: new Date().toISOString(),
-            end: new Date().toISOString(),
+            start: new Date(),
+            end: new Date(),
             completed: true,
             minutesEstimate: 30,
             order: 0,
@@ -123,8 +123,8 @@ async function main() {
           {
             userId: user.id,
             title: "Run pre-commit install",
-            start: new Date().toISOString(),
-            end: new Date().toISOString(),
+            start: new Date(),
+            end: new Date(),
             completed: false,
             minutesEstimate: 15,
             order: 1,
@@ -132,8 +132,8 @@ async function main() {
           {
             userId: user.id,
             title: "Run pre-commit autoupdate",
-            start: new Date().toISOString(),
-            end: new Date().toISOString(),
+            start: new Date(),
+            end: new Date(),
             completed: false,
             minutesEstimate: 20,
             order: 2,
@@ -161,8 +161,8 @@ async function main() {
           {
             userId: user.id,
             title: "Fix mobile header spacing",
-            start: new Date().toISOString(),
-            end: new Date().toISOString(),
+            start: new Date(),
+            end: new Date(),
             completed: true,
             minutesEstimate: 10,
             order: 0,
@@ -170,8 +170,8 @@ async function main() {
           {
             userId: user.id,
             title: "Adjust hero section spacing",
-            start: new Date().toISOString(),
-            end: new Date().toISOString(),
+            start: new Date(),
+            end: new Date(),
             completed: false,
             minutesEstimate: 25,
             order: 1,
@@ -193,14 +193,14 @@ async function main() {
       title: "Add unit tests for auth",
       description:
         "Write unit tests covering login/logout and token refresh logic.",
-      dueDate: "2026-02-01T09:30:00",
+      dueDate: new Date("2026-02-01T09:30:00Z"),
       events: {
         create: [
           {
             userId: user.id,
             title: "Test login flow",
-            start: new Date().toISOString(),
-            end: new Date().toISOString(),
+            start: new Date(),
+            end: new Date(),
             completed: false,
             minutesEstimate: 40,
             order: 0,
@@ -208,8 +208,8 @@ async function main() {
           {
             userId: user.id,
             title: "Test token refresh",
-            start: new Date().toISOString(),
-            end: new Date().toISOString(),
+            start: new Date(),
+            end: new Date(),
             completed: false,
             minutesEstimate: 35,
             order: 1,
@@ -240,14 +240,14 @@ async function main() {
         today.getDate(),
         9,
         0
-      ).toISOString(),
+      ),
       end: new Date(
         today.getFullYear(),
         today.getMonth(),
         today.getDate(),
         9,
         30
-      ).toISOString(),
+      ),
       kind: "break",
     },
   });
@@ -262,14 +262,14 @@ async function main() {
         today.getDate(),
         14,
         0
-      ).toISOString(),
+      ),
       end: new Date(
         today.getFullYear(),
         today.getMonth(),
         today.getDate(),
         15,
         0
-      ).toISOString(),
+      ),
       kind: "task",
     },
   });
@@ -284,14 +284,14 @@ async function main() {
         tomorrow.getDate(),
         10,
         0
-      ).toISOString(),
+      ),
       end: new Date(
         tomorrow.getFullYear(),
         tomorrow.getMonth(),
         tomorrow.getDate(),
         11,
         30
-      ).toISOString(),
+      ),
       kind: "task",
     },
   });
