@@ -212,8 +212,7 @@ function buildGoalPlannerTools(goalId: string, userId: string) {
               end: z.string().describe("ISO 8601 end datetime for this task"),
             })
           )
-          .min(1)
-          .max(10),
+          .min(1),
       }),
       execute: async ({ tasks }) => {
         const goal = await prisma.goal.findFirst({
