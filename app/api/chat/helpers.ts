@@ -350,8 +350,8 @@ function buildGoalPlannerTools(goalId: string, userId: string) {
               userId: goal.userId,
               goalId,
               title: tasks[i].title,
-              start: taskStart.toISOString(),
-              end: taskEnd.toISOString(),
+              start: taskStart,
+              end: taskEnd,
               kind: "task",
               minutesEstimate,
               order: i,
@@ -422,19 +422,24 @@ const BASE_GUIDELINES = `
 - When you need current web information, call searchOnline before answering.
 `.trim();
 
-export function buildGoalSystemPrompt(goal: Goal): string {
+export function buildGoalSystemPrompt(goal: Goal, timezone: string): string {
+  const now = new Date();
+  const nowInTimezone = now.toLocaleString("en-US", { timeZone: timezone });
   const dueDateContext = goal.dueDate
-    ? `The goal is due on ${new Date(goal.dueDate).toLocaleString()}.`
+    ? `The goal is due on ${goal.dueDate.toLocaleString("en-US", {
+        timeZone: timezone,
+      })}.`
     : "There is no specific due date.";
-  const nowContext = `The current date/time is ${new Date().toLocaleString()}.`;
 
   return `You are an AI assistant helping the user break down a goal into scheduled calendar events.
+
+The user's timezone is ${timezone}.
+The current date/time in the user's timezone is ${nowInTimezone}.
 
 The user just created a goal:
 - Title: ${goal.title}
 - Description: ${goal.description}
 - ${dueDateContext}
-- ${nowContext}
 
 Your job contains 3 phases:
 Phase 1 Detective mode:
@@ -459,15 +464,18 @@ ${BASE_GUIDELINES}
 - Each task should be 15-120 minutes.
 - Order tasks in the sequence they should be done.
 - If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call suggestEvents again with the updated list.
-- Always call suggestEvents proactively — do not wait for explicit user approval on the first proposal.`;
+- Always call suggestEvents proactively — do not wait for explicit user approval on the first proposal.
+- IMPORTANT: When specifying event times, use the user's timezone (${timezone}). All ISO 8601 datetime strings should reflect times in the user's local timezone.`;
 }
 
-export function buildAssistantSystemPrompt(): string {
-  const nowContext = `The current date/time is ${new Date().toLocaleString()}.`;
+export function buildAssistantSystemPrompt(timezone: string): string {
+  const now = new Date();
+  const nowInTimezone = now.toLocaleString("en-US", { timeZone: timezone });
 
   return `You are a helpful AI assistant for a calendar and task management application.
 
-${nowContext}
+The user's timezone is ${timezone}.
+The current date/time in the user's timezone is ${nowInTimezone}.
 
 You can help users with:
 - Answering questions about their schedule and tasks
@@ -483,21 +491,24 @@ ${BASE_GUIDELINES}
 type SystemPromptContext = {
   role: ChatHistoryRole;
   goal?: Goal;
+  timezone: string;
 };
 
 export function buildSystemPrompt(context: SystemPromptContext): string {
+  const timezone = context.timezone || "UTC";
+
   switch (context.role) {
     case "GoalPlanner":
       if (!context.goal) {
         throw new Error("GoalPlanner requires a goal");
       }
-      return buildGoalSystemPrompt(context.goal);
+      return buildGoalSystemPrompt(context.goal, timezone);
 
     case "Assistant":
-      return buildAssistantSystemPrompt();
+      return buildAssistantSystemPrompt(timezone);
 
     default:
-      return buildAssistantSystemPrompt();
+      return buildAssistantSystemPrompt(timezone);
   }
 }
 

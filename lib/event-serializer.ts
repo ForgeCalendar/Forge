@@ -34,20 +34,19 @@ function msToIsoDuration(ms: number): string {
 }
 
 /**
- * Format an ISO date string as an ICS DTSTART line for use in rrule strings.
- * All dates stored in the DB are UTC ISO strings, so we emit UTC format.
+ * Format a Date as an ICS DTSTART line for use in rrule strings.
+ * All dates stored in the DB are UTC, so we emit UTC format.
  */
-function toIcsDtstart(isoDate: string, isAllDay: boolean): string {
-  const d = new Date(isoDate);
-  const y = d.getUTCFullYear();
-  const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const da = String(d.getUTCDate()).padStart(2, "0");
+function toIcsDtstart(date: Date, isAllDay: boolean): string {
+  const y = date.getUTCFullYear();
+  const mo = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const da = String(date.getUTCDate()).padStart(2, "0");
   if (isAllDay) {
     return `DTSTART;VALUE=DATE:${y}${mo}${da}`;
   }
-  const h = String(d.getUTCHours()).padStart(2, "0");
-  const mi = String(d.getUTCMinutes()).padStart(2, "0");
-  const s = String(d.getUTCSeconds()).padStart(2, "0");
+  const h = String(date.getUTCHours()).padStart(2, "0");
+  const mi = String(date.getUTCMinutes()).padStart(2, "0");
+  const s = String(date.getUTCSeconds()).padStart(2, "0");
   return `DTSTART:${y}${mo}${da}T${h}${mi}${s}Z`;
 }
 
@@ -87,8 +86,8 @@ export function toCalendarEvent(event: Event): Record<string, unknown> {
   };
 
   if (isRecurringMaster) {
-    const startMs = new Date(event.start).getTime();
-    const endMs = new Date(event.end).getTime();
+    const startMs = event.start.getTime();
+    const endMs = event.end.getTime();
     const durationMs = Math.max(endMs - startMs, 0);
 
     // Build the full rrule string with DTSTART embedded so FullCalendar
@@ -116,8 +115,8 @@ export function toCalendarEvent(event: Event): Record<string, unknown> {
   return {
     id: event.id,
     title: event.title,
-    start: new Date(event.start),
-    end: new Date(event.end),
+    start: event.start,
+    end: event.end,
     allDay: event.isAllDay,
     ...colorProps,
     extendedProps,
@@ -132,8 +131,8 @@ export function toEventResponse(event: Event): Record<string, unknown> {
   return {
     id: event.id,
     title: event.title,
-    start: new Date(event.start),
-    end: new Date(event.end),
+    start: event.start,
+    end: event.end,
     extendedProps: {
       ...parseMetadata(event.metadata),
       kind: event.kind,

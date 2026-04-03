@@ -115,8 +115,8 @@ describe("POST /api/events", () => {
       data: {
         userId: "test@example.com",
         title: "Team Meeting",
-        start: new Date("2024-06-01T10:00:00Z").toISOString(),
-        end: new Date("2024-06-01T11:00:00Z").toISOString(),
+        start: new Date("2024-06-01T10:00:00Z"),
+        end: new Date("2024-06-01T11:00:00Z"),
         kind: "meeting",
         goalId: null,
         completed: false,

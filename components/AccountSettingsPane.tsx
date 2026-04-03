@@ -7,8 +7,72 @@ import {
   createListCollection,
   Flex,
 } from "@chakra-ui/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
+
+// Common IANA timezones grouped by region
+const TIMEZONE_OPTIONS = [
+  // Americas
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "America/Phoenix",
+  "America/Toronto",
+  "America/Vancouver",
+  "America/Mexico_City",
+  "America/Sao_Paulo",
+  "America/Buenos_Aires",
+  // Europe
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Rome",
+  "Europe/Madrid",
+  "Europe/Amsterdam",
+  "Europe/Moscow",
+  "Europe/Istanbul",
+  // Asia
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Asia/Hong_Kong",
+  "Asia/Singapore",
+  "Asia/Seoul",
+  "Asia/Kolkata",
+  "Asia/Dubai",
+  "Asia/Bangkok",
+  "Asia/Jakarta",
+  // Pacific
+  "Pacific/Auckland",
+  "Pacific/Sydney",
+  "Australia/Melbourne",
+  "Australia/Perth",
+  "Pacific/Honolulu",
+  // Africa
+  "Africa/Cairo",
+  "Africa/Johannesburg",
+  "Africa/Lagos",
+  // UTC
+  "UTC",
+];
+
+function formatTimezoneLabel(tz: string): string {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "shortOffset",
+    });
+    const parts = formatter.formatToParts(now);
+    const offset = parts.find((p) => p.type === "timeZoneName")?.value || "";
+    // Convert "America/New_York" to "New York"
+    const name = tz.split("/").pop()?.replace(/_/g, " ") || tz;
+    return `${name} (${offset})`;
+  } catch {
+    return tz;
+  }
+}
 
 type ProviderRecord = {
   id: string;
@@ -60,6 +124,56 @@ export default function AccountSettingsPane() {
     border: cardBorder,
     bgCard: cardBg,
   } = useThemeTokens();
+
+  // Timezone state
+  const [timezone, setTimezone] = useState<string>("UTC");
+  const [timezoneLoading, setTimezoneLoading] = useState(true);
+  const [timezoneSaving, setTimezoneSaving] = useState(false);
+
+  const timezoneOptions = useMemo(
+    () =>
+      createListCollection({
+        items: TIMEZONE_OPTIONS.map((tz) => ({
+          label: formatTimezoneLabel(tz),
+          value: tz,
+        })),
+      }),
+    []
+  );
+
+  const fetchUserSettings = useCallback(async () => {
+    try {
+      setTimezoneLoading(true);
+      const res = await fetch("/api/user");
+      if (res.ok) {
+        const data = await res.json();
+        setTimezone(data.timezone || "UTC");
+      }
+    } catch (err) {
+      console.error("Failed to fetch user settings:", err);
+    } finally {
+      setTimezoneLoading(false);
+    }
+  }, []);
+
+  async function handleTimezoneChange(newTimezone: string[]) {
+    if (!newTimezone[0] || newTimezone[0] === timezone) return;
+    setTimezoneSaving(true);
+    try {
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timezone: newTimezone[0] }),
+      });
+      if (res.ok) {
+        setTimezone(newTimezone[0]);
+      }
+    } catch (err) {
+      console.error("Failed to update timezone:", err);
+    } finally {
+      setTimezoneSaving(false);
+    }
+  }
 
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,8 +229,9 @@ export default function AccountSettingsPane() {
 
   useEffect(() => {
     fetchProviders();
+    fetchUserSettings();
     fetchSearchConfig();
-  }, [fetchProviders, fetchSearchConfig]);
+  }, [fetchProviders, fetchUserSettings, fetchSearchConfig]);
 
   async function handleAdd() {
     if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;
@@ -264,7 +379,51 @@ export default function AccountSettingsPane() {
     <Box>
       <Text fontWeight="semibold">Account</Text>
       <Text color={subtitleColor} mt={2}>
-        Manage your AI providers and API keys.
+        Manage your account settings.
+      </Text>
+
+      {/* Timezone Setting */}
+      <Box
+        mt={4}
+        p={3}
+        borderWidth="1px"
+        borderColor={cardBorder}
+        borderRadius="md"
+        bg={cardBg}
+      >
+        <Text fontWeight="medium" fontSize="sm" mb={2}>
+          Timezone
+        </Text>
+        <Text color={subtitleColor} fontSize="xs" mb={3}>
+          Set your local timezone for accurate event scheduling.
+        </Text>
+        <Box maxW="300px">
+          <Select.Root
+            collection={timezoneOptions}
+            value={[timezone]}
+            onValueChange={(e) => handleTimezoneChange(e.value)}
+            size="sm"
+            disabled={timezoneLoading || timezoneSaving}
+          >
+            <Select.Trigger>
+              <Select.ValueText placeholder="Select timezone" />
+            </Select.Trigger>
+            <Select.Positioner>
+              <Select.Content maxH="300px" overflowY="auto">
+                {timezoneOptions.items.map((opt) => (
+                  <Select.Item item={opt} key={opt.value}>
+                    {opt.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+        </Box>
+      </Box>
+
+      {/* AI Providers Section */}
+      <Text fontWeight="medium" fontSize="sm" mt={6} mb={2}>
+        AI Providers
       </Text>
 
       {error && (

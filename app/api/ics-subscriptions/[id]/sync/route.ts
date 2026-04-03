@@ -33,24 +33,24 @@ function parseIcsDuration(duration: string): number {
 }
 
 /**
- * Compute the ISO end date for an ICS event, handling DTEND, DURATION, and
+ * Compute the end Date for an ICS event, handling DTEND, DURATION, and
  * fallback to a provided master duration (for modified occurrences).
  */
 function computeEndDate(
   event: IcsEvent,
   startMs: number,
   masterDurationMs?: number
-): string {
+): Date {
   if (event.dtend) {
-    return parseIcsDate(event.dtend).toISOString();
+    return parseIcsDate(event.dtend);
   }
   if (event.duration) {
-    return new Date(startMs + parseIcsDuration(event.duration)).toISOString();
+    return new Date(startMs + parseIcsDuration(event.duration));
   }
   if (masterDurationMs !== undefined) {
-    return new Date(startMs + masterDurationMs).toISOString();
+    return new Date(startMs + masterDurationMs);
   }
-  return new Date(startMs).toISOString();
+  return new Date(startMs);
 }
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -144,18 +144,16 @@ export async function POST(
 
       // Pass 2: upsert masters (with consolidated exdates), then modifications
       for (const [uid, master] of masters) {
-        let startDate: string;
-        let endDate: string;
+        let startDate: Date;
+        let endDate: Date;
         try {
-          const startMs = parseIcsDate(master.dtstart!).getTime();
-          startDate = new Date(startMs).toISOString();
-          endDate = computeEndDate(master, startMs);
+          startDate = parseIcsDate(master.dtstart!);
+          endDate = computeEndDate(master, startDate.getTime());
         } catch {
           continue;
         }
 
-        const masterDurationMs =
-          new Date(endDate).getTime() - new Date(startDate).getTime();
+        const masterDurationMs = endDate.getTime() - startDate.getTime();
         const isAllDay = isAllDayDate(master.dtstart!);
 
         // Build consolidated exdates:
@@ -226,12 +224,11 @@ export async function POST(
         for (const mod of modifications.get(uid) ?? []) {
           if (!mod.dtstart || !mod.recurid) continue;
 
-          let modStart: string;
-          let modEnd: string;
+          let modStart: Date;
+          let modEnd: Date;
           try {
-            const modStartMs = parseIcsDate(mod.dtstart).getTime();
-            modStart = new Date(modStartMs).toISOString();
-            modEnd = computeEndDate(mod, modStartMs, masterDurationMs);
+            modStart = parseIcsDate(mod.dtstart);
+            modEnd = computeEndDate(mod, modStart.getTime(), masterDurationMs);
           } catch {
             continue;
           }
@@ -295,12 +292,11 @@ export async function POST(
         for (const mod of mods) {
           if (!mod.dtstart || !mod.recurid) continue;
 
-          let modStart: string;
-          let modEnd: string;
+          let modStart: Date;
+          let modEnd: Date;
           try {
-            const modStartMs = parseIcsDate(mod.dtstart).getTime();
-            modStart = new Date(modStartMs).toISOString();
-            modEnd = computeEndDate(mod, modStartMs);
+            modStart = parseIcsDate(mod.dtstart);
+            modEnd = computeEndDate(mod, modStart.getTime());
           } catch {
             continue;
           }

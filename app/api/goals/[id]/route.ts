@@ -93,8 +93,8 @@ export async function PUT(
             events?.map((d: EventInput, index: number) => ({
               userId,
               title: d.title,
-              start: d.start || new Date().toISOString(),
-              end: d.end || new Date().toISOString(),
+              start: d.start ? new Date(d.start) : new Date(),
+              end: d.end ? new Date(d.end) : new Date(),
               completed: d.completed ?? false,
               minutesEstimate: d.minutesEstimate,
               order: index,
