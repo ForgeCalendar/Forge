@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import {
   Box,
   Container,
@@ -26,7 +26,7 @@ import {
   IoPlaySkipForward,
 } from "react-icons/io5";
 
-export default function ZenModePage() {
+function ZenModeContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
   const router = useRouter();
@@ -200,7 +200,7 @@ export default function ZenModePage() {
 
     const updateTimer = () => {
       const now = new Date();
-      const endTime = new Date(event.end);
+      const endTime = new Date(event.end!);
       const diff = endTime.getTime() - now.getTime();
 
       if (diff <= 0) {
@@ -419,7 +419,7 @@ export default function ZenModePage() {
                       Started
                     </Text>
                     <Text fontSize="md" color={textHeading}>
-                      {formatTime(event.start)}
+                      {formatTime(event.start!)}
                     </Text>
                   </Box>
                   <Box>
@@ -427,7 +427,7 @@ export default function ZenModePage() {
                       Ends
                     </Text>
                     <Text fontSize="md" color={textHeading}>
-                      {formatTime(event.end)}
+                      {formatTime(event.end!)}
                     </Text>
                   </Box>
                 </HStack>
@@ -578,5 +578,30 @@ export default function ZenModePage() {
         </Box>
       </Grid>
     </Box>
+  );
+}
+
+export default function ZenModePage() {
+  const { bgSurface, textMuted } = useThemeTokens();
+
+  return (
+    <Suspense
+      fallback={
+        <Box
+          minH="100vh"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          bg={bgSurface}
+        >
+          <VStack gap={4}>
+            <Spinner size="xl" />
+            <Text color={textMuted}>Loading zen mode...</Text>
+          </VStack>
+        </Box>
+      }
+    >
+      <ZenModeContent />
+    </Suspense>
   );
 }
