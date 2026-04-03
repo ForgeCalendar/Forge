@@ -19,6 +19,12 @@ import { useRouter } from "next/navigation";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import type { EventWithId } from "@/storage/types";
 import { ChatboxComponent } from "@/components/Chatbox";
+import {
+  IoPlaySkipBack,
+  IoPlay,
+  IoPause,
+  IoPlaySkipForward,
+} from "react-icons/io5";
 
 export default function ZenModePage() {
   const searchParams = useSearchParams();
@@ -315,7 +321,7 @@ export default function ZenModePage() {
                     }}
                     transition="all 0.2s"
                   >
-                    ⏮
+                    <IoPlaySkipBack />
                   </IconButton>
                   <IconButton
                     aria-label={isPlaying ? "Pause" : "Play"}
@@ -326,7 +332,7 @@ export default function ZenModePage() {
                     _hover={{ transform: "scale(1.1)" }}
                     transition="all 0.2s"
                   >
-                    {isPlaying ? "⏸" : "▶"}
+                    {isPlaying ? <IoPause /> : <IoPlay />}
                   </IconButton>
                   <IconButton
                     aria-label="Next track"
@@ -343,7 +349,7 @@ export default function ZenModePage() {
                     }}
                     transition="all 0.2s"
                   >
-                    ⏭
+                    <IoPlaySkipForward />
                   </IconButton>
                 </HStack>
               </VStack>
