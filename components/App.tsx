@@ -18,7 +18,7 @@ import LoginDialog from "@/components/LoginDialog";
 import RegisterDialog from "@/components/RegisterDialog";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import { ChatboxComponent } from "@/components/Chatbox";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQueryState } from "nuqs";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,19 +67,22 @@ export default function App() {
   const currentView = [view];
   const setCurrentView = (v: string[]) => setView(v[0]);
 
-  // Sync calendar when URL params change
-  useEffect(() => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi.changeView(view);
-      calendarApi.gotoDate(date);
-    }
-  }, [view, date]);
+  // Sync calendar when URL params change - DISABLED FOR TESTING
+  // useEffect(() => {
+  //   const calendarApi = calendarRef.current?.getApi();
+  //   if (calendarApi) {
+  //     calendarApi.changeView(view);
+  //     calendarApi.gotoDate(date);
+  //   }
+  // }, [view, date]);
 
-  const handleCalendarChange = (newDate: string, newView: string) => {
-    setView(newView);
-    setDate(newDate);
-  };
+  const handleCalendarChange = useCallback(
+    (newDate: string, newView: string) => {
+      setView(newView);
+      setDate(newDate);
+    },
+    [setView, setDate]
+  );
 
   if (authLoading) {
     return null;

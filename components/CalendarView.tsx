@@ -50,12 +50,16 @@ export default function CalendarView({
 
   const { textHeading: headingColor, textMuted: subColor } = useThemeTokens();
 
-  useEffect(() => {
-    if (calendarRef.current && currentView.length > 0) {
-      const calendarApi = calendarRef.current.getApi();
-      calendarApi.changeView(currentView[0]);
-    }
-  }, [calendarRef, currentView]);
+  // Temporarily disabled to debug scroll issue
+  // useEffect(() => {
+  //   if (calendarRef.current && currentView.length > 0) {
+  //     const calendarApi = calendarRef.current.getApi();
+  //     // Only change view if it's actually different
+  //     if (calendarApi.view.type !== currentView[0]) {
+  //       calendarApi.changeView(currentView[0]);
+  //     }
+  //   }
+  // }, [calendarRef, currentView]);
 
   const formatTime = (date: Date | null) => {
     if (!date) return "\u2014";
@@ -88,6 +92,7 @@ export default function CalendarView({
             initialDate={initialDate}
             headerToolbar={false}
             nowIndicator={true}
+            scrollTimeReset={false}
             height="100%"
             allDaySlot={false}
             slotDuration="00:30:00"
@@ -100,8 +105,9 @@ export default function CalendarView({
             events={calendarEvents}
             datesSet={(info) => {
               onTitleChange(info.view.title);
-              const dateStr = info.view.currentStart.toISOString().slice(0, 10);
-              onCalendarChange(dateStr, info.view.type);
+              // Temporarily disabled to debug scroll issue
+              // const dateStr = info.view.currentStart.toISOString().slice(0, 10);
+              // onCalendarChange(dateStr, info.view.type);
             }}
             dateClick={(info) => {
               if (currentView[0] === "dayGridMonth") {
