@@ -15,7 +15,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import rrulePlugin from "@fullcalendar/rrule";
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useCalendarEvents } from "@/storage/hooks";
 
@@ -50,10 +50,24 @@ export default function CalendarView({
 
   const { textHeading: headingColor, textMuted: subColor } = useThemeTokens();
 
+  // Track last synced values to prevent feedback loops
+  const lastSyncedDate = useRef<string>(initialDate);
+  const lastSyncedView = useRef<string>(currentView[0]);
+
+  // Sync calendar when URL params change (external navigation)
   useEffect(() => {
     if (calendarRef.current && currentView.length > 0) {
       const calendarApi = calendarRef.current.getApi();
-      calendarApi.changeView(currentView[0]);
+      const currentCalendarView = calendarApi.view.type;
+
+      // Only change view if it's actually different and wasn't just set by datesSet
+      if (
+        currentCalendarView !== currentView[0] &&
+        lastSyncedView.current !== currentView[0]
+      ) {
+        calendarApi.changeView(currentView[0]);
+        lastSyncedView.current = currentView[0];
+      }
     }
   }, [calendarRef, currentView]);
 
@@ -88,6 +102,7 @@ export default function CalendarView({
             initialDate={initialDate}
             headerToolbar={false}
             nowIndicator={true}
+            scrollTimeReset={false}
             height="100%"
             allDaySlot={false}
             slotDuration="00:30:00"
@@ -101,7 +116,17 @@ export default function CalendarView({
             datesSet={(info) => {
               onTitleChange(info.view.title);
               const dateStr = info.view.currentStart.toISOString().slice(0, 10);
-              onCalendarChange(dateStr, info.view.type);
+              const viewType = info.view.type;
+
+              // Only sync to URL if values actually changed
+              if (
+                dateStr !== lastSyncedDate.current ||
+                viewType !== lastSyncedView.current
+              ) {
+                lastSyncedDate.current = dateStr;
+                lastSyncedView.current = viewType;
+                onCalendarChange(dateStr, viewType);
+              }
             }}
             dateClick={(info) => {
               if (currentView[0] === "dayGridMonth") {
