@@ -186,6 +186,7 @@ const toolDisplayNames: Record<string, string> = {
   searchMemoryAnswer: "Searching Memory",
   setChatTitle: "Setting Title",
   askUserChoice: "Asking Question",
+  searchOnline: "Search Online",
 };
 
 export function ToolCallBox(props: ToolCallMessagePartProps) {
@@ -198,7 +199,7 @@ export function ToolCallBox(props: ToolCallMessagePartProps) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 mt-2 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground">
       <WrenchIcon className="size-3.5 shrink-0" />
-      <span className="flex-1">{displayName}</span>
+      <span className="flex-1">Tool called: {displayName}</span>
       {isRunning && (
         <Loader2Icon className="size-3.5 animate-spin text-blue-500" />
       )}

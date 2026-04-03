@@ -88,6 +88,10 @@ type ProviderRecord = {
   }[];
 };
 
+type SearchConfigResponse = {
+  hasTavilyApiKey: boolean;
+};
+
 const providerTypeOptions = createListCollection({
   items: [
     { label: "Anthropic", value: "anthropic" },
@@ -180,6 +184,11 @@ export default function AccountSettingsPane() {
   const [newApiKey, setNewApiKey] = useState("");
   const [newBaseUrl, setNewBaseUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [searchSaving, setSearchSaving] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(true);
+  const [hasTavilyApiKey, setHasTavilyApiKey] = useState(false);
+  const [searchEditing, setSearchEditing] = useState(false);
+  const [tavilyApiKeyInput, setTavilyApiKeyInput] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -201,10 +210,28 @@ export default function AccountSettingsPane() {
     }
   }, []);
 
+  const fetchSearchConfig = useCallback(async () => {
+    try {
+      setSearchLoading(true);
+      const res = await fetch("/api/search-config");
+      if (!res.ok) throw new Error("Failed to fetch search config");
+      const data: SearchConfigResponse = await res.json();
+      setHasTavilyApiKey(data.hasTavilyApiKey);
+      setSearchEditing(!data.hasTavilyApiKey);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load search config"
+      );
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProviders();
     fetchUserSettings();
-  }, [fetchProviders, fetchUserSettings]);
+    fetchSearchConfig();
+  }, [fetchProviders, fetchUserSettings, fetchSearchConfig]);
 
   async function handleAdd() {
     if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;
@@ -282,6 +309,62 @@ export default function AccountSettingsPane() {
       await fetchProviders();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  }
+
+  async function handleSaveSearchConfig() {
+    setSearchSaving(true);
+    setError(null);
+    try {
+      const payload: Record<string, string> = {
+        tavilyApiKey: tavilyApiKeyInput.trim(),
+      };
+
+      const res = await fetch("/api/search-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save search config");
+      }
+
+      const data: SearchConfigResponse = await res.json();
+      setHasTavilyApiKey(data.hasTavilyApiKey);
+      setSearchEditing(false);
+      setTavilyApiKeyInput("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSearchSaving(false);
+    }
+  }
+
+  async function handleClearSearchConfig() {
+    setSearchSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/search-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tavilyApiKey: "",
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to clear search config");
+      }
+
+      setHasTavilyApiKey(false);
+      setSearchEditing(true);
+      setTavilyApiKeyInput("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to clear");
+    } finally {
+      setSearchSaving(false);
     }
   }
 
@@ -549,6 +632,111 @@ export default function AccountSettingsPane() {
         >
           Add
         </Button>
+      </Box>
+
+      <Box
+        mt={4}
+        p={3}
+        borderWidth="1px"
+        borderColor={cardBorder}
+        borderRadius="md"
+      >
+        <Text fontWeight="medium" fontSize="sm" mb={2}>
+          Search API
+        </Text>
+        <Text color={subtitleColor} fontSize="xs" mb={2}>
+          allow AI agents to search.
+        </Text>
+        <Text color={subtitleColor} fontSize="xs" mb={2}>
+          Tavily is built for AI agents to search the web and fetch up-to-date
+          information during chat.
+        </Text>
+
+        {searchLoading ? (
+          <Text color={subtitleColor} fontSize="sm">
+            Loading search config...
+          </Text>
+        ) : (
+          <Box
+            p={3}
+            bg={cardBg}
+            borderWidth="1px"
+            borderColor={cardBorder}
+            borderRadius="md"
+          >
+            {searchEditing ? (
+              <Box>
+                <Text fontSize="xs" mb={1}>
+                  Tavily API Key{" "}
+                  {hasTavilyApiKey ? "(configured)" : "(not set)"}
+                </Text>
+                <Input
+                  size="sm"
+                  type="password"
+                  placeholder={
+                    hasTavilyApiKey ? "Enter new key to replace" : "tvly-..."
+                  }
+                  value={tavilyApiKeyInput}
+                  onChange={(e) => setTavilyApiKeyInput(e.target.value)}
+                />
+
+                <Flex gap={2} mt={3}>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveSearchConfig}
+                    disabled={searchSaving || !tavilyApiKeyInput.trim()}
+                  >
+                    Save
+                  </Button>
+                  {hasTavilyApiKey && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setSearchEditing(false);
+                        setTavilyApiKeyInput("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </Flex>
+              </Box>
+            ) : (
+              <Flex justify="space-between" align="center" gap={3}>
+                <Box>
+                  <Text fontWeight="medium" fontSize="sm">
+                    Tavily Search
+                  </Text>
+                  <Text fontSize="xs" color={subtitleColor}>
+                    {hasTavilyApiKey ? "Configured" : "Not configured"}
+                  </Text>
+                </Box>
+                <Flex gap={2}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSearchEditing(true);
+                      setTavilyApiKeyInput("");
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    colorPalette="red"
+                    onClick={handleClearSearchConfig}
+                    disabled={!hasTavilyApiKey}
+                  >
+                    Delete
+                  </Button>
+                </Flex>
+              </Flex>
+            )}
+          </Box>
+        )}
       </Box>
     </Box>
   );
