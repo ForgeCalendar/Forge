@@ -17,6 +17,7 @@ import rrulePlugin from "@fullcalendar/rrule";
 import momentTimezonePlugin from "@fullcalendar/moment-timezone";
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useCalendarEvents } from "@/storage/hooks";
 
@@ -37,6 +38,7 @@ export default function CalendarView({
   onCalendarChange: (date: string, view: string) => void;
   timezone: string;
 }) {
+  const router = useRouter();
   const {
     events: calendarEvents,
     isLoading,
@@ -237,6 +239,17 @@ export default function CalendarView({
                     Close
                   </Button>
                 </Dialog.ActionTrigger>
+                <Button
+                  colorScheme="blue"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedEvent?.id) {
+                      router.push(`/zen-mode?eventId=${selectedEvent.id}`);
+                    }
+                  }}
+                >
+                  Enter Zen Mode
+                </Button>
                 <Button
                   colorPalette="red"
                   size="sm"
