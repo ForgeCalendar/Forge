@@ -54,7 +54,7 @@ export async function PUT(req: Request): Promise<NextResponse> {
 
     const tavilyApiKey = tavilyApiKeyProvided
       ? body.tavilyApiKey.trim()
-      : (existing?.tavilyApiKey ?? "");
+      : existing?.tavilyApiKey ?? "";
 
     if (!tavilyApiKey) {
       await prisma.$executeRaw`

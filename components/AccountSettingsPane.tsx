@@ -489,7 +489,8 @@ export default function AccountSettingsPane() {
           allow AI agents to search.
         </Text>
         <Text color={subtitleColor} fontSize="xs" mb={2}>
-          Tavily is built for AI agents to search the web and fetch up-to-date information during chat.
+          Tavily is built for AI agents to search the web and fetch up-to-date
+          information during chat.
         </Text>
 
         {searchLoading ? (
@@ -507,12 +508,15 @@ export default function AccountSettingsPane() {
             {searchEditing ? (
               <Box>
                 <Text fontSize="xs" mb={1}>
-                  Tavily API Key {hasTavilyApiKey ? "(configured)" : "(not set)"}
+                  Tavily API Key{" "}
+                  {hasTavilyApiKey ? "(configured)" : "(not set)"}
                 </Text>
                 <Input
                   size="sm"
                   type="password"
-                  placeholder={hasTavilyApiKey ? "Enter new key to replace" : "tvly-..."}
+                  placeholder={
+                    hasTavilyApiKey ? "Enter new key to replace" : "tvly-..."
+                  }
                   value={tavilyApiKeyInput}
                   onChange={(e) => setTavilyApiKeyInput(e.target.value)}
                 />
