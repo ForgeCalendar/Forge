@@ -106,9 +106,7 @@ npm install
 ```
 
 ```bash
-# Optional: enable Assistant web search tool (Google or Tavily)
-export GOOGLE_SEARCH_API_KEY="your-google-api-key"
-export GOOGLE_SEARCH_ENGINE_ID="your-custom-search-engine-id"
+# Optional: enable Assistant web search tool (Tavily)
 export TAVILY_API_KEY="your-tavily-api-key"
 ```
 
