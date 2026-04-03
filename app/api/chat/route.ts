@@ -40,6 +40,13 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     );
     if (provider instanceof NextResponse) return provider;
 
+    // Fetch user's timezone
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true },
+    });
+    const timezone = user?.timezone || "UTC";
+
     const { messages } = await req.json();
 
     // Look up the chat history and its role
@@ -67,6 +74,7 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
       system = buildSystemPrompt({
         role: chatHistory.role,
         goal: chatHistory.goal ?? undefined,
+        timezone,
       });
     }
 

@@ -43,6 +43,7 @@ export function createMockRequest(options: {
 export const mockUser = {
   id: "test@example.com",
   passwordHash: "$2a$10$abcdefghijklmnopqrstuvwxyz123456",
+  timezone: "America/New_York",
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
 };
