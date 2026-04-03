@@ -316,6 +316,7 @@ export default function ZenModePage() {
           display="flex"
           flexDirection="column"
           minH={0}
+          p={6}
         >
           {creatingChat || !chatId ? (
             <Box
