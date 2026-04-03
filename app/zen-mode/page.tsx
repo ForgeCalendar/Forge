@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Box,
   Container,
@@ -39,14 +39,88 @@ export default function ZenModePage() {
   const [creatingChat, setCreatingChat] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { bgSurface, textHeading, textMuted, textSecondary } = useThemeTokens();
 
-  // Focus music tracks (placeholder - you can add your own audio files)
+  // Focus music tracks from Pixabay
   const tracks = [
-    { name: "Lofi Focus", url: "" },
-    { name: "Ambient Calm", url: "" },
-    { name: "Classical Study", url: "" },
+    {
+      name: "Deep Thinking",
+      url: "/music/absolutesound-deep-thinking-lofi-music-510766.mp3",
+    },
+    {
+      name: "Lofi Chill Girl",
+      url: "/music/absolutesound-lofi-chill-lofi-girl-510773.mp3",
+    },
+    {
+      name: "Sad Emotional",
+      url: "/music/absolutesound-sad-emotional-lofi-510771.mp3",
+    },
+    {
+      name: "Chill Background",
+      url: "/music/aventure-lofi-chill-background-music-508269.mp3",
+    },
+    {
+      name: "Nostalgic Chill",
+      url: "/music/aventure-lofi-chill-nostalgic-469629.mp3",
+    },
+    {
+      name: "Urban Chill",
+      url: "/music/aventure-lofi-urban-chill-music-478919.mp3",
+    },
+    { name: "Chill Beat", url: "/music/bfcmusic-lofi-chill-beat-493668.mp3" },
+    { name: "Lo-Fi", url: "/music/bfcmusic-lofi-lo-fi-511230.mp3" },
+    { name: "Lofi Chill 2", url: "/music/delosound-lofi-chill-2-466475.mp3" },
+    {
+      name: "Lofi Girl Study",
+      url: "/music/delosound-lofi-lofi-chill-lofi-girl-456265.mp3",
+    },
+    {
+      name: "Lofi Girl Chill",
+      url: "/music/delosound-lofi-lofi-chill-lofi-girl-466467.mp3",
+    },
+    {
+      name: "Lofi Study Mix",
+      url: "/music/delosound-lofi-lofi-chill-lofi-girl-471138.mp3",
+    },
+    {
+      name: "Study Focus",
+      url: "/music/delosound-lofi-lofi-chill-lofi-girl-study-480208.mp3",
+    },
+    {
+      name: "Lofi Vibes",
+      url: "/music/freemusicforvideo-lofi-lofi-chill-lofi-girl-504905.mp3",
+    },
+    {
+      name: "Coffee Time",
+      url: "/music/lofi_music_library-coffee-lofi-chill-lofi-ambient-458901.mp3",
+    },
+    {
+      name: "Coffee Ambient",
+      url: "/music/lofi_music_library-coffee-lofi-lofi-music-chill-ambient-458900.mp3",
+    },
+    {
+      name: "Lofi Rain",
+      url: "/music/lofi_music_library-lofi-rain-lofi-music-458077.mp3",
+    },
+    {
+      name: "Cozy Background",
+      url: "/music/lofidreams-cozy-lofi-background-music-457199.mp3",
+    },
+    { name: "Monda Chill", url: "/music/mondamusic-lofi-chill-487321.mp3" },
+    {
+      name: "Monda Relax",
+      url: "/music/mondamusic-lofi-chill-chill-487317.mp3",
+    },
+    {
+      name: "Lofi Chill Music",
+      url: "/music/musicforpeople-lofi-chill-music-492001.mp3",
+    },
+    {
+      name: "Sentimental Jazz",
+      url: "/music/sonican-lo-fi-music-loop-sentimental-jazzy-love-473154.mp3",
+    },
   ];
 
   useEffect(() => {
@@ -130,6 +204,54 @@ export default function ZenModePage() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [event]);
+
+  // Audio player controls
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Load current track
+    audio.src = tracks[currentTrack].url;
+    audio.load();
+
+    // Play if was playing
+    if (isPlaying) {
+      audio.play().catch((err) => console.error("Audio play error:", err));
+    }
+
+    // Auto-play next track when current ends
+    const handleEnded = () => {
+      setCurrentTrack((prev) => (prev + 1) % tracks.length);
+    };
+
+    audio.addEventListener("ended", handleEnded);
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [currentTrack, tracks]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.play().catch((err) => console.error("Audio play error:", err));
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying]);
+
+  const handlePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const handlePrevious = () => {
+    setCurrentTrack((prev) => (prev > 0 ? prev - 1 : tracks.length - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentTrack((prev) => (prev + 1) % tracks.length);
+  };
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -309,11 +431,7 @@ export default function ZenModePage() {
                     borderRadius="full"
                     size="lg"
                     variant="outline"
-                    onClick={() => {
-                      setCurrentTrack((prev) =>
-                        prev > 0 ? prev - 1 : tracks.length - 1
-                      );
-                    }}
+                    onClick={handlePrevious}
                     _hover={{
                       bg: "gray.200",
                       transform: "scale(1.1)",
@@ -328,7 +446,7 @@ export default function ZenModePage() {
                     borderRadius="full"
                     size="lg"
                     colorScheme={isPlaying ? "red" : "green"}
-                    onClick={() => setIsPlaying(!isPlaying)}
+                    onClick={handlePlayPause}
                     _hover={{ transform: "scale(1.1)" }}
                     transition="all 0.2s"
                   >
@@ -339,9 +457,7 @@ export default function ZenModePage() {
                     borderRadius="full"
                     size="lg"
                     variant="outline"
-                    onClick={() => {
-                      setCurrentTrack((prev) => (prev + 1) % tracks.length);
-                    }}
+                    onClick={handleNext}
                     _hover={{
                       bg: "gray.200",
                       transform: "scale(1.1)",
@@ -352,6 +468,8 @@ export default function ZenModePage() {
                     <IoPlaySkipForward />
                   </IconButton>
                 </HStack>
+                {/* Hidden audio element */}
+                <audio ref={audioRef} preload="metadata" />
               </VStack>
             </Box>
 
