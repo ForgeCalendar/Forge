@@ -6,10 +6,6 @@ import type { Goal, ChatHistoryRole } from "@/lib/generated/prisma";
 
 const TAVILY_SEARCH_ENDPOINT = "https://api.tavily.com/search";
 
-type SearchConfigRow = {
-  tavilyApiKey: string | null;
-};
-
 type TavilySearchApiResponse = {
   results?: Array<{
     title?: string;
@@ -222,14 +218,11 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
       }),
       execute: async ({ query, num }) => {
         try {
-          const rows = await prisma.$queryRaw<SearchConfigRow[]>`
-            SELECT "tavilyApiKey"
-            FROM "SearchConfig"
-            WHERE "userId" = ${userId}
-            LIMIT 1
-          `;
+          const config = await prisma.searchConfig.findUnique({
+            where: { userId },
+            select: { tavilyApiKey: true },
+          });
 
-          const config = rows[0];
           const tavilyApiKey =
             config?.tavilyApiKey ?? process.env.TAVILY_API_KEY;
           if (!tavilyApiKey) {
