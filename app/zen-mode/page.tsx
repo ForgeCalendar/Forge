@@ -40,11 +40,12 @@ export default function ZenModePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [tracks, setTracks] = useState<typeof originalTracks>([]);
 
   const { bgSurface, textHeading, textMuted, textSecondary } = useThemeTokens();
 
-  // Focus music tracks from Pixabay
-  const tracks = [
+  // Focus music tracks from Pixabay (original order)
+  const originalTracks = [
     {
       name: "Deep Thinking",
       url: "/music/absolutesound-deep-thinking-lofi-music-510766.mp3",
@@ -122,6 +123,16 @@ export default function ZenModePage() {
       url: "/music/sonican-lo-fi-music-loop-sentimental-jazzy-love-473154.mp3",
     },
   ];
+
+  // Shuffle tracks on mount
+  useEffect(() => {
+    const shuffled = [...originalTracks];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    setTracks(shuffled);
+  }, []);
 
   useEffect(() => {
     if (!eventId) {
@@ -205,17 +216,19 @@ export default function ZenModePage() {
     return () => clearInterval(interval);
   }, [event]);
 
-  // Audio player controls
+  // Load track when currentTrack changes
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || tracks.length === 0) return;
+
+    const wasPlaying = !audio.paused;
 
     // Load current track
     audio.src = tracks[currentTrack].url;
     audio.load();
 
-    // Play if was playing
-    if (isPlaying) {
+    // Resume playing if it was playing before
+    if (wasPlaying) {
       audio.play().catch((err) => console.error("Audio play error:", err));
     }
 
@@ -230,16 +243,22 @@ export default function ZenModePage() {
     };
   }, [currentTrack, tracks]);
 
+  // Handle play/pause state
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || tracks.length === 0) return;
 
     if (isPlaying) {
+      // Ensure audio has a source before playing
+      if (!audio.src) {
+        audio.src = tracks[currentTrack].url;
+        audio.load();
+      }
       audio.play().catch((err) => console.error("Audio play error:", err));
     } else {
       audio.pause();
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack, tracks]);
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -423,7 +442,8 @@ export default function ZenModePage() {
                   color={textHeading}
                   textAlign="center"
                 >
-                  🎵 {tracks[currentTrack].name}
+                  🎵{" "}
+                  {tracks.length > 0 ? tracks[currentTrack].name : "Loading..."}
                 </Text>
                 <HStack gap={3} justify="center">
                   <IconButton
