@@ -4,6 +4,17 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { Goal, ChatHistoryRole } from "@/lib/generated/prisma";
 
+const TAVILY_SEARCH_ENDPOINT = "https://api.tavily.com/search";
+
+type TavilySearchApiResponse = {
+  results?: Array<{
+    title?: string;
+    url?: string;
+    content?: string;
+  }>;
+  error?: string;
+};
+
 // =============================================================================
 // Base Tools - Shared by all AI agents
 // =============================================================================
@@ -189,6 +200,92 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
         }
       },
     }),
+    searchOnline: tool({
+      description:
+        "Search Online for up-to-date information. Uses Tavily. Use this when the user asks about recent events, external facts, or web information.",
+      inputSchema: z.object({
+        query: z
+          .string()
+          .min(2)
+          .describe("Search query describing what to find on the web"),
+        num: z
+          .number()
+          .int()
+          .min(1)
+          .max(5)
+          .default(3)
+          .describe("How many results to return (1-5)"),
+      }),
+      execute: async ({ query, num }) => {
+        try {
+          const config = await prisma.searchConfig.findUnique({
+            where: { userId },
+            select: { tavilyApiKey: true },
+          });
+
+          const tavilyApiKey =
+            config?.tavilyApiKey ?? process.env.TAVILY_API_KEY;
+          if (!tavilyApiKey) {
+            return {
+              success: false,
+              error:
+                "Tavily search is not configured. Add Tavily API key in Settings > Account.",
+            };
+          }
+
+          const response = await fetch(TAVILY_SEARCH_ENDPOINT, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              api_key: tavilyApiKey,
+              query,
+              max_results: num,
+              search_depth: "basic",
+            }),
+          });
+
+          if (!response.ok) {
+            return {
+              success: false,
+              error: `Tavily search request failed with status ${response.status}`,
+            };
+          }
+
+          const data = (await response.json()) as TavilySearchApiResponse;
+
+          if (data.error) {
+            return {
+              success: false,
+              error: data.error,
+            };
+          }
+
+          const results = (data.results ?? [])
+            .filter((item) => item.title && item.url)
+            .map((item) => ({
+              title: item.title as string,
+              url: item.url as string,
+              snippet: item.content ?? "",
+              source: "tavily",
+            }));
+
+          return {
+            success: true,
+            provider: "tavily",
+            query,
+            count: results.length,
+            results,
+          };
+        } catch {
+          return {
+            success: false,
+            error: "Failed to execute Search Online",
+          };
+        }
+      },
+    }),
   };
 }
 
@@ -282,15 +379,6 @@ function buildGoalPlannerTools(goalId: string, userId: string) {
 }
 
 // =============================================================================
-// Assistant Tools
-// =============================================================================
-
-function buildAssistantTools() {
-  // Assistant-specific tools can be added here
-  return {};
-}
-
-// =============================================================================
 // Tool Builder - Combines base + role-specific tools
 // =============================================================================
 
@@ -315,10 +403,7 @@ export function buildTools(context: ToolContext) {
       };
 
     case "Assistant":
-      return {
-        ...baseTools,
-        ...buildAssistantTools(),
-      };
+      return baseTools;
 
     default:
       return baseTools;
@@ -333,7 +418,9 @@ const BASE_GUIDELINES = `
 - Ask questions one by one. When presenting multiple choice questions, use the askUserChoice tool to let the user select from options. The UI automatically includes an "Other" option where users can type a custom answer if none of the choices fit.
 - Be conversational and helpful.
 - When you learn something notable about the user (e.g. their occupation, work schedule, preferences, constraints, hobbies), use the saveMemory tool to remember it for future conversations. Only save information that would be useful across sessions — do not save trivial or one-off details.
-- At any point in the conversation when you need context about the user, call listMemoryQuestions to see what you already know, then call searchMemoryAnswer for the specific questions relevant to the topic at hand. Use readMemories when you need a broad overview of all stored knowledge about the user.`.trim();
+- At any point in the conversation when you need context about the user, call listMemoryQuestions to see what you already know, then call searchMemoryAnswer for the specific questions relevant to the topic at hand. Use readMemories when you need a broad overview of all stored knowledge about the user.
+- When you need current web information, call searchOnline before answering.
+`.trim();
 
 export function buildGoalSystemPrompt(goal: Goal): string {
   const dueDateContext = goal.dueDate
