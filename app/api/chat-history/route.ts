@@ -34,18 +34,23 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-export async function POST(): Promise<NextResponse> {
+export async function POST(req: Request): Promise<NextResponse> {
   try {
     const userId = await requireAuth();
 
+    const body = await req.json().catch(() => ({}));
+    const { role, title: customTitle } = body;
+
     const now = new Date();
-    const title = `Chat ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+    const title =
+      customTitle ||
+      `Chat ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
 
     const chatHistory = await prisma.chatHistory.create({
       data: {
         userId,
         title,
-        role: "Assistant",
+        role: role || "Assistant",
       },
       select: {
         id: true,

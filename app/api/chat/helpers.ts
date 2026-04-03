@@ -405,6 +405,9 @@ export function buildTools(context: ToolContext) {
     case "Assistant":
       return baseTools;
 
+    case "TaskHelper":
+      return baseTools;
+
     default:
       return baseTools;
   }
@@ -488,9 +491,41 @@ ${BASE_GUIDELINES}
 - If the user asks about specific calendar events or tasks, let them know you can help manage their schedule.`;
 }
 
+export function buildTaskHelperSystemPrompt(
+  eventTitle: string,
+  timezone: string
+): string {
+  const now = new Date();
+  const nowInTimezone = now.toLocaleString("en-US", { timeZone: timezone });
+
+  return `You are a focused Task Helper AI, dedicated to helping the user complete a specific task.
+
+The user's timezone is ${timezone}.
+The current date/time in the user's timezone is ${nowInTimezone}.
+
+Current task: "${eventTitle}"
+
+Your role:
+- Help the user work through this specific task with focus and efficiency
+- Break down the task into smaller steps if needed
+- Answer questions related to completing this task
+- Provide relevant information, tips, or resources
+- Keep the user motivated and on track
+- Be concise and actionable - the user is in "zen mode" and wants to stay focused
+
+Guidelines:
+${BASE_GUIDELINES}
+- Stay focused on the current task at hand
+- Be encouraging but brief
+- Suggest concrete next steps when appropriate
+- If the user gets distracted, gently guide them back to the task
+- Celebrate progress and completion milestones`;
+}
+
 type SystemPromptContext = {
   role: ChatHistoryRole;
   goal?: Goal;
+  eventTitle?: string;
   timezone: string;
 };
 
@@ -506,6 +541,12 @@ export function buildSystemPrompt(context: SystemPromptContext): string {
 
     case "Assistant":
       return buildAssistantSystemPrompt(timezone);
+
+    case "TaskHelper":
+      if (!context.eventTitle) {
+        throw new Error("TaskHelper requires an eventTitle");
+      }
+      return buildTaskHelperSystemPrompt(context.eventTitle, timezone);
 
     default:
       return buildAssistantSystemPrompt(timezone);

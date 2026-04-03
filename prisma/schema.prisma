@@ -150,6 +150,7 @@ model AIModel {
 enum ChatHistoryRole {
   GoalPlanner
   Assistant
+  TaskHelper
 }
 
 model ChatHistory {
