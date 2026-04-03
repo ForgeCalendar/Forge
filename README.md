@@ -106,6 +106,13 @@ npm install
 ```
 
 ```bash
+# Optional: enable Assistant web search tool (Google or Tavily)
+export GOOGLE_SEARCH_API_KEY="your-google-api-key"
+export GOOGLE_SEARCH_ENGINE_ID="your-custom-search-engine-id"
+export TAVILY_API_KEY="your-tavily-api-key"
+```
+
+```bash
 # Initialize database
 npm run db:init
 npm run db:seed
