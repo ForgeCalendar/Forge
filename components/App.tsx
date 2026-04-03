@@ -41,7 +41,22 @@ export default function App() {
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [calendarTitle, setCalendarTitle] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [timezone, setTimezone] = useState<string>("local");
   const calendarRef = useRef<FullCalendar | null>(null);
+
+  // Fetch user timezone
+  useEffect(() => {
+    if (user) {
+      fetch("/api/user")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.timezone) {
+            setTimezone(data.timezone);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user]);
 
   // Close drawer when screen becomes md or larger (sidebar visible)
   useEffect(() => {
@@ -283,6 +298,7 @@ export default function App() {
             onTitleChange={setCalendarTitle}
             initialDate={date}
             onCalendarChange={handleCalendarChange}
+            timezone={timezone}
           />
         </Box>
       </Flex>

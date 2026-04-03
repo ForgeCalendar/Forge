@@ -14,6 +14,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import rrulePlugin from "@fullcalendar/rrule";
+import momentTimezonePlugin from "@fullcalendar/moment-timezone";
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
@@ -26,6 +27,7 @@ export default function CalendarView({
   onTitleChange,
   initialDate,
   onCalendarChange,
+  timezone,
 }: {
   calendarRef: React.RefObject<FullCalendar | null>;
   currentView: string[];
@@ -33,6 +35,7 @@ export default function CalendarView({
   onTitleChange: (title: string) => void;
   initialDate: string;
   onCalendarChange: (date: string, view: string) => void;
+  timezone: string;
 }) {
   const {
     events: calendarEvents,
@@ -79,6 +82,7 @@ export default function CalendarView({
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: timezone === "local" ? undefined : timezone,
     });
   };
 
@@ -97,9 +101,11 @@ export default function CalendarView({
               dayGridPlugin,
               timeGridPlugin,
               interactionPlugin,
+              momentTimezonePlugin,
             ]}
             initialView={currentView[0]}
             initialDate={initialDate}
+            timeZone={timezone}
             headerToolbar={false}
             nowIndicator={true}
             scrollTimeReset={false}
