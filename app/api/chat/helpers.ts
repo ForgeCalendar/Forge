@@ -426,7 +426,7 @@ const BASE_GUIDELINES = `
 - Be conversational and helpful.
 - When you learn something notable about the user (e.g. their occupation, work schedule, preferences, constraints, hobbies), use the saveMemory tool to remember it for future conversations. Only save information that would be useful across sessions — do not save trivial or one-off details.
 - At any point in the conversation when you need context about the user, call listMemoryQuestions to see what you already know, then call searchMemoryAnswer for the specific questions relevant to the topic at hand. Use readMemories when you need a broad overview of all stored knowledge about the user.
-- When you need current web information, call Search Online before answering.
+- When you need current web information, call searchOnline before answering.
 `.trim();
 
 export function buildGoalSystemPrompt(goal: Goal): string {
