@@ -146,7 +146,7 @@ export default function SettingsDialog() {
   const menuItems = Object.keys(panes) as Array<keyof typeof panes>;
 
   return (
-    <Dialog.Root size="lg">
+    <Dialog.Root size={{ base: "full", md: "lg" }}>
       <Dialog.Trigger asChild>
         <SettingsButton />
       </Dialog.Trigger>
@@ -154,25 +154,37 @@ export default function SettingsDialog() {
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content maxW="960px" bg={bodyBg}>
+          <Dialog.Content maxW="960px" bg={bodyBg} mx={{ base: 2, md: "auto" }}>
             <Dialog.Header>
               <Dialog.Title>Settings</Dialog.Title>
             </Dialog.Header>
 
             <Dialog.Body>
-              {/* Two-column layout: left menu and right content */}
-              <Box display="flex" gap={6} p={3} minWidth="600px">
-                <Box width="200px" flexShrink={0}>
-                  <Box as="nav">
+              {/* Two-column on desktop, single-column on mobile */}
+              <Box
+                display="flex"
+                flexDirection={{ base: "column", md: "row" }}
+                gap={{ base: 3, md: 6 }}
+                p={{ base: 1, md: 3 }}
+              >
+                <Box width={{ base: "100%", md: "200px" }} flexShrink={0}>
+                  <Box
+                    as="nav"
+                    display="flex"
+                    flexDirection={{ base: "row", md: "column" }}
+                    flexWrap={{ base: "wrap", md: "nowrap" }}
+                    gap={{ base: 1, md: 0 }}
+                  >
                     {menuItems.map((item) => (
                       <Button
                         key={item}
                         variant="ghost"
                         justifyContent="flex-start"
-                        width="100%"
-                        mb={1}
+                        width={{ base: "auto", md: "100%" }}
+                        mb={{ base: 0, md: 1 }}
                         bg={item === selected ? menuBgActive : menuBg}
                         onClick={() => setSelected(item)}
+                        size={{ base: "sm", md: "md" }}
                       >
                         {item}
                       </Button>
@@ -180,7 +192,9 @@ export default function SettingsDialog() {
                   </Box>
                 </Box>
 
-                <Box flex={1}>{panes[selected] ?? null}</Box>
+                <Box flex={1} minW={0}>
+                  {panes[selected] ?? null}
+                </Box>
               </Box>
             </Dialog.Body>
 
