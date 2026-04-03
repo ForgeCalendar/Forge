@@ -133,6 +133,7 @@ export function toEventResponse(event: Event): Record<string, unknown> {
     title: event.title,
     start: event.start,
     end: event.end,
+    chatHistoryId: event.chatHistoryId,
     extendedProps: {
       ...parseMetadata(event.metadata),
       kind: event.kind,

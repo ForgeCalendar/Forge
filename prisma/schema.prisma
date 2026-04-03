@@ -75,6 +75,7 @@ model Event {
   id              String   @id @default(uuid())
   userId          String
   goalId          String?  // nullable — links to Goal if it's a goal task
+  chatHistoryId   String?  @unique // FK to ChatHistory (TaskHelper chat for this event)
   title           String
   start           DateTime // UTC datetime
   end             DateTime // UTC datetime
@@ -109,6 +110,7 @@ model Event {
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   goal             Goal?             @relation(fields: [goalId], references: [id], onDelete: Cascade)
   subscription     IcsSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  chatHistory      ChatHistory?      @relation(fields: [chatHistoryId], references: [id], onDelete: SetNull)
 
   @@unique([subscriptionId, uid, recurid])
   @@index([userId])
@@ -167,6 +169,7 @@ model ChatHistory {
   provider  Provider?  @relation(fields: [providerId], references: [id], onDelete: SetNull)
   messages  Message[]
   goal      Goal?      // back-relation for 1:1
+  event     Event?     // back-relation for 1:1
 
   @@index([userId])
   @@index([providerId])

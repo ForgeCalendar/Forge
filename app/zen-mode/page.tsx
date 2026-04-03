@@ -150,8 +150,12 @@ export default function ZenModePage() {
       .then((data) => {
         setEvent(data);
         setLoading(false);
-        // Create or find a TaskHelper chat for this event
-        createTaskHelperChat(data.title);
+        // Use existing TaskHelper chat or create a new one
+        if (data.chatHistoryId) {
+          setChatId(data.chatHistoryId);
+        } else {
+          createTaskHelperChat(data.title);
+        }
       })
       .catch((err) => {
         setError(err.message || "Failed to load event");
@@ -175,6 +179,15 @@ export default function ZenModePage() {
 
       const chat = await response.json();
       setChatId(chat.id);
+
+      // Associate the chat with the event
+      if (eventId) {
+        await fetch(`/api/events/${eventId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatHistoryId: chat.id }),
+        });
+      }
     } catch (err) {
       console.error("Failed to create TaskHelper chat:", err);
     } finally {

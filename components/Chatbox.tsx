@@ -233,6 +233,7 @@ export function ChatboxComponent({
     const params = new URLSearchParams();
     if (selectedProviderId) params.set("providerId", selectedProviderId);
     if (selectedModelId) params.set("modelId", selectedModelId);
+    if (chatHistoryId) params.set("chatHistoryId", chatHistoryId);
     if (extraParams) {
       for (const [key, value] of Object.entries(extraParams)) {
         params.set(key, value);
@@ -242,7 +243,7 @@ export function ChatboxComponent({
     return new AssistantChatTransport({
       api: `/api/chat?${params.toString()}`,
     });
-  }, [extraParamsKey, selectedProviderId, selectedModelId]);
+  }, [extraParamsKey, selectedProviderId, selectedModelId, chatHistoryId]);
 
   const initialMessages = historyData?.messages;
   const hasHistory = initialMessages && initialMessages.length > 0;

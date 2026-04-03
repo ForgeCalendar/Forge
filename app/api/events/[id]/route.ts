@@ -53,6 +53,7 @@ export async function PATCH(
       completed,
       confirmed,
       minutesEstimate,
+      chatHistoryId,
     } = body;
 
     const existingEvent = await verifyOwnership(
@@ -71,6 +72,7 @@ export async function PATCH(
         ...(completed !== undefined && { completed }),
         ...(confirmed !== undefined && { confirmed }),
         ...(minutesEstimate !== undefined && { minutesEstimate }),
+        ...(chatHistoryId !== undefined && { chatHistoryId }),
         ...(metadata !== undefined && {
           metadata: metadata ? JSON.stringify(metadata) : null,
         }),
