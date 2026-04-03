@@ -12,6 +12,8 @@ import {
   HStack,
   Spinner,
   Grid,
+  Input,
+  IconButton,
 } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import { useThemeTokens } from "@/lib/theme-tokens";
@@ -29,8 +31,17 @@ export default function ZenModePage() {
   const [isComplete, setIsComplete] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
   const [creatingChat, setCreatingChat] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState(0);
 
   const { bgSurface, textHeading, textMuted, textSecondary } = useThemeTokens();
+
+  // Focus music tracks (placeholder - you can add your own audio files)
+  const tracks = [
+    { name: "Lofi Focus", url: "" },
+    { name: "Ambient Calm", url: "" },
+    { name: "Classical Study", url: "" },
+  ];
 
   useEffect(() => {
     if (!eventId) {
@@ -267,6 +278,74 @@ export default function ZenModePage() {
                     </Text>
                   </Box>
                 )}
+              </VStack>
+            </Box>
+
+            {/* Music Player */}
+            <Box
+              bg="gray.50"
+              _dark={{ bg: "gray.900" }}
+              borderRadius="lg"
+              p={4}
+            >
+              <VStack gap={3} align="stretch">
+                <Text
+                  fontSize="sm"
+                  fontWeight="semibold"
+                  color={textHeading}
+                  textAlign="center"
+                >
+                  🎵 {tracks[currentTrack].name}
+                </Text>
+                <HStack gap={3} justify="center">
+                  <IconButton
+                    aria-label="Previous track"
+                    borderRadius="full"
+                    size="lg"
+                    variant="outline"
+                    onClick={() => {
+                      setCurrentTrack((prev) =>
+                        prev > 0 ? prev - 1 : tracks.length - 1
+                      );
+                    }}
+                    _hover={{
+                      bg: "gray.200",
+                      transform: "scale(1.1)",
+                      _dark: { bg: "gray.700" },
+                    }}
+                    transition="all 0.2s"
+                  >
+                    ⏮
+                  </IconButton>
+                  <IconButton
+                    aria-label={isPlaying ? "Pause" : "Play"}
+                    borderRadius="full"
+                    size="lg"
+                    colorScheme={isPlaying ? "red" : "green"}
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    _hover={{ transform: "scale(1.1)" }}
+                    transition="all 0.2s"
+                  >
+                    {isPlaying ? "⏸" : "▶"}
+                  </IconButton>
+                  <IconButton
+                    aria-label="Next track"
+                    borderRadius="full"
+                    size="lg"
+                    variant="outline"
+                    onClick={() => {
+                      setCurrentTrack((prev) => (prev + 1) % tracks.length);
+                    }}
+                    _hover={{
+                      bg: "gray.200",
+                      transform: "scale(1.1)",
+                      _dark: { bg: "gray.700" },
+                    }}
+                    transition="all 0.2s"
+                  >
+                    ⏭
+                  </IconButton>
+                </HStack>
               </VStack>
             </Box>
 
