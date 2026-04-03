@@ -16,6 +16,7 @@ export interface GoalWithId
 export interface EventWithId extends Event {
   id: string;
   goalId: string | null;
+  chatHistoryId?: string | null;
   userId: string;
   kind: string | null;
   confirmed: boolean;

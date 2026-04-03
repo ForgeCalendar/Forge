@@ -26,6 +26,7 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     const providerId = url.searchParams.get("providerId");
     const modelId = url.searchParams.get("modelId");
     const chatHistoryId = url.searchParams.get("chatHistoryId");
+    const eventTitle = url.searchParams.get("eventTitle");
 
     if (!providerId || !modelId) {
       return NextResponse.json(
@@ -74,6 +75,7 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
       system = buildSystemPrompt({
         role: chatHistory.role,
         goal: chatHistory.goal ?? undefined,
+        eventTitle: eventTitle ?? undefined,
         timezone,
       });
     }

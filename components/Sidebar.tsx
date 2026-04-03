@@ -13,7 +13,6 @@ import {
 } from "@chakra-ui/react";
 import { ChatRoleBadge } from "./ChatRoleBadge";
 import { InfoTagComponent } from "./InfoTagComponent";
-import WorkDialog from "./WorkDialog";
 import type { Goal } from "../states/goals";
 import type { GoalWithId, CreateGoalInput } from "@/storage/types";
 import { useState, useRef } from "react";
@@ -228,16 +227,9 @@ function GoalComponent({
         </Box>
       )}
       <Box mt={3} display="flex" gap={2}>
-        {isGoalWithId(goal) ? (
-          <>
-            <WorkDialog goal={goal} />
-            <Button size="sm" variant="outline" onClick={() => onUpdate?.()}>
-              Update
-            </Button>
-          </>
-        ) : (
-          <Button size="sm" colorScheme="blue" disabled>
-            Work! (Save goal first)
+        {isGoalWithId(goal) && (
+          <Button size="sm" variant="outline" onClick={() => onUpdate?.()}>
+            Update
           </Button>
         )}
       </Box>

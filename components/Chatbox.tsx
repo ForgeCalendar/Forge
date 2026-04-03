@@ -15,6 +15,7 @@ import { useChatHistoryQuery } from "@/storage/useChatHistoryQuery";
 import type { ProviderWithModels } from "@/storage/useProvidersQuery";
 import type { FC } from "react";
 import { ChatRoleBadge } from "./ChatRoleBadge";
+import { Box } from "@chakra-ui/react";
 
 type ChatboxProps = {
   name: string;
@@ -232,6 +233,7 @@ export function ChatboxComponent({
     const params = new URLSearchParams();
     if (selectedProviderId) params.set("providerId", selectedProviderId);
     if (selectedModelId) params.set("modelId", selectedModelId);
+    if (chatHistoryId) params.set("chatHistoryId", chatHistoryId);
     if (extraParams) {
       for (const [key, value] of Object.entries(extraParams)) {
         params.set(key, value);
@@ -241,7 +243,7 @@ export function ChatboxComponent({
     return new AssistantChatTransport({
       api: `/api/chat?${params.toString()}`,
     });
-  }, [extraParamsKey, selectedProviderId, selectedModelId]);
+  }, [extraParamsKey, selectedProviderId, selectedModelId, chatHistoryId]);
 
   const initialMessages = historyData?.messages;
   const hasHistory = initialMessages && initialMessages.length > 0;
@@ -252,6 +254,14 @@ export function ChatboxComponent({
   });
 
   const providerKey = `${name}-${extraParamsKey}-${chatHistoryId ?? "new"}`;
+  const role = historyData?.role;
+
+  // Map roles to their border colors (matching badge colors)
+  const roleBorderColors: Record<string, { light: string; dark: string }> = {
+    GoalPlanner: { light: "purple.400", dark: "purple.600" },
+    Assistant: { light: "blue.400", dark: "blue.600" },
+    TaskHelper: { light: "green.400", dark: "green.600" },
+  };
 
   if (chatHistoryId && historyLoading) {
     return (
@@ -261,7 +271,7 @@ export function ChatboxComponent({
     );
   }
 
-  return (
+  const chatContent = (
     <div
       className="flex flex-1 min-h-0 w-full flex-col"
       aria-label={`Chat with ${name}`}
@@ -281,4 +291,29 @@ export function ChatboxComponent({
       </AssistantRuntimeProvider>
     </div>
   );
+
+  // Apply colored border box for all roles with defined colors
+  if (role && roleBorderColors[role]) {
+    const colors = roleBorderColors[role];
+    return (
+      <Box
+        flex={1}
+        minH={0}
+        borderRadius="xl"
+        borderWidth="2px"
+        borderColor={colors.light}
+        bg="white"
+        _dark={{ borderColor: colors.dark, bg: "gray.800" }}
+        overflow="hidden"
+        m={2}
+        p={3}
+        display="flex"
+        flexDir="column"
+      >
+        {chatContent}
+      </Box>
+    );
+  }
+
+  return chatContent;
 }

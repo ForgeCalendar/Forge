@@ -14,6 +14,10 @@ const roleConfig: Record<string, { label: string; colorPalette: string }> = {
     label: "Assistant",
     colorPalette: "blue",
   },
+  TaskHelper: {
+    label: "Task Helper",
+    colorPalette: "green",
+  },
 };
 
 export function ChatRoleBadge({
