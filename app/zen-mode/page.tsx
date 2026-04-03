@@ -349,12 +349,13 @@ export default function ZenModePage() {
   }
 
   return (
-    <Box minH="100vh" bg={bgSurface} display="flex" flexDirection="column">
+    <Box h="100vh" bg={bgSurface} display="flex" flexDirection="column">
       <Grid
         templateColumns={{ base: "1fr", lg: "1fr 1fr" }}
         flex={1}
         minH={0}
         gap={0}
+        overflow="hidden"
       >
         {/* Left side: Task Info */}
         <Box
@@ -552,6 +553,7 @@ export default function ZenModePage() {
           display="flex"
           flexDirection="column"
           minH={0}
+          overflow="hidden"
           p={6}
         >
           {creatingChat || !chatId ? (
