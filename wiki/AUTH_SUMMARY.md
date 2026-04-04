@@ -122,6 +122,7 @@ All existing endpoints require authentication:
 - HTTP-only cookies (JavaScript cannot access)
 - Secure flag in production (HTTPS only)
 - SameSite protection (CSRF prevention)
+- HMAC-SHA256 cookie signing via `COOKIE_SECRET` (tamper prevention)
 - 7-day expiration
 
 ✅ **Data Isolation**:
@@ -207,8 +208,9 @@ curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
 2. **HTTP-Only Cookies**: More secure than localStorage for web apps
 3. **Session-Based Auth**: Simple, no JWT complexity for single-server setup
 4. **Bcrypt**: Industry standard for password hashing
-5. **Ownership Verification**: Database queries filter by userId to prevent data leaks
-6. **Cascade Delete**: Automatic cleanup when user is deleted
+5. **HMAC-SHA256 Cookie Signing**: Signed cookie values (`COOKIE_SECRET`) prevent client-side tampering of the stored email without adding JWT complexity
+6. **Ownership Verification**: Database queries filter by userId to prevent data leaks
+7. **Cascade Delete**: Automatic cleanup when user is deleted
 
 ## API Endpoint Summary
 

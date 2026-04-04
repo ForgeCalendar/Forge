@@ -8,6 +8,7 @@ The Forge backend includes secure user authentication with email-based login and
 
 - **Password Hashing**: Passwords are hashed using bcrypt with 10 salt rounds
 - **HTTP-Only Cookies**: Session tokens are stored in secure HTTP-only cookies
+- **Cookie Signing**: Session cookie values are HMAC-SHA256 signed using `COOKIE_SECRET` to prevent tampering
 - **User Isolation**: All goals and events are scoped to individual users
 - **Email as ID**: User email addresses serve as unique identifiers
 
@@ -157,6 +158,16 @@ All data endpoints require authentication:
 - `secure: true` (in production) — Only sent over HTTPS
 - `sameSite: 'lax'` — CSRF protection
 - `maxAge: 7 days` — Session expires after 7 days
+
+**Cookie Signing**:
+
+The cookie value (user email) is signed with HMAC-SHA256 using the `COOKIE_SECRET` environment variable before being stored. On every request the signature is verified using a timing-safe comparison; an invalid or tampered value is rejected as unauthenticated.
+
+`COOKIE_SECRET` is **required** in all environments. Generate a strong secret with:
+
+```bash
+openssl rand -base64 32
+```
 
 ## Testing Authentication
 
@@ -358,13 +369,14 @@ export async function GET(req: Request) {
 
 ## Security Best Practices
 
-1. **Use HTTPS in Production**: Set `NODE_ENV=production` to enable secure cookies
-2. **Change Test Credentials**: Update the test user password in production
-3. **Implement Rate Limiting**: Add rate limiting to prevent brute force attacks
-4. **Add Password Requirements**: Consider enforcing stronger password policies
-5. **Implement Email Verification**: Add email verification for new registrations
-6. **Add Refresh Tokens**: Implement refresh tokens for longer sessions
-7. **Add 2FA**: Consider adding two-factor authentication for enhanced security
+1. **Set COOKIE_SECRET**: Generate a strong random secret (`openssl rand -base64 32`) and set it as the `COOKIE_SECRET` environment variable. The application will refuse to start without it.
+2. **Use HTTPS in Production**: Set `NODE_ENV=production` to enable secure cookies
+3. **Change Test Credentials**: Update the test user password in production
+4. **Implement Rate Limiting**: Add rate limiting to prevent brute force attacks
+5. **Add Password Requirements**: Consider enforcing stronger password policies
+6. **Implement Email Verification**: Add email verification for new registrations
+7. **Add Refresh Tokens**: Implement refresh tokens for longer sessions
+8. **Add 2FA**: Consider adding two-factor authentication for enhanced security
 
 ## Frontend Integration
 
