@@ -1,5 +1,10 @@
 import bcrypt from "bcryptjs";
-import { hashPassword, verifyPassword, setAuthCookie, getCurrentUser } from "@/lib/auth";
+import {
+  hashPassword,
+  verifyPassword,
+  setAuthCookie,
+  getCurrentUser,
+} from "@/lib/auth";
 import { prismaMock } from "@/__tests__/utils/prisma-mock";
 import { mockUser } from "@/__tests__/utils/test-helpers";
 
