@@ -9,6 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
+import { useUserQuery, useUpdateUserMutation } from "@/storage";
 
 // Common IANA timezones grouped by region
 const TIMEZONE_OPTIONS = [
@@ -125,10 +126,12 @@ export default function AccountSettingsPane() {
     bgCard: cardBg,
   } = useThemeTokens();
 
-  // Timezone state
-  const [timezone, setTimezone] = useState<string>("UTC");
-  const [timezoneLoading, setTimezoneLoading] = useState(true);
-  const [timezoneSaving, setTimezoneSaving] = useState(false);
+  // User data with TanStack Query
+  const { data: userData, isLoading: timezoneLoading } = useUserQuery();
+  const updateUserMutation = useUpdateUserMutation();
+
+  const timezone = userData?.timezone || "UTC";
+  const timezoneSaving = updateUserMutation.isPending;
 
   const timezoneOptions = useMemo(
     () =>
@@ -141,37 +144,12 @@ export default function AccountSettingsPane() {
     []
   );
 
-  const fetchUserSettings = useCallback(async () => {
-    try {
-      setTimezoneLoading(true);
-      const res = await fetch("/api/user");
-      if (res.ok) {
-        const data = await res.json();
-        setTimezone(data.timezone || "UTC");
-      }
-    } catch (err) {
-      console.error("Failed to fetch user settings:", err);
-    } finally {
-      setTimezoneLoading(false);
-    }
-  }, []);
-
   async function handleTimezoneChange(newTimezone: string[]) {
     if (!newTimezone[0] || newTimezone[0] === timezone) return;
-    setTimezoneSaving(true);
     try {
-      const res = await fetch("/api/user", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ timezone: newTimezone[0] }),
-      });
-      if (res.ok) {
-        setTimezone(newTimezone[0]);
-      }
+      await updateUserMutation.mutateAsync({ timezone: newTimezone[0] });
     } catch (err) {
       console.error("Failed to update timezone:", err);
-    } finally {
-      setTimezoneSaving(false);
     }
   }
 
@@ -229,9 +207,8 @@ export default function AccountSettingsPane() {
 
   useEffect(() => {
     fetchProviders();
-    fetchUserSettings();
     fetchSearchConfig();
-  }, [fetchProviders, fetchUserSettings, fetchSearchConfig]);
+  }, [fetchProviders, fetchSearchConfig]);
 
   async function handleAdd() {
     if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;

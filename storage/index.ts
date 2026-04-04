@@ -48,3 +48,20 @@ export {
 } from "./useProvidersQuery";
 
 export type { ProviderWithModels, ProviderModel } from "./useProvidersQuery";
+
+export { useUserQuery, useUpdateUserMutation } from "./useUserQuery";
+
+export type { User, UpdateUserInput } from "./useUserQuery";
+
+export {
+  useChatHistoryQuery,
+  useChatHistoriesQuery,
+  useCreateChatHistory,
+  useDeleteChatHistory,
+} from "./useChatHistoryQuery";
+
+export type {
+  ChatHistoryResponse,
+  ChatHistoryListItem,
+  CreateChatHistoryInput,
+} from "./useChatHistoryQuery";

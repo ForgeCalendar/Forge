@@ -23,6 +23,7 @@ import { useQueryState } from "nuqs";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
 import { useGoals } from "@/storage/hooks";
+import { useUserQuery } from "@/storage";
 import type { CreateGoalInput, GoalWithId } from "@/storage/types";
 
 const viewOptions = createListCollection({
@@ -37,26 +38,15 @@ export default function App() {
   const { bgApp: appBg } = useThemeTokens();
   const { user, isLoading: authLoading, login, logout } = useAuth();
   const { goals, create, delete: deleteGoal } = useGoals();
+  const { data: userData } = useUserQuery();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [calendarTitle, setCalendarTitle] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [timezone, setTimezone] = useState<string>("local");
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  // Fetch user timezone
-  useEffect(() => {
-    if (user) {
-      fetch("/api/user")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.timezone) {
-            setTimezone(data.timezone);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [user]);
+  // Get timezone from user data
+  const timezone = userData?.timezone || "local";
 
   // Close drawer when screen becomes md or larger (sidebar visible)
   useEffect(() => {
