@@ -6,7 +6,7 @@ import { prisma } from "./prisma";
 const SALT_ROUNDS = 10;
 const SESSION_COOKIE_NAME = "session_user_email";
 
-// Get or generate cookie signing secret
+// Read the cookie signing secret from the environment
 function getCookieSecret(): string {
   const secret = process.env.COOKIE_SECRET;
   if (!secret) {
