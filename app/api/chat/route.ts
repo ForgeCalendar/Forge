@@ -64,9 +64,11 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     let system = undefined;
 
     if (chatHistory?.role) {
-      // If TaskHelper but event was deleted, fall back to Assistant mode
+      // If the linked entity for a role-dependent chat was deleted,
+      // fall back to Assistant mode to avoid helper prompt/tool errors.
       const effectiveRole =
-        chatHistory.role === "TaskHelper" && !chatHistory.event
+        (chatHistory.role === "TaskHelper" && !chatHistory.event) ||
+        (chatHistory.role === "GoalPlanner" && !chatHistory.goal)
           ? "Assistant"
           : chatHistory.role;
 
