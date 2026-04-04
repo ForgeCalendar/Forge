@@ -178,8 +178,126 @@ export const SuggestEventsUI = makeAssistantToolUI<
   },
 });
 
+type ModifySuggestedEventArgs = {
+  eventId: string;
+  title?: string;
+  start?: string;
+  end?: string;
+};
+
+type ModifySuggestedEventResult = {
+  success: boolean;
+  event?: {
+    id: string;
+    title: string;
+    start: string;
+    end: string;
+    minutesEstimate: number | null;
+  };
+  error?: string;
+};
+
+export const ModifySuggestedEventUI = makeAssistantToolUI<
+  ModifySuggestedEventArgs,
+  ModifySuggestedEventResult
+>({
+  toolName: "modifySuggestedEvent",
+  render: function ModifySuggestedEventRender({ result, status }) {
+    const queryClient = useQueryClient();
+    const event = result?.event;
+    const isRunning =
+      status.type === "running" || status.type === "requires-action";
+    const isComplete = status.type === "complete";
+
+    useEffect(() => {
+      if (isComplete) {
+        queryClient.invalidateQueries({ queryKey: eventKeys.all });
+      }
+    }, [isComplete, queryClient]);
+
+    if (!event) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 mb-2 min-w-0">
+        <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+          <CalendarIcon className="size-4 shrink-0" />
+          <span>Modified Event</span>
+          {isRunning && (
+            <Loader2Icon className="size-3.5 animate-spin text-blue-500 shrink-0" />
+          )}
+          {isComplete && (
+            <CheckCircle2Icon className="size-3.5 text-green-500 shrink-0" />
+          )}
+        </div>
+        <div className="rounded border border-border p-2 bg-muted/30">
+          <EventThumbnail
+            title={event.title}
+            start={event.start}
+            end={event.end}
+          />
+        </div>
+      </div>
+    );
+  },
+});
+
+type DeleteSuggestedEventArgs = {
+  eventId: string;
+};
+
+type DeleteSuggestedEventResult = {
+  success: boolean;
+  deletedEventId?: string;
+  message?: string;
+  error?: string;
+};
+
+export const DeleteSuggestedEventUI = makeAssistantToolUI<
+  DeleteSuggestedEventArgs,
+  DeleteSuggestedEventResult
+>({
+  toolName: "deleteSuggestedEvent",
+  render: function DeleteSuggestedEventRender({ result, status }) {
+    const queryClient = useQueryClient();
+    const isRunning =
+      status.type === "running" || status.type === "requires-action";
+    const isComplete = status.type === "complete";
+
+    useEffect(() => {
+      if (isComplete) {
+        queryClient.invalidateQueries({ queryKey: eventKeys.all });
+      }
+    }, [isComplete, queryClient]);
+
+    if (!result?.message) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 mb-2 min-w-0">
+        <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+          <CalendarIcon className="size-4 shrink-0" />
+          <span>{result.message}</span>
+          {isRunning && (
+            <Loader2Icon className="size-3.5 animate-spin text-blue-500 shrink-0" />
+          )}
+          {isComplete && (
+            <CheckCircle2Icon className="size-3.5 text-green-500 shrink-0" />
+          )}
+        </div>
+      </div>
+    );
+  },
+});
+
 const toolDisplayNames: Record<string, string> = {
   suggestEvents: "Suggesting Events",
+  listAllEvents: "Listing All Events",
+  listSuggestedEvents: "Listing Suggested Events",
+  modifySuggestedEvent: "Modifying Event",
+  deleteSuggestedEvent: "Deleting Event",
   saveMemory: "Saving Memory",
   readMemories: "Reading Memories",
   listMemoryQuestions: "Listing Memories",
