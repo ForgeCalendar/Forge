@@ -64,15 +64,23 @@ export async function POST(req: Request): Promise<NextResponse | Response> {
     let system = undefined;
 
     if (chatHistory?.role) {
+      // If the linked entity for a role-dependent chat was deleted,
+      // fall back to Assistant mode to avoid helper prompt/tool errors.
+      const effectiveRole =
+        (chatHistory.role === "TaskHelper" && !chatHistory.event) ||
+        (chatHistory.role === "GoalPlanner" && !chatHistory.goal)
+          ? "Assistant"
+          : chatHistory.role;
+
       tools = buildTools({
         chatHistoryId: chatHistory.id,
         userId,
-        role: chatHistory.role,
+        role: effectiveRole,
         goalId: chatHistory.goal?.id,
       });
 
       system = buildSystemPrompt({
-        role: chatHistory.role,
+        role: effectiveRole,
         goal: chatHistory.goal ?? undefined,
         eventTitle: chatHistory.event?.title,
         timezone,
