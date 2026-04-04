@@ -197,73 +197,63 @@ export default function AccountSettingsPane() {
 
   async function handleAdd() {
     if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;
-    try {
-      await createProviderMutation.mutateAsync({
+    createProviderMutation
+      .mutateAsync({
         type: newType[0],
         name: newName.trim(),
         apiKey: newApiKey.trim(),
         ...(newType[0] === "openai-compatible" && newBaseUrl.trim()
           ? { baseUrl: newBaseUrl.trim() }
           : {}),
+      })
+      .then(() => {
+        setNewType([]);
+        setNewName("");
+        setNewApiKey("");
+        setNewBaseUrl("");
       });
-      setNewType([]);
-      setNewName("");
-      setNewApiKey("");
-      setNewBaseUrl("");
-    } catch (err) {
-      console.error("Failed to save provider:", err);
-    }
   }
 
   async function handleUpdate(id: string) {
-    try {
-      const input: Record<string, string> = {};
-      if (editName.trim()) input.name = editName.trim();
-      if (editApiKey.trim()) input.apiKey = editApiKey.trim();
-      const provider = providers.find((p) => p.id === id);
-      if (provider?.type === "openai-compatible") {
-        input.baseUrl = editBaseUrl.trim();
-      }
+    const input: Record<string, string> = {};
+    if (editName.trim()) input.name = editName.trim();
+    if (editApiKey.trim()) input.apiKey = editApiKey.trim();
+    const provider = providers.find((p) => p.id === id);
+    if (provider?.type === "openai-compatible") {
+      input.baseUrl = editBaseUrl.trim();
+    }
 
-      await updateProviderMutation.mutateAsync({ id, input });
+    updateProviderMutation.mutateAsync({ id, input }).then(() => {
       setEditingId(null);
       setEditName("");
       setEditApiKey("");
       setEditBaseUrl("");
-    } catch (err) {
-      console.error("Failed to update provider:", err);
-    }
+    });
   }
 
   async function handleDelete(id: string) {
-    try {
-      await deleteProviderMutation.mutateAsync(id);
-    } catch (err) {
-      console.error("Failed to delete provider:", err);
-    }
+    deleteProviderMutation.mutateAsync(id);
   }
 
   async function handleSaveSearchConfig() {
-    try {
-      await updateSearchConfigMutation.mutateAsync({
+    updateSearchConfigMutation
+      .mutateAsync({
         tavilyApiKey: tavilyApiKeyInput.trim(),
+      })
+      .then(() => {
+        setSearchEditing(false);
+        setTavilyApiKeyInput("");
       });
-      setSearchEditing(false);
-      setTavilyApiKeyInput("");
-    } catch (err) {
-      console.error("Failed to save search config:", err);
-    }
   }
 
   async function handleClearSearchConfig() {
-    try {
-      await updateSearchConfigMutation.mutateAsync({
+    updateSearchConfigMutation
+      .mutateAsync({
         tavilyApiKey: "",
+      })
+      .then(() => {
+        setSearchEditing(true);
       });
-      setSearchEditing(true);
-    } catch (err) {
-      console.error("Failed to clear search config:", err);
-    }
   }
 
   function startEditing(provider: ProviderRecord) {

@@ -115,34 +115,27 @@ export default function App() {
   }
 
   const handleAddGoal = async (goal: CreateGoalInput) => {
-    try {
-      const created = await create(goal);
+    create(goal).then((created) => {
       if (!created.chatHistoryId) {
         console.error("Goal created without chatHistoryId");
         return;
       }
       setChatId(created.chatHistoryId);
-    } catch (error) {
-      console.error("Failed to create goal:", error);
-    }
+    });
   };
 
   const handleRemoveGoal = async (index: number) => {
-    try {
-      const goalToDelete = goals[index];
-      if ("id" in goalToDelete) {
-        // If the current chatId is associated with this goal, remove it from URL
-        if (
-          chatId &&
-          "chatHistoryId" in goalToDelete &&
-          goalToDelete.chatHistoryId === chatId
-        ) {
-          setChatId(null);
-        }
-        await deleteGoal(goalToDelete.id);
+    const goalToDelete = goals[index];
+    if ("id" in goalToDelete) {
+      // If the current chatId is associated with this goal, remove it from URL
+      if (
+        chatId &&
+        "chatHistoryId" in goalToDelete &&
+        goalToDelete.chatHistoryId === chatId
+      ) {
+        setChatId(null);
       }
-    } catch (error) {
-      console.error("Failed to delete goal:", error);
+      deleteGoal(goalToDelete.id);
     }
   };
 

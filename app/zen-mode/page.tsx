@@ -161,26 +161,29 @@ function ZenModeContent() {
   const createTaskHelperChat = async (eventTitle: string) => {
     if (!eventId || creatingChat) return;
     setCreatingChat(true);
-    try {
-      // Create chat history
-      const chat = await createChatMutation.mutateAsync({
+
+    // Create chat history
+    createChatMutation
+      .mutateAsync({
         role: "TaskHelper",
         title: `Task: ${eventTitle}`,
+      })
+      .then((chat) => {
+        // Associate the chat with the event BEFORE rendering the chat UI
+        return updateEventMutation
+          .mutateAsync({
+            id: eventId,
+            input: { chatHistoryId: chat.id },
+          })
+          .then(() => chat);
+      })
+      .then((chat) => {
+        // Only set chatId after the association is complete
+        setChatId(chat.id);
+      })
+      .finally(() => {
+        setCreatingChat(false);
       });
-
-      // Associate the chat with the event BEFORE rendering the chat UI
-      await updateEventMutation.mutateAsync({
-        id: eventId,
-        input: { chatHistoryId: chat.id },
-      });
-
-      // Only set chatId after the association is complete
-      setChatId(chat.id);
-    } catch (err) {
-      console.error("Failed to create TaskHelper chat:", err);
-    } finally {
-      setCreatingChat(false);
-    }
   };
 
   useEffect(() => {
@@ -284,15 +287,14 @@ function ZenModeContent() {
   const handleComplete = async () => {
     if (!eventId) return;
 
-    try {
-      await updateEventMutation.mutateAsync({
+    updateEventMutation
+      .mutateAsync({
         id: eventId,
         input: { completed: true },
+      })
+      .then(() => {
+        router.push("/");
       });
-      router.push("/");
-    } catch (err) {
-      console.error("Failed to mark event as complete:", err);
-    }
   };
 
   const handleExit = () => {

@@ -55,51 +55,39 @@ export default function CalendarSettingsPane() {
 
   async function handleAdd() {
     if (!newName.trim() || !newUrl.trim()) return;
-    try {
-      await createSubscriptionMutation.mutateAsync({
+    createSubscriptionMutation
+      .mutateAsync({
         name: newName.trim(),
         url: newUrl.trim(),
+      })
+      .then(() => {
+        setNewName("");
+        setNewUrl("");
       });
-      setNewName("");
-      setNewUrl("");
-    } catch (err) {
-      console.error("Failed to add subscription:", err);
-    }
   }
 
   async function handleUpdate(id: string) {
     if (!editName.trim() && !editUrl.trim()) return;
-    try {
-      const input: { name?: string; url?: string } = {};
-      if (editName.trim()) input.name = editName.trim();
-      if (editUrl.trim()) input.url = editUrl.trim();
+    const input: { name?: string; url?: string } = {};
+    if (editName.trim()) input.name = editName.trim();
+    if (editUrl.trim()) input.url = editUrl.trim();
 
-      await updateSubscriptionMutation.mutateAsync({ id, input });
+    updateSubscriptionMutation.mutateAsync({ id, input }).then(() => {
       setEditingId(null);
       setEditName("");
       setEditUrl("");
-    } catch (err) {
-      console.error("Failed to update subscription:", err);
-    }
+    });
   }
 
   async function handleDelete(id: string) {
-    try {
-      await deleteSubscriptionMutation.mutateAsync(id);
-    } catch (err) {
-      console.error("Failed to delete subscription:", err);
-    }
+    deleteSubscriptionMutation.mutateAsync(id);
   }
 
   async function handleSync(id: string) {
     setSyncingId(id);
-    try {
-      await syncSubscriptionMutation.mutateAsync(id);
-    } catch (err) {
-      console.error("Failed to sync subscription:", err);
-    } finally {
+    syncSubscriptionMutation.mutateAsync(id).finally(() => {
       setSyncingId(null);
-    }
+    });
   }
 
   return (

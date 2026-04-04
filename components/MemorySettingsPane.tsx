@@ -39,39 +39,31 @@ export default function MemorySettingsPane() {
 
   async function handleAdd() {
     if (!newQuestion.trim() || !newAnswer.trim()) return;
-    try {
-      await createMemoryMutation.mutateAsync({
+    createMemoryMutation
+      .mutateAsync({
         question: newQuestion.trim(),
         answer: newAnswer.trim(),
+      })
+      .then(() => {
+        setNewQuestion("");
+        setNewAnswer("");
       });
-      setNewQuestion("");
-      setNewAnswer("");
-    } catch (err) {
-      console.error("Failed to save memory:", err);
-    }
   }
 
   async function handleUpdate(id: string) {
-    try {
-      const input: Record<string, string> = {};
-      if (editQuestion.trim()) input.question = editQuestion.trim();
-      if (editAnswer.trim()) input.answer = editAnswer.trim();
+    const input: Record<string, string> = {};
+    if (editQuestion.trim()) input.question = editQuestion.trim();
+    if (editAnswer.trim()) input.answer = editAnswer.trim();
 
-      await updateMemoryMutation.mutateAsync({ id, input });
+    updateMemoryMutation.mutateAsync({ id, input }).then(() => {
       setEditingId(null);
       setEditQuestion("");
       setEditAnswer("");
-    } catch (err) {
-      console.error("Failed to update memory:", err);
-    }
+    });
   }
 
   async function handleDelete(id: string) {
-    try {
-      await deleteMemoryMutation.mutateAsync(id);
-    } catch (err) {
-      console.error("Failed to delete memory:", err);
-    }
+    deleteMemoryMutation.mutateAsync(id);
   }
 
   function startEditing(memory: {
