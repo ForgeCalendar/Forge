@@ -1,14 +1,12 @@
 import { Box, Button, Text, Input, Textarea, Flex } from "@chakra-ui/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
-
-type MemoryRecord = {
-  id: string;
-  question: string;
-  answer: string;
-  createdAt: string;
-  updatedAt: string;
-};
+import {
+  useMemoriesQuery,
+  useCreateMemoryMutation,
+  useUpdateMemoryMutation,
+  useDeleteMemoryMutation,
+} from "@/storage";
 
 export default function MemorySettingsPane() {
   const {
@@ -17,106 +15,70 @@ export default function MemorySettingsPane() {
     bgCard: cardBg,
   } = useThemeTokens();
 
-  const [memories, setMemories] = useState<MemoryRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // TanStack Query hooks
+  const {
+    data: memories = [],
+    isLoading: loading,
+    error: queryError,
+  } = useMemoriesQuery();
+  const createMemoryMutation = useCreateMemoryMutation();
+  const updateMemoryMutation = useUpdateMemoryMutation();
+  const deleteMemoryMutation = useDeleteMemoryMutation();
+
+  const error = queryError ? String(queryError) : null;
 
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQuestion, setEditQuestion] = useState("");
   const [editAnswer, setEditAnswer] = useState("");
 
-  const fetchMemories = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/memories");
-      if (!res.ok) throw new Error("Failed to fetch memories");
-      const data: MemoryRecord[] = await res.json();
-      setMemories(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load memories");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchMemories();
-  }, [fetchMemories]);
+  const saving =
+    createMemoryMutation.isPending || updateMemoryMutation.isPending;
 
   async function handleAdd() {
     if (!newQuestion.trim() || !newAnswer.trim()) return;
-    setSaving(true);
-    setError(null);
     try {
-      const res = await fetch("/api/memories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: newQuestion.trim(),
-          answer: newAnswer.trim(),
-        }),
+      await createMemoryMutation.mutateAsync({
+        question: newQuestion.trim(),
+        answer: newAnswer.trim(),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save memory");
-      }
       setNewQuestion("");
       setNewAnswer("");
-      await fetchMemories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
+      console.error("Failed to save memory:", err);
     }
   }
 
   async function handleUpdate(id: string) {
-    setSaving(true);
-    setError(null);
     try {
-      const body: Record<string, string> = {};
-      if (editQuestion.trim()) body.question = editQuestion.trim();
-      if (editAnswer.trim()) body.answer = editAnswer.trim();
+      const input: Record<string, string> = {};
+      if (editQuestion.trim()) input.question = editQuestion.trim();
+      if (editAnswer.trim()) input.answer = editAnswer.trim();
 
-      const res = await fetch(`/api/memories/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update memory");
-      }
+      await updateMemoryMutation.mutateAsync({ id, input });
       setEditingId(null);
       setEditQuestion("");
       setEditAnswer("");
-      await fetchMemories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update");
-    } finally {
-      setSaving(false);
+      console.error("Failed to update memory:", err);
     }
   }
 
   async function handleDelete(id: string) {
-    setError(null);
     try {
-      const res = await fetch(`/api/memories/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete memory");
-      await fetchMemories();
+      await deleteMemoryMutation.mutateAsync(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete");
+      console.error("Failed to delete memory:", err);
     }
   }
 
-  function startEditing(memory: MemoryRecord) {
+  function startEditing(memory: {
+    id: string;
+    question: string;
+    answer: string;
+  }) {
     setEditingId(memory.id);
     setEditQuestion(memory.question);
     setEditAnswer(memory.answer);

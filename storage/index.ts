@@ -45,9 +45,17 @@ export {
 export {
   useProvidersQuery,
   useDefaultProviderModel,
+  useCreateProviderMutation,
+  useUpdateProviderMutation,
+  useDeleteProviderMutation,
 } from "./useProvidersQuery";
 
-export type { ProviderWithModels, ProviderModel } from "./useProvidersQuery";
+export type {
+  ProviderWithModels,
+  ProviderModel,
+  CreateProviderInput,
+  UpdateProviderInput,
+} from "./useProvidersQuery";
 
 export { useUserQuery, useUpdateUserMutation } from "./useUserQuery";
 
@@ -65,3 +73,40 @@ export type {
   ChatHistoryListItem,
   CreateChatHistoryInput,
 } from "./useChatHistoryQuery";
+
+export {
+  useSearchConfigQuery,
+  useUpdateSearchConfigMutation,
+} from "./useSearchConfigQuery";
+
+export type {
+  SearchConfig,
+  UpdateSearchConfigInput,
+} from "./useSearchConfigQuery";
+
+export {
+  useMemoriesQuery,
+  useCreateMemoryMutation,
+  useUpdateMemoryMutation,
+  useDeleteMemoryMutation,
+} from "./useMemoriesQuery";
+
+export type {
+  Memory,
+  CreateMemoryInput,
+  UpdateMemoryInput,
+} from "./useMemoriesQuery";
+
+export {
+  useIcsSubscriptionsQuery,
+  useCreateIcsSubscriptionMutation,
+  useUpdateIcsSubscriptionMutation,
+  useDeleteIcsSubscriptionMutation,
+  useSyncIcsSubscriptionMutation,
+} from "./useIcsSubscriptionsQuery";
+
+export type {
+  IcsSubscription,
+  CreateIcsSubscriptionInput,
+  UpdateIcsSubscriptionInput,
+} from "./useIcsSubscriptionsQuery";
