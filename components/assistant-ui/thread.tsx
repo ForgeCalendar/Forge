@@ -6,6 +6,8 @@ import {
   useChoiceStore,
   AskUserChoiceUI,
   SuggestEventsUI,
+  ModifySuggestedEventUI,
+  DeleteSuggestedEventUI,
   ToolCallBox,
 } from "@/components/assistant-ui/tool-ui";
 import {
@@ -27,6 +29,8 @@ export const Thread: FC = () => {
     >
       <AskUserChoiceUI />
       <SuggestEventsUI />
+      <ModifySuggestedEventUI />
+      <DeleteSuggestedEventUI />
       <ThreadPrimitive.Viewport
         className="flex-1 overflow-y-auto"
         style={{ minHeight: 0 }}
