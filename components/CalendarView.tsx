@@ -64,32 +64,53 @@ export default function CalendarView({
     if (calendarRef.current && currentView.length > 0) {
       const calendarApi = calendarRef.current.getApi();
       const currentCalendarView = calendarApi.view.type;
-      const currentCalendarDate = calendarApi.view.currentStart
-        .toISOString()
-        .slice(0, 10);
+
+      // Format currentStart in the calendar's configured timezone to avoid
+      // UTC off-by-one errors for positive-offset timezones (e.g. Asia/Tokyo).
+      const tz =
+        timezone === "local"
+          ? Intl.DateTimeFormat().resolvedOptions().timeZone
+          : timezone;
+      const currentCalendarDate = new Intl.DateTimeFormat("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: tz,
+      }).format(calendarApi.view.currentStart);
+
+      const nextView = currentView[0];
+      const nextDate = initialDate;
 
       // Check if view needs to change
       const viewChanged =
-        currentCalendarView !== currentView[0] &&
-        lastSyncedView.current !== currentView[0];
+        currentCalendarView !== nextView &&
+        lastSyncedView.current !== nextView;
 
       // Check if date needs to change
       const dateChanged =
-        initialDate !== currentCalendarDate &&
-        lastSyncedDate.current !== initialDate;
+        nextDate !== currentCalendarDate &&
+        lastSyncedDate.current !== nextDate;
 
       if (viewChanged || dateChanged) {
+        // Update both refs before triggering calendar navigation so any
+        // intermediate datesSet emission observes a consistent target state.
         if (viewChanged) {
-          calendarApi.changeView(currentView[0]);
-          lastSyncedView.current = currentView[0];
+          lastSyncedView.current = nextView;
         }
         if (dateChanged) {
-          calendarApi.gotoDate(initialDate);
-          lastSyncedDate.current = initialDate;
+          lastSyncedDate.current = nextDate;
+        }
+
+        if (viewChanged && dateChanged) {
+          calendarApi.changeView(nextView, nextDate);
+        } else if (viewChanged) {
+          calendarApi.changeView(nextView);
+        } else {
+          calendarApi.gotoDate(nextDate);
         }
       }
     }
-  }, [calendarRef, currentView, initialDate]);
+  }, [calendarRef, currentView, initialDate, timezone]);
 
   const formatTime = (date: Date | null) => {
     if (!date) return "\u2014";
@@ -138,7 +159,8 @@ export default function CalendarView({
             events={calendarEvents}
             datesSet={(info) => {
               onTitleChange(info.view.title);
-              const dateStr = info.view.currentStart.toISOString().slice(0, 10);
+              // info.startStr is already formatted in the calendar's timezone
+              const dateStr = info.startStr.slice(0, 10);
               const viewType = info.view.type;
 
               // Only sync to URL if values actually changed
