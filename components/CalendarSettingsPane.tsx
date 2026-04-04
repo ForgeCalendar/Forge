@@ -1,13 +1,13 @@
 import { Box, Button, Text, Input, Flex } from "@chakra-ui/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useThemeTokens } from "../lib/theme-tokens";
-
-type IcsSubscriptionRecord = {
-  id: string;
-  name: string;
-  url: string;
-  lastSynced: string | null;
-};
+import {
+  useIcsSubscriptionsQuery,
+  useCreateIcsSubscriptionMutation,
+  useUpdateIcsSubscriptionMutation,
+  useDeleteIcsSubscriptionMutation,
+  useSyncIcsSubscriptionMutation,
+} from "@/storage";
 
 function maskUrl(url: string): string {
   try {
@@ -27,15 +27,21 @@ export default function CalendarSettingsPane() {
     bgCard: cardBg,
   } = useThemeTokens();
 
-  const [subscriptions, setSubscriptions] = useState<IcsSubscriptionRecord[]>(
-    []
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // TanStack Query hooks
+  const {
+    data: subscriptions = [],
+    isLoading: loading,
+    error: queryError,
+  } = useIcsSubscriptionsQuery();
+  const createSubscriptionMutation = useCreateIcsSubscriptionMutation();
+  const updateSubscriptionMutation = useUpdateIcsSubscriptionMutation();
+  const deleteSubscriptionMutation = useDeleteIcsSubscriptionMutation();
+  const syncSubscriptionMutation = useSyncIcsSubscriptionMutation();
+
+  const error = queryError ? String(queryError) : null;
 
   const [newName, setNewName] = useState("");
   const [newUrl, setNewUrl] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -43,109 +49,45 @@ export default function CalendarSettingsPane() {
 
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
-  const fetchSubscriptions = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/ics-subscriptions");
-      if (!res.ok) throw new Error("Failed to fetch subscriptions");
-      const data: IcsSubscriptionRecord[] = await res.json();
-      setSubscriptions(data);
-      setError(null);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load subscriptions"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSubscriptions();
-  }, [fetchSubscriptions]);
+  const saving =
+    createSubscriptionMutation.isPending ||
+    updateSubscriptionMutation.isPending;
 
   async function handleAdd() {
     if (!newName.trim() || !newUrl.trim()) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/ics-subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim(), url: newUrl.trim() }),
+    createSubscriptionMutation
+      .mutateAsync({
+        name: newName.trim(),
+        url: newUrl.trim(),
+      })
+      .then(() => {
+        setNewName("");
+        setNewUrl("");
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to add subscription");
-      }
-      setNewName("");
-      setNewUrl("");
-      await fetchSubscriptions();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add");
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function handleUpdate(id: string) {
     if (!editName.trim() && !editUrl.trim()) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const body: { name?: string; url?: string } = {};
-      if (editName.trim()) body.name = editName.trim();
-      if (editUrl.trim()) body.url = editUrl.trim();
-      const res = await fetch(`/api/ics-subscriptions/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update subscription");
-      }
+    const input: { name?: string; url?: string } = {};
+    if (editName.trim()) input.name = editName.trim();
+    if (editUrl.trim()) input.url = editUrl.trim();
+
+    updateSubscriptionMutation.mutateAsync({ id, input }).then(() => {
       setEditingId(null);
       setEditName("");
       setEditUrl("");
-      await fetchSubscriptions();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update");
-    } finally {
-      setSaving(false);
-    }
+    });
   }
 
   async function handleDelete(id: string) {
-    setError(null);
-    try {
-      const res = await fetch(`/api/ics-subscriptions/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete subscription");
-      await fetchSubscriptions();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete");
-    }
+    deleteSubscriptionMutation.mutateAsync(id);
   }
 
   async function handleSync(id: string) {
     setSyncingId(id);
-    setError(null);
-    try {
-      const res = await fetch(`/api/ics-subscriptions/${id}/sync`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to sync");
-      }
-      await fetchSubscriptions();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sync");
-    } finally {
+    syncSubscriptionMutation.mutateAsync(id).finally(() => {
       setSyncingId(null);
-    }
+    });
   }
 
   return (

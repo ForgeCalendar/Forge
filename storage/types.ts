@@ -66,6 +66,8 @@ export type CreateCalendarEventInput = {
 
 export type UpdateCalendarEventInput = Partial<CreateCalendarEventInput> & {
   confirmed?: boolean;
+  chatHistoryId?: string;
+  completed?: boolean;
 };
 
 export type CreateInfoTagInput = {

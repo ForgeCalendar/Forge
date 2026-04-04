@@ -1,3 +1,5 @@
+"use client";
+
 import "./globals.css";
 import type { ReactNode } from "react";
 
@@ -6,6 +8,8 @@ import { Provider } from "@/components/ui/provider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { QueryProvider } from "@/components/QueryProvider";
 import { VibeKanbanWrapper } from "@/components/VibeKanbanWrapper";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function RootLayout(props: { children: ReactNode }) {
   const { children } = props;
@@ -16,8 +20,20 @@ export default function RootLayout(props: { children: ReactNode }) {
           <Provider>
             <QueryProvider>
               <AuthProvider>
-                <VibeKanbanWrapper />
-                {children}
+                <ErrorBoundary
+                  onError={(error, errorInfo) => {
+                    // Log errors to console in development
+                    console.error(
+                      "Error caught by boundary:",
+                      error,
+                      errorInfo
+                    );
+                  }}
+                >
+                  <VibeKanbanWrapper />
+                  {children}
+                </ErrorBoundary>
+                <Toaster />
               </AuthProvider>
             </QueryProvider>
           </Provider>

@@ -18,6 +18,11 @@ import {
 import { useRouter } from "next/navigation";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import type { EventWithId } from "@/storage/types";
+import {
+  useEventQuery,
+  useUpdateEventMutation,
+  useCreateChatHistory,
+} from "@/storage";
 import { ChatboxComponent } from "@/components/Chatbox";
 import {
   IoPlaySkipBack,
@@ -30,9 +35,17 @@ function ZenModeContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
   const router = useRouter();
-  const [event, setEvent] = useState<EventWithId | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // TanStack Query hooks
+  const {
+    data: event,
+    isLoading: loading,
+    error: queryError,
+  } = useEventQuery(eventId || "");
+  const updateEventMutation = useUpdateEventMutation();
+  const createChatMutation = useCreateChatHistory();
+
+  const error = queryError ? String(queryError) : null;
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isComplete, setIsComplete] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
@@ -134,67 +147,43 @@ function ZenModeContent() {
     setTracks(shuffled);
   }, []);
 
+  // Initialize chat when event loads
   useEffect(() => {
-    if (!eventId) {
-      setError("No event ID provided");
-      setLoading(false);
-      return;
+    if (event) {
+      if (event.chatHistoryId) {
+        setChatId(event.chatHistoryId);
+      } else if (!creatingChat) {
+        createTaskHelperChat(event.title);
+      }
     }
-
-    // Fetch event details
-    fetch(`/api/events/${eventId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch event");
-        return res.json();
-      })
-      .then((data) => {
-        setEvent(data);
-        setLoading(false);
-        // Use existing TaskHelper chat or create a new one
-        if (data.chatHistoryId) {
-          setChatId(data.chatHistoryId);
-        } else {
-          createTaskHelperChat(data.title);
-        }
-      })
-      .catch((err) => {
-        setError(err.message || "Failed to load event");
-        setLoading(false);
-      });
-  }, [eventId]);
+  }, [event?.id, event?.chatHistoryId]);
 
   const createTaskHelperChat = async (eventTitle: string) => {
+    if (!eventId || creatingChat) return;
     setCreatingChat(true);
-    try {
-      const response = await fetch("/api/chat-history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: "TaskHelper",
-          title: `Task: ${eventTitle}`,
-        }),
+
+    // Create chat history
+    createChatMutation
+      .mutateAsync({
+        role: "TaskHelper",
+        title: `Task: ${eventTitle}`,
+      })
+      .then((chat) => {
+        // Associate the chat with the event BEFORE rendering the chat UI
+        return updateEventMutation
+          .mutateAsync({
+            id: eventId,
+            input: { chatHistoryId: chat.id },
+          })
+          .then(() => chat);
+      })
+      .then((chat) => {
+        // Only set chatId after the association is complete
+        setChatId(chat.id);
+      })
+      .finally(() => {
+        setCreatingChat(false);
       });
-
-      if (!response.ok) throw new Error("Failed to create chat");
-
-      const chat = await response.json();
-
-      // Associate the chat with the event BEFORE rendering the chat UI
-      if (eventId) {
-        await fetch(`/api/events/${eventId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chatHistoryId: chat.id }),
-        });
-      }
-
-      // Only set chatId after the association is complete
-      setChatId(chat.id);
-    } catch (err) {
-      console.error("Failed to create TaskHelper chat:", err);
-    } finally {
-      setCreatingChat(false);
-    }
   };
 
   useEffect(() => {
@@ -298,21 +287,38 @@ function ZenModeContent() {
   const handleComplete = async () => {
     if (!eventId) return;
 
-    try {
-      await fetch(`/api/events/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: true }),
+    updateEventMutation
+      .mutateAsync({
+        id: eventId,
+        input: { completed: true },
+      })
+      .then(() => {
+        router.push("/");
       });
-      router.push("/");
-    } catch (err) {
-      console.error("Failed to mark event as complete:", err);
-    }
   };
 
   const handleExit = () => {
     router.push("/");
   };
+
+  if (!eventId) {
+    return (
+      <Box
+        minH="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bg={bgSurface}
+      >
+        <VStack gap={4}>
+          <Text color="red.500" fontSize="lg">
+            No event ID provided
+          </Text>
+          <Button onClick={handleExit}>Return to Calendar</Button>
+        </VStack>
+      </Box>
+    );
+  }
 
   if (loading) {
     return (

@@ -7,8 +7,18 @@ import {
   createListCollection,
   Flex,
 } from "@chakra-ui/react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
+import {
+  useUserQuery,
+  useUpdateUserMutation,
+  useProvidersQuery,
+  useCreateProviderMutation,
+  useUpdateProviderMutation,
+  useDeleteProviderMutation,
+  useSearchConfigQuery,
+  useUpdateSearchConfigMutation,
+} from "@/storage";
 
 // Common IANA timezones grouped by region
 const TIMEZONE_OPTIONS = [
@@ -125,10 +135,12 @@ export default function AccountSettingsPane() {
     bgCard: cardBg,
   } = useThemeTokens();
 
-  // Timezone state
-  const [timezone, setTimezone] = useState<string>("UTC");
-  const [timezoneLoading, setTimezoneLoading] = useState(true);
-  const [timezoneSaving, setTimezoneSaving] = useState(false);
+  // User data with TanStack Query
+  const { data: userData, isLoading: timezoneLoading } = useUserQuery();
+  const updateUserMutation = useUpdateUserMutation();
+
+  const timezone = userData?.timezone || "UTC";
+  const timezoneSaving = updateUserMutation.isPending;
 
   const timezoneOptions = useMemo(
     () =>
@@ -141,53 +153,37 @@ export default function AccountSettingsPane() {
     []
   );
 
-  const fetchUserSettings = useCallback(async () => {
-    try {
-      setTimezoneLoading(true);
-      const res = await fetch("/api/user");
-      if (res.ok) {
-        const data = await res.json();
-        setTimezone(data.timezone || "UTC");
-      }
-    } catch (err) {
-      console.error("Failed to fetch user settings:", err);
-    } finally {
-      setTimezoneLoading(false);
-    }
-  }, []);
-
   async function handleTimezoneChange(newTimezone: string[]) {
     if (!newTimezone[0] || newTimezone[0] === timezone) return;
-    setTimezoneSaving(true);
     try {
-      const res = await fetch("/api/user", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ timezone: newTimezone[0] }),
-      });
-      if (res.ok) {
-        setTimezone(newTimezone[0]);
-      }
+      await updateUserMutation.mutateAsync({ timezone: newTimezone[0] });
     } catch (err) {
       console.error("Failed to update timezone:", err);
-    } finally {
-      setTimezoneSaving(false);
     }
   }
 
-  const [providers, setProviders] = useState<ProviderRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // TanStack Query hooks
+  const {
+    data: providers = [],
+    isLoading: loading,
+    error: queryError,
+  } = useProvidersQuery();
+  const createProviderMutation = useCreateProviderMutation();
+  const updateProviderMutation = useUpdateProviderMutation();
+  const deleteProviderMutation = useDeleteProviderMutation();
+
+  const { data: searchConfig, isLoading: searchLoading } =
+    useSearchConfigQuery();
+  const updateSearchConfigMutation = useUpdateSearchConfigMutation();
+
+  const error = queryError ? String(queryError) : null;
+  const hasTavilyApiKey = searchConfig?.hasTavilyApiKey ?? false;
 
   const [newType, setNewType] = useState<string[]>([]);
   const [newName, setNewName] = useState("");
   const [newApiKey, setNewApiKey] = useState("");
   const [newBaseUrl, setNewBaseUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [searchSaving, setSearchSaving] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(true);
-  const [hasTavilyApiKey, setHasTavilyApiKey] = useState(false);
-  const [searchEditing, setSearchEditing] = useState(false);
+  const [searchEditing, setSearchEditing] = useState(!hasTavilyApiKey);
   const [tavilyApiKeyInput, setTavilyApiKeyInput] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -195,177 +191,69 @@ export default function AccountSettingsPane() {
   const [editApiKey, setEditApiKey] = useState("");
   const [editBaseUrl, setEditBaseUrl] = useState("");
 
-  const fetchProviders = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/providers");
-      if (!res.ok) throw new Error("Failed to fetch providers");
-      const data: ProviderRecord[] = await res.json();
-      setProviders(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load providers");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchSearchConfig = useCallback(async () => {
-    try {
-      setSearchLoading(true);
-      const res = await fetch("/api/search-config");
-      if (!res.ok) throw new Error("Failed to fetch search config");
-      const data: SearchConfigResponse = await res.json();
-      setHasTavilyApiKey(data.hasTavilyApiKey);
-      setSearchEditing(!data.hasTavilyApiKey);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load search config"
-      );
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProviders();
-    fetchUserSettings();
-    fetchSearchConfig();
-  }, [fetchProviders, fetchUserSettings, fetchSearchConfig]);
+  const saving =
+    createProviderMutation.isPending || updateProviderMutation.isPending;
+  const searchSaving = updateSearchConfigMutation.isPending;
 
   async function handleAdd() {
     if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/providers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: newType[0],
-          name: newName.trim(),
-          apiKey: newApiKey.trim(),
-          ...(newType[0] === "openai-compatible" && newBaseUrl.trim()
-            ? { baseUrl: newBaseUrl.trim() }
-            : {}),
-        }),
+    createProviderMutation
+      .mutateAsync({
+        type: newType[0],
+        name: newName.trim(),
+        apiKey: newApiKey.trim(),
+        ...(newType[0] === "openai-compatible" && newBaseUrl.trim()
+          ? { baseUrl: newBaseUrl.trim() }
+          : {}),
+      })
+      .then(() => {
+        setNewType([]);
+        setNewName("");
+        setNewApiKey("");
+        setNewBaseUrl("");
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save provider");
-      }
-      setNewType([]);
-      setNewName("");
-      setNewApiKey("");
-      setNewBaseUrl("");
-      await fetchProviders();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function handleUpdate(id: string) {
-    setSaving(true);
-    setError(null);
-    try {
-      const body: Record<string, string> = {};
-      if (editName.trim()) body.name = editName.trim();
-      if (editApiKey.trim()) body.apiKey = editApiKey.trim();
-      const provider = providers.find((p) => p.id === id);
-      if (provider?.type === "openai-compatible") {
-        body.baseUrl = editBaseUrl.trim();
-      }
+    const input: Record<string, string> = {};
+    if (editName.trim()) input.name = editName.trim();
+    if (editApiKey.trim()) input.apiKey = editApiKey.trim();
+    const provider = providers.find((p) => p.id === id);
+    if (provider?.type === "openai-compatible") {
+      input.baseUrl = editBaseUrl.trim();
+    }
 
-      const res = await fetch(`/api/providers/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update provider");
-      }
+    updateProviderMutation.mutateAsync({ id, input }).then(() => {
       setEditingId(null);
       setEditName("");
       setEditApiKey("");
       setEditBaseUrl("");
-      await fetchProviders();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update");
-    } finally {
-      setSaving(false);
-    }
+    });
   }
 
   async function handleDelete(id: string) {
-    setError(null);
-    try {
-      const res = await fetch(`/api/providers/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete provider");
-      await fetchProviders();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete");
-    }
+    deleteProviderMutation.mutateAsync(id);
   }
 
   async function handleSaveSearchConfig() {
-    setSearchSaving(true);
-    setError(null);
-    try {
-      const payload: Record<string, string> = {
+    updateSearchConfigMutation
+      .mutateAsync({
         tavilyApiKey: tavilyApiKeyInput.trim(),
-      };
-
-      const res = await fetch("/api/search-config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      })
+      .then(() => {
+        setSearchEditing(false);
+        setTavilyApiKeyInput("");
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save search config");
-      }
-
-      const data: SearchConfigResponse = await res.json();
-      setHasTavilyApiKey(data.hasTavilyApiKey);
-      setSearchEditing(false);
-      setTavilyApiKeyInput("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSearchSaving(false);
-    }
   }
 
   async function handleClearSearchConfig() {
-    setSearchSaving(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/search-config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tavilyApiKey: "",
-        }),
+    updateSearchConfigMutation
+      .mutateAsync({
+        tavilyApiKey: "",
+      })
+      .then(() => {
+        setSearchEditing(true);
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to clear search config");
-      }
-
-      setHasTavilyApiKey(false);
-      setSearchEditing(true);
-      setTavilyApiKeyInput("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to clear");
-    } finally {
-      setSearchSaving(false);
-    }
   }
 
   function startEditing(provider: ProviderRecord) {
