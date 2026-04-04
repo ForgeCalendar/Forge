@@ -119,7 +119,7 @@ function EventThumbnail({
       <span className="text-orange-500 font-medium whitespace-nowrap">
         {dateStr}
       </span>
-      <span className="truncate max-w-24">{title}</span>
+      <span className="truncate flex-1">{title}</span>
       <span className="text-muted-foreground whitespace-nowrap">
         {startTime}
       </span>
