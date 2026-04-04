@@ -1,17 +1,19 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, type ReactNode, type ErrorInfo } from "react";
 import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
 import { Box, Button, Heading, Text, VStack } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 
 interface ErrorFallbackProps {
-  error: Error;
+  error: unknown;
   resetErrorBoundary: () => void;
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
   const router = useRouter();
+  const errorMessage =
+    error instanceof Error ? error.message : "An unexpected error occurred";
 
   return (
     <Box
@@ -26,7 +28,7 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
           Something went wrong
         </Heading>
         <Text color="gray.600" _dark={{ color: "gray.400" }}>
-          {error.message || "An unexpected error occurred"}
+          {errorMessage}
         </Text>
         <VStack gap={2}>
           <Button onClick={resetErrorBoundary} colorScheme="blue">
@@ -43,7 +45,7 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  onError?: (error: Error, errorInfo: { componentStack: string }) => void;
+  onError?: (error: unknown, errorInfo: ErrorInfo) => void;
 }
 
 export function ErrorBoundary({ children, onError }: ErrorBoundaryProps) {

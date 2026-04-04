@@ -63,17 +63,17 @@ export function useChatHistoriesQuery() {
 }
 
 export type CreateChatHistoryInput = {
-  role: string;
-  title: string;
+  role?: string;
+  title?: string;
 };
 
 async function createChatHistory(
-  input: CreateChatHistoryInput
+  input?: CreateChatHistoryInput
 ): Promise<ChatHistoryListItem> {
   const response = await fetch("/api/chat-history", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    headers: input ? { "Content-Type": "application/json" } : {},
+    body: input ? JSON.stringify(input) : undefined,
   });
   if (!response.ok) throw new Error("Failed to create chat history");
   return response.json();
