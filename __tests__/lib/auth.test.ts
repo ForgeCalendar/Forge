@@ -1,10 +1,37 @@
 import bcrypt from "bcryptjs";
-import { hashPassword, verifyPassword } from "@/lib/auth";
+import {
+  hashPassword,
+  verifyPassword,
+  setAuthCookie,
+  getCurrentUser,
+} from "@/lib/auth";
+import { prismaMock } from "@/__tests__/utils/prisma-mock";
+import { mockUser } from "@/__tests__/utils/test-helpers";
 
 // Mock bcryptjs
 jest.mock("bcryptjs", () => ({
   hash: jest.fn(),
   compare: jest.fn(),
+}));
+
+const mockCookieSet = jest.fn();
+const mockCookieDelete = jest.fn();
+let mockCookieStore: Record<string, string> = {};
+
+jest.mock("next/headers", () => ({
+  cookies: jest.fn(() =>
+    Promise.resolve({
+      set: (name: string, value: string) => {
+        mockCookieSet(name, value);
+        mockCookieStore[name] = value;
+      },
+      delete: mockCookieDelete,
+      get: (name: string) =>
+        mockCookieStore[name]
+          ? { name, value: mockCookieStore[name] }
+          : undefined,
+    })
+  ),
 }));
 
 describe("Auth Utilities", () => {
@@ -69,6 +96,58 @@ describe("Auth Utilities", () => {
 
       await expect(verifyPassword(password, hash)).rejects.toThrow(
         "Comparison failed"
+      );
+    });
+  });
+
+  describe("Cookie signing", () => {
+    const ORIGINAL_ENV = process.env;
+
+    beforeEach(() => {
+      process.env = { ...ORIGINAL_ENV, COOKIE_SECRET: "test-secret-key" };
+      mockCookieStore = {};
+      mockCookieSet.mockClear();
+      mockCookieDelete.mockClear();
+    });
+
+    afterEach(() => {
+      process.env = ORIGINAL_ENV;
+    });
+
+    it("should round-trip a signed cookie through setAuthCookie and getCurrentUser", async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+
+      await setAuthCookie("test@example.com");
+
+      expect(mockCookieSet).toHaveBeenCalledWith(
+        "session_user_email",
+        expect.stringContaining("test@example.com")
+      );
+
+      const email = await getCurrentUser();
+      expect(email).toBe("test@example.com");
+    });
+
+    it("should return null for a tampered cookie value", async () => {
+      await setAuthCookie("test@example.com");
+
+      // Tamper with the stored cookie value
+      mockCookieStore["session_user_email"] = "test@example.com.invalidsig";
+
+      const email = await getCurrentUser();
+      expect(email).toBeNull();
+    });
+
+    it("should return null when cookie is missing", async () => {
+      const email = await getCurrentUser();
+      expect(email).toBeNull();
+    });
+
+    it("should throw when COOKIE_SECRET is not set", async () => {
+      delete process.env.COOKIE_SECRET;
+
+      await expect(setAuthCookie("test@example.com")).rejects.toThrow(
+        "COOKIE_SECRET environment variable is required for secure sessions"
       );
     });
   });
