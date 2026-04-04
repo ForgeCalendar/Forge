@@ -295,6 +295,192 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
 
 function buildGoalPlannerTools(goalId: string, userId: string) {
   return {
+    listAllEvents: tool({
+      description:
+        "List all events related to this goal, including both confirmed and unconfirmed events. Use this to see the complete picture of what tasks exist for this goal.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const events = await prisma.event.findMany({
+          where: { goalId, userId },
+          select: {
+            id: true,
+            title: true,
+            start: true,
+            end: true,
+            minutesEstimate: true,
+            order: true,
+            confirmed: true,
+            completed: true,
+          },
+          orderBy: { order: "asc" },
+        });
+
+        return {
+          success: true,
+          count: events.length,
+          events: events.map((e) => ({
+            id: e.id,
+            title: e.title,
+            start: e.start.toISOString(),
+            end: e.end.toISOString(),
+            minutesEstimate: e.minutesEstimate,
+            order: e.order,
+            confirmed: e.confirmed,
+            completed: e.completed,
+          })),
+        };
+      },
+    }),
+    listSuggestedEvents: tool({
+      description:
+        "List all suggested (unconfirmed) events for this goal. Use this to see what events have been proposed but not yet confirmed by the user.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const events = await prisma.event.findMany({
+          where: { goalId, userId, confirmed: false },
+          select: {
+            id: true,
+            title: true,
+            start: true,
+            end: true,
+            minutesEstimate: true,
+            order: true,
+          },
+          orderBy: { order: "asc" },
+        });
+
+        return {
+          success: true,
+          count: events.length,
+          events: events.map((e) => ({
+            id: e.id,
+            title: e.title,
+            start: e.start.toISOString(),
+            end: e.end.toISOString(),
+            minutesEstimate: e.minutesEstimate,
+            order: e.order,
+          })),
+        };
+      },
+    }),
+    modifySuggestedEvent: tool({
+      description:
+        "Modify a specific suggested event. Use this to update the title, start time, or end time of an unconfirmed event. Only works for events with confirmed: false.",
+      inputSchema: z.object({
+        eventId: z.string().describe("The ID of the event to modify"),
+        title: z.string().optional().describe("New title for the event"),
+        start: z
+          .string()
+          .optional()
+          .describe("New ISO 8601 start datetime for the event"),
+        end: z
+          .string()
+          .optional()
+          .describe("New ISO 8601 end datetime for the event"),
+      }),
+      execute: async ({ eventId, title, start, end }) => {
+        // Verify the event exists and belongs to this goal
+        const event = await prisma.event.findFirst({
+          where: { id: eventId, goalId, userId, confirmed: false },
+        });
+
+        if (!event) {
+          return {
+            success: false,
+            error:
+              "Event not found or already confirmed. Only unconfirmed events can be modified.",
+          };
+        }
+
+        // Validate dates if provided
+        const updates: {
+          title?: string;
+          start?: Date;
+          end?: Date;
+          minutesEstimate?: number;
+        } = {};
+
+        if (title) updates.title = title;
+
+        if (start) {
+          const startDate = new Date(start);
+          if (Number.isNaN(startDate.getTime())) {
+            return { success: false, error: "Invalid start date format" };
+          }
+          updates.start = startDate;
+        }
+
+        if (end) {
+          const endDate = new Date(end);
+          if (Number.isNaN(endDate.getTime())) {
+            return { success: false, error: "Invalid end date format" };
+          }
+          updates.end = endDate;
+        }
+
+        // Validate start < end if both are provided
+        const finalStart = updates.start || event.start;
+        const finalEnd = updates.end || event.end;
+        if (finalEnd.getTime() <= finalStart.getTime()) {
+          return { success: false, error: "End time must be after start time" };
+        }
+
+        // Calculate new minutesEstimate if times changed
+        if (updates.start || updates.end) {
+          updates.minutesEstimate = Math.round(
+            (finalEnd.getTime() - finalStart.getTime()) / 60000
+          );
+        }
+
+        // Update the event
+        const updated = await prisma.event.update({
+          where: { id: eventId },
+          data: updates,
+        });
+
+        return {
+          success: true,
+          event: {
+            id: updated.id,
+            title: updated.title,
+            start: updated.start.toISOString(),
+            end: updated.end.toISOString(),
+            minutesEstimate: updated.minutesEstimate,
+          },
+        };
+      },
+    }),
+    deleteSuggestedEvent: tool({
+      description:
+        "Delete a specific suggested event. Use this to remove an unconfirmed event that is no longer needed. Only works for events with confirmed: false.",
+      inputSchema: z.object({
+        eventId: z.string().describe("The ID of the event to delete"),
+      }),
+      execute: async ({ eventId }) => {
+        // Verify the event exists and belongs to this goal
+        const event = await prisma.event.findFirst({
+          where: { id: eventId, goalId, userId, confirmed: false },
+        });
+
+        if (!event) {
+          return {
+            success: false,
+            error:
+              "Event not found or already confirmed. Only unconfirmed events can be deleted.",
+          };
+        }
+
+        await prisma.event.delete({
+          where: { id: eventId },
+        });
+
+        return {
+          success: true,
+          deletedEventId: eventId,
+          message: `Deleted event "${event.title}"`,
+        };
+      },
+    }),
     suggestEvents: tool({
       description:
         "Suggest events for the goal as calendar events. Each event must have a scheduled start and end time (ISO 8601). Call this proactively after proposing tasks.",
@@ -457,6 +643,13 @@ Phase 3 Decision mode:
 1. Ask the user for confirmation. If there is any problem, you can ask more question for further information and go back to Draft mode.
 2. If everything is good to go, call the suggestEvents tool to submit the decision to the database.
 
+Managing events:
+- Use listAllEvents to see all events for this goal (both confirmed and unconfirmed), including their completion status
+- Use listSuggestedEvents to see only the events that have been proposed but not yet confirmed
+- Use modifySuggestedEvent to update a specific event's title, start time, or end time (e.g., if user wants to reschedule one task)
+- Use deleteSuggestedEvent to remove a specific event (e.g., if user says "remove the third task")
+- Use suggestEvents to replace all events at once (useful for major changes)
+
 Guidelines:
 ${BASE_GUIDELINES}
 - Keep tasks short and actionable.
@@ -466,8 +659,11 @@ ${BASE_GUIDELINES}
 - Spread tasks across available days before the due date.
 - Each task should be 15-120 minutes.
 - Order tasks in the sequence they should be done.
-- If the user wants to add, remove, reschedule, or modify tasks, accommodate them and call suggestEvents again with the updated list.
-- Always call suggestEvents proactively — do not wait for explicit user approval on the first proposal.
+- If the user wants to modify tasks, use fine-grained tools when appropriate:
+  - For small changes (e.g., "move task 2 to 3pm", "rename the first task"), use modifySuggestedEvent or deleteSuggestedEvent
+  - For major changes (e.g., "start over", "completely different approach"), use suggestEvents to replace all events
+  - Call listSuggestedEvents first if you need to see what's currently proposed
+- Always call suggestEvents proactively on the first proposal — do not wait for explicit user approval.
 - IMPORTANT: When specifying event times, use the user's timezone (${timezone}). All ISO 8601 datetime strings should reflect times in the user's local timezone.`;
 }
 
