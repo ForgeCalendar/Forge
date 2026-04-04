@@ -67,6 +67,7 @@ export default function CalendarView({
 
       // Format currentStart in the calendar's configured timezone to avoid
       // UTC off-by-one errors for positive-offset timezones (e.g. Asia/Tokyo).
+      // "en-CA" locale reliably produces YYYY-MM-DD format.
       const tz =
         timezone === "local"
           ? Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -83,13 +84,11 @@ export default function CalendarView({
 
       // Check if view needs to change
       const viewChanged =
-        currentCalendarView !== nextView &&
-        lastSyncedView.current !== nextView;
+        currentCalendarView !== nextView && lastSyncedView.current !== nextView;
 
       // Check if date needs to change
       const dateChanged =
-        nextDate !== currentCalendarDate &&
-        lastSyncedDate.current !== nextDate;
+        nextDate !== currentCalendarDate && lastSyncedDate.current !== nextDate;
 
       if (viewChanged || dateChanged) {
         // Update both refs before triggering calendar navigation so any
