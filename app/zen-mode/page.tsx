@@ -178,9 +178,8 @@ function ZenModeContent() {
       if (!response.ok) throw new Error("Failed to create chat");
 
       const chat = await response.json();
-      setChatId(chat.id);
 
-      // Associate the chat with the event
+      // Associate the chat with the event BEFORE rendering the chat UI
       if (eventId) {
         await fetch(`/api/events/${eventId}`, {
           method: "PATCH",
@@ -188,6 +187,9 @@ function ZenModeContent() {
           body: JSON.stringify({ chatHistoryId: chat.id }),
         });
       }
+
+      // Only set chatId after the association is complete
+      setChatId(chat.id);
     } catch (err) {
       console.error("Failed to create TaskHelper chat:", err);
     } finally {
@@ -569,11 +571,7 @@ function ZenModeContent() {
               </VStack>
             </Box>
           ) : (
-            <ChatboxComponent
-              name="Task Helper"
-              chatHistoryId={chatId}
-              extraParams={{ eventTitle: event.title }}
-            />
+            <ChatboxComponent name="Task Helper" chatHistoryId={chatId} />
           )}
         </Box>
       </Grid>
