@@ -64,17 +64,32 @@ export default function CalendarView({
     if (calendarRef.current && currentView.length > 0) {
       const calendarApi = calendarRef.current.getApi();
       const currentCalendarView = calendarApi.view.type;
+      const currentCalendarDate = calendarApi.view.currentStart
+        .toISOString()
+        .slice(0, 10);
 
-      // Only change view if it's actually different and wasn't just set by datesSet
-      if (
+      // Check if view needs to change
+      const viewChanged =
         currentCalendarView !== currentView[0] &&
-        lastSyncedView.current !== currentView[0]
-      ) {
-        calendarApi.changeView(currentView[0]);
-        lastSyncedView.current = currentView[0];
+        lastSyncedView.current !== currentView[0];
+
+      // Check if date needs to change
+      const dateChanged =
+        initialDate !== currentCalendarDate &&
+        lastSyncedDate.current !== initialDate;
+
+      if (viewChanged || dateChanged) {
+        if (viewChanged) {
+          calendarApi.changeView(currentView[0]);
+          lastSyncedView.current = currentView[0];
+        }
+        if (dateChanged) {
+          calendarApi.gotoDate(initialDate);
+          lastSyncedDate.current = initialDate;
+        }
       }
     }
-  }, [calendarRef, currentView]);
+  }, [calendarRef, currentView, initialDate]);
 
   const formatTime = (date: Date | null) => {
     if (!date) return "\u2014";
