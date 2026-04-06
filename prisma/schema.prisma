@@ -25,6 +25,7 @@ model User {
   icsSubscriptions IcsSubscription[]
   memories         Memory[]
   searchConfig     SearchConfig?
+  files            File[]
 }
 
 model SearchConfig {
@@ -193,6 +194,21 @@ model Memory {
   userId    String
   question  String   // The key question, e.g. "What is your occupation?"
   answer    String   // The user's answer/characteristic
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model File {
+  id        String   @id @default(uuid())
+  userId    String
+  filename  String   // Original filename
+  mimeType  String   // MIME type (e.g., "text/plain", "application/pdf")
+  content   Bytes    // File contents as binary data
+  size      Int      // File size in bytes
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
