@@ -6,7 +6,6 @@ const prisma = new PrismaClient();
 async function main() {
   // Clear existing data
   await prisma.event.deleteMany();
-  await prisma.infoTag.deleteMany();
   await prisma.goal.deleteMany();
   await prisma.aIModel.deleteMany();
   await prisma.provider.deleteMany();

@@ -2,11 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
-interface InfoTagInput {
-  title: string;
-  info: string;
-}
-
 export async function GET(): Promise<NextResponse> {
   try {
     const userId = await requireAuth();
@@ -21,7 +16,6 @@ export async function GET(): Promise<NextResponse> {
             order: "asc",
           },
         },
-        infoTags: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -48,7 +42,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     const userId = await requireAuth();
     const body = await req.json();
-    const { title, description, dueDate, infoTags } = body;
+    const { title, description, dueDate } = body;
 
     // Create goal with its chat history in a single transaction
     const goal = await prisma.$transaction(async (tx) => {
@@ -69,17 +63,9 @@ export async function POST(req: Request): Promise<NextResponse> {
           description,
           dueDate,
           chatHistoryId: chatHistory.id,
-          infoTags: {
-            create:
-              infoTags?.map((tag: InfoTagInput) => ({
-                title: tag.title,
-                info: tag.info,
-              })) ?? [],
-          },
         },
         include: {
           events: true,
-          infoTags: true,
         },
       });
     });

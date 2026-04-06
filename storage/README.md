@@ -7,7 +7,7 @@ A unified storage system that automatically switches between localStorage (when 
 - **Automatic switching**: Detects authentication state and uses the appropriate storage method
 - **React hooks**: All operations are exposed as React hooks for automatic UI updates
 - **Type-safe**: Full TypeScript support with comprehensive types
-- **Four data types**: Goals, Events, Calendar Events, and Info Tags
+- **Three data types**: Goals, Events, and Calendar Events
 
 ## Installation
 
@@ -18,7 +18,7 @@ The module is already set up and TanStack Query is installed. The QueryClient pr
 ### Import the hooks
 
 ```typescript
-import { useGoals, useEvents, useCalendarEvents, useInfoTags } from "@/storage";
+import { useGoals, useEvents, useCalendarEvents } from "@/storage";
 ```
 
 ### Goals Hook
@@ -41,7 +41,6 @@ function MyComponent() {
       description: "Description",
       dueDate: "2026-01-20T10:00:00",
       events: [{ title: "Task 1", completed: false, minutesEstimate: 30 }],
-      infoTags: [{ title: "Priority", info: "High" }],
     });
   };
 
@@ -137,58 +136,12 @@ function CalendarComponent() {
 }
 ```
 
-### Info Tags Hook
-
-```typescript
-function InfoTagsComponent() {
-  const {
-    infoTags,
-    isLoading,
-    create,
-    update,
-    delete: deleteTag,
-  } = useInfoTags();
-
-  // Create a tag
-  const handleCreate = async () => {
-    await create({
-      title: "Name",
-      info: "John Doe",
-      goalId: "optional-goal-id", // Optional: associate with a goal
-    });
-  };
-
-  // Update a tag
-  const handleUpdate = async (tagId: string) => {
-    await update(tagId, {
-      title: "Updated Name",
-      info: "Jane Doe",
-    });
-  };
-
-  // Delete a tag
-  const handleDelete = async (tagId: string) => {
-    await deleteTag(tagId);
-  };
-
-  return (
-    <div>
-      {infoTags.map((tag) => (
-        <div key={tag.id}>
-          {tag.title}: {tag.info}
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
 ## How It Works
 
 ### When Logged Out
 
 - Data is stored in browser localStorage
-- Keys used: `forge:goals`, `forge:events`, `forge:infoTags`
+- Keys used: `forge:goals`, `forge:events`
 - Operations are synchronous and immediate
 - Data persists across browser sessions
 - Each item gets a generated ID in format: `timestamp-randomstring`
@@ -203,16 +156,13 @@ function InfoTagsComponent() {
   - Goals: `/api/goals` (GET, POST, PUT, DELETE)
   - Events: `/api/events/:id` (PATCH, DELETE)
   - Events: `/api/events` (GET, POST, PATCH, DELETE)
-  - Info Tags: `/api/infoTags` (GET, POST, PATCH, DELETE) \*
-
-\* Note: Info Tags API endpoints may need to be implemented if they don't exist yet.
 
 ## Advanced Usage
 
 ### Direct localStorage access
 
 ```typescript
-import { localGoals, localEvents, localInfoTags } from "@/storage";
+import { localGoals, localEvents } from "@/storage";
 
 // Direct localStorage operations (use with caution)
 const goals = localGoals.getAll();
@@ -237,11 +187,9 @@ All types are exported from the storage module:
 import type {
   Goal,
   Event,
-  InfoTag,
   CalendarEvent,
   GoalWithId,
   EventWithId,
-  InfoTagWithId,
   CalendarEventWithId,
   CreateGoalInput,
   UpdateGoalInput,
@@ -270,8 +218,6 @@ storage/
 ├── localStorage.ts             # LocalStorage functions
 ├── hooks.ts                    # Unified hooks (main API)
 ├── useGoalsQuery.ts           # TanStack Query hooks for goals
-├── useEventsQuery.ts    # TanStack Query hooks for events
 ├── useEventsQuery.ts          # TanStack Query hooks for events
-├── useInfoTagsQuery.ts        # TanStack Query hooks for info tags
 └── README.md                  # This file
 ```

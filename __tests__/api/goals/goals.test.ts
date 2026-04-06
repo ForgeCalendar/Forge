@@ -35,7 +35,6 @@ describe("GET /api/goals", () => {
         events: {
           orderBy: { order: "asc" },
         },
-        infoTags: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -72,7 +71,7 @@ describe("POST /api/goals", () => {
     jest.clearAllMocks();
   });
 
-  it("should create a new goal with events and infoTags", async () => {
+  it("should create a new goal with events", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     const mockCreatedGoal = {
@@ -84,13 +83,6 @@ describe("POST /api/goals", () => {
           completed: false,
           minutesEstimate: 60,
           order: 0,
-        },
-      ],
-      infoTags: [
-        {
-          id: "tag-1",
-          title: "Priority",
-          info: "High",
         },
       ],
     };
@@ -110,12 +102,6 @@ describe("POST /api/goals", () => {
             minutesEstimate: 60,
           },
         ],
-        infoTags: [
-          {
-            title: "Priority",
-            info: "High",
-          },
-        ],
       },
     });
 
@@ -126,7 +112,6 @@ describe("POST /api/goals", () => {
     expect(data.id).toBe(mockCreatedGoal.id);
     expect(data.title).toBe(mockCreatedGoal.title);
     expect(data.events).toHaveLength(1);
-    expect(data.infoTags).toHaveLength(1);
     expect(prismaMock.goal.create).toHaveBeenCalledWith({
       data: {
         userId: "test@example.com",
@@ -143,25 +128,16 @@ describe("POST /api/goals", () => {
             },
           ],
         },
-        infoTags: {
-          create: [
-            {
-              title: "Priority",
-              info: "High",
-            },
-          ],
-        },
       },
       include: {
         events: {
           orderBy: { order: "asc" },
         },
-        infoTags: true,
       },
     });
   });
 
-  it("should create goal without events and infoTags", async () => {
+  it("should create goal without events", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     prismaMock.goal.create.mockResolvedValue(mockGoal as any);

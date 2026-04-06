@@ -30,7 +30,6 @@ Instead of micromanaging todo lists, Forge helps you answer "what should I work 
 - Goal data structure includes:
   - Title, description, and due date
   - Events with completion status and time estimates
-  - Custom info tags (owner, priority, etc.)
 
 ### AI Integration
 
@@ -173,8 +172,7 @@ Forge/
 │   └── VISION.md
 ├── states/               # State management
 │   ├── goals.ts         # Goal data types and samples
-│   ├── events.tsx       # Calendar event management
-│   └── InfoTag.tsx      # Tag type definitions
+│   └── events.tsx       # Calendar event management
 ├── lib/                 # Utility functions
 ├── prisma/              # Database schema and migrations
 └── public/              # Static assets

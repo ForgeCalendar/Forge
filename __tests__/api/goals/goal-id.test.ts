@@ -30,7 +30,6 @@ describe("GET /api/goals/:id", () => {
       where: { id: "goal-1", userId: "test@example.com" },
       include: {
         events: { orderBy: { order: "asc" } },
-        infoTags: true,
       },
     });
   });
@@ -85,7 +84,6 @@ describe("PUT /api/goals/:id", () => {
         description: "Updated Description",
         dueDate: "2024-12-31",
         events: [],
-        infoTags: [],
       },
     });
 

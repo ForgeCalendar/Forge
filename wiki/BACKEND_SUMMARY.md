@@ -2,7 +2,7 @@
 
 ## Overview
 
-A complete REST API backend for the Forge application, providing persistent storage for goals, events, info tags, AI providers, chat history, and ICS calendar subscriptions.
+A complete REST API backend for the Forge application, providing persistent storage for goals, events, AI providers, chat history, and ICS calendar subscriptions.
 
 ## What Was Built
 
@@ -10,12 +10,11 @@ A complete REST API backend for the Forge application, providing persistent stor
 
 **Location:** `prisma/`
 
-- **Schema** (`schema.prisma`): Defines 9 models
+- **Schema** (`schema.prisma`): Defines 8 models
 
   - `User`: Authenticated users (email as primary key)
   - `Goal`: Main planning entities with title, description, and due dates
   - `Event`: Unified event model for goal tasks and calendar events
-  - `InfoTag`: Flexible key-value metadata for goals
   - `Provider`: AI provider configurations (Anthropic, OpenAI, Google, Mistral)
   - `AIModel`: AI models associated with providers
   - `ChatHistory`: Conversation history per goal
@@ -39,10 +38,10 @@ A complete REST API backend for the Forge application, providing persistent stor
 
 #### Goals API (`/api/goals`)
 
-- `GET /api/goals` — List all goals with nested events and info tags
+- `GET /api/goals` — List all goals with nested events
 - `POST /api/goals` — Create a new goal
 - `GET /api/goals/:id` — Get a specific goal
-- `PUT /api/goals/:id` — Update a goal (replaces events and info tags)
+- `PUT /api/goals/:id` — Update a goal (replaces events)
 - `DELETE /api/goals/:id` — Delete a goal (cascades)
 
 #### Events API (`/api/events`)

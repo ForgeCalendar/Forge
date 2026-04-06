@@ -12,7 +12,6 @@ import {
   Flex,
 } from "@chakra-ui/react";
 import { ChatRoleBadge } from "./ChatRoleBadge";
-import { InfoTagComponent } from "./InfoTagComponent";
 import type { Goal } from "../states/goals";
 import type { GoalWithId, CreateGoalInput } from "@/storage/types";
 import { useState, useRef } from "react";
@@ -217,15 +216,6 @@ function GoalComponent({
         {goal.description}
       </Text>
 
-      {goal.infoTags && goal.infoTags.length > 0 && (
-        <Box mt={2} display="flex" gap={2} flexWrap="wrap">
-          {goal.infoTags.map((t, idx) => (
-            <Box key={`${goal.title}-info-${idx}`}>
-              <InfoTagComponent tag={t} />
-            </Box>
-          ))}
-        </Box>
-      )}
       <Box mt={3} display="flex" gap={2}>
         {isGoalWithId(goal) && (
           <Button size="sm" variant="outline" onClick={() => onUpdate?.()}>
@@ -273,7 +263,6 @@ export default function Sidebar({
       description: description || "",
       dueDate: dueDate ? dueDate.toISOString() : null,
       events: [],
-      infoTags: [],
     };
     if (onAddGoal) onAddGoal(goal);
     resetForm();

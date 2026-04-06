@@ -28,7 +28,6 @@ The backend uses SQLite with Prisma ORM. The database includes:
 - **User**: Authenticated users (email as primary key)
 - **Goal**: Main planning entities with title, description, and due dates
 - **Event**: Unified event model for both goal tasks and calendar events
-- **InfoTag**: Metadata tags for goals
 - **Provider**: AI provider configurations (Anthropic, OpenAI, Google, Mistral)
 - **AIModel**: AI models associated with providers
 - **ChatHistory**: Conversation history per goal
@@ -121,7 +120,7 @@ All goals endpoints require authentication.
 
 #### GET /api/goals
 
-Get all goals for the authenticated user, with their events and info tags.
+Get all goals for the authenticated user, with their events.
 
 **Response:**
 
@@ -149,16 +148,6 @@ Get all goals for the authenticated user, with their events and info tags.
         "minutesEstimate": 30,
         "order": 0
       }
-    ],
-    "infoTags": [
-      {
-        "id": "uuid",
-        "goalId": "uuid",
-        "title": "Owner",
-        "info": "Patrick Li",
-        "createdAt": "2026-01-15T18:00:00.000Z",
-        "updatedAt": "2026-01-15T18:00:00.000Z"
-      }
     ]
   }
 ]
@@ -174,13 +163,7 @@ Create a new goal.
 {
   "title": "Goal title",
   "description": "Goal description",
-  "dueDate": "2026-01-15T17:00:00",
-  "infoTags": [
-    {
-      "title": "Owner",
-      "info": "Patrick Li"
-    }
-  ]
+  "dueDate": "2026-01-15T17:00:00"
 }
 ```
 
@@ -194,7 +177,7 @@ Get a specific goal by ID.
 
 #### PUT /api/goals/:id
 
-Update a goal. Replaces all events and info tags.
+Update a goal. Replaces all events.
 
 **Request Body:**
 
@@ -211,12 +194,6 @@ Update a goal. Replaces all events and info tags.
       "completed": false,
       "minutesEstimate": 30
     }
-  ],
-  "infoTags": [
-    {
-      "title": "Owner",
-      "info": "Patrick Li"
-    }
   ]
 }
 ```
@@ -225,7 +202,7 @@ Update a goal. Replaces all events and info tags.
 
 #### DELETE /api/goals/:id
 
-Delete a goal (cascades to events and info tags).
+Delete a goal (cascades to events).
 
 **Response:**
 

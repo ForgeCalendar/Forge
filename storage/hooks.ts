@@ -11,22 +11,13 @@ import {
   useUpdateEventMutation,
   useDeleteEventMutation,
 } from "./useEventsQuery";
-import {
-  useInfoTagsQuery,
-  useCreateInfoTagMutation,
-  useUpdateInfoTagMutation,
-  useDeleteInfoTagMutation,
-} from "./useInfoTagsQuery";
 import type {
   GoalWithId,
   EventWithId,
-  InfoTagWithId,
   CreateGoalInput,
   UpdateGoalInput,
   CreateCalendarEventInput,
   UpdateCalendarEventInput,
-  CreateInfoTagInput,
-  UpdateInfoTagInput,
 } from "./types";
 
 // Goals Hook
@@ -98,40 +89,5 @@ export function useCalendarEvents() {
     create,
     update,
     delete: deleteEvent,
-  };
-}
-
-// Info Tags Hook
-export function useInfoTags() {
-  const query = useInfoTagsQuery();
-  const createMutation = useCreateInfoTagMutation();
-  const updateMutation = useUpdateInfoTagMutation();
-  const deleteMutation = useDeleteInfoTagMutation();
-
-  const create = useCallback(
-    (input: CreateInfoTagInput): Promise<InfoTagWithId> =>
-      createMutation.mutateAsync(input),
-    [createMutation]
-  );
-
-  const update = useCallback(
-    (id: string, input: UpdateInfoTagInput): Promise<InfoTagWithId | null> =>
-      updateMutation.mutateAsync({ id, input }),
-    [updateMutation]
-  );
-
-  const deleteInfoTag = useCallback(
-    (id: string): Promise<boolean> =>
-      deleteMutation.mutateAsync(id).then(() => true),
-    [deleteMutation]
-  );
-
-  return {
-    infoTags: query.data || [],
-    isLoading: query.isLoading,
-    error: query.error,
-    create,
-    update,
-    delete: deleteInfoTag,
   };
 }
