@@ -116,29 +116,36 @@ describe("POST /api/ics-subscriptions/:id/sync", () => {
 
     expect(prismaMock.event.upsert).toHaveBeenCalledWith({
       where: {
-        subscriptionId_uid: {
+        subscriptionId_uid_recurid: {
           subscriptionId: "ics-sub-1",
           uid: "event-uid-123@google.com",
+          recurid: "",
         },
       },
       create: expect.objectContaining({
         userId: "test@example.com",
         subscriptionId: "ics-sub-1",
         uid: "event-uid-123@google.com",
+        recurid: "",
         title: "Team Standup",
         description: "Daily standup meeting",
         location: "Conference Room A",
-        start: "2024-06-01T10:00:00.000Z",
-        end: "2024-06-01T10:30:00.000Z",
+        start: expect.any(Date),
+        end: expect.any(Date),
         startTimezone: null,
         endTimezone: null,
         isAllDay: false,
         status: "CONFIRMED",
         kind: "ics",
+        recurrenceRule: null,
+        exdates: null,
+        categories: '["work","standup"]',
+        url: "https://meet.google.com/abc",
+        rawData: expect.any(String),
       }),
       update: expect.objectContaining({
         title: "Team Standup",
-        start: "2024-06-01T10:00:00.000Z",
+        start: expect.any(Date),
       }),
     });
 

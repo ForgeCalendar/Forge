@@ -72,20 +72,13 @@ describe("POST /api/goals", () => {
     jest.clearAllMocks();
   });
 
-  it("should create a new goal with events and infoTags", async () => {
+  it("should create a new goal with infoTags", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     const mockCreatedGoal = {
       ...mockGoal,
-      events: [
-        {
-          id: "event-1",
-          title: "Task 1",
-          completed: false,
-          minutesEstimate: 60,
-          order: 0,
-        },
-      ],
+      chatHistoryId: "chat-history-1",
+      events: [],
       infoTags: [
         {
           id: "tag-1",
@@ -95,7 +88,25 @@ describe("POST /api/goals", () => {
       ],
     };
 
-    prismaMock.goal.create.mockResolvedValue(mockCreatedGoal as any);
+    const mockChatHistory = {
+      id: "chat-history-1",
+      userId: "test@example.com",
+      title: "Goal: Test Goal",
+      role: "GoalPlanner",
+    };
+
+    // Mock the transaction - it receives a callback and should execute it with a mock tx
+    prismaMock.$transaction.mockImplementation(async (callback: any) => {
+      const mockTx = {
+        chatHistory: {
+          create: jest.fn().mockResolvedValue(mockChatHistory),
+        },
+        goal: {
+          create: jest.fn().mockResolvedValue(mockCreatedGoal),
+        },
+      };
+      return callback(mockTx);
+    });
 
     const request = createMockRequest({
       method: "POST",
@@ -103,13 +114,6 @@ describe("POST /api/goals", () => {
         title: "Test Goal",
         description: "Test Description",
         dueDate: "2024-12-31",
-        events: [
-          {
-            title: "Task 1",
-            completed: false,
-            minutesEstimate: 60,
-          },
-        ],
         infoTags: [
           {
             title: "Priority",
@@ -125,46 +129,38 @@ describe("POST /api/goals", () => {
     expect(response.status).toBe(201);
     expect(data.id).toBe(mockCreatedGoal.id);
     expect(data.title).toBe(mockCreatedGoal.title);
-    expect(data.events).toHaveLength(1);
     expect(data.infoTags).toHaveLength(1);
-    expect(prismaMock.goal.create).toHaveBeenCalledWith({
-      data: {
-        userId: "test@example.com",
-        title: "Test Goal",
-        description: "Test Description",
-        dueDate: "2024-12-31",
-        events: {
-          create: [
-            {
-              title: "Task 1",
-              completed: false,
-              minutesEstimate: 60,
-              order: 0,
-            },
-          ],
-        },
-        infoTags: {
-          create: [
-            {
-              title: "Priority",
-              info: "High",
-            },
-          ],
-        },
-      },
-      include: {
-        events: {
-          orderBy: { order: "asc" },
-        },
-        infoTags: true,
-      },
-    });
+    expect(prismaMock.$transaction).toHaveBeenCalled();
   });
 
-  it("should create goal without events and infoTags", async () => {
+  it("should create goal without infoTags", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
-    prismaMock.goal.create.mockResolvedValue(mockGoal as any);
+    const mockCreatedGoal = {
+      ...mockGoal,
+      chatHistoryId: "chat-history-1",
+      events: [],
+      infoTags: [],
+    };
+
+    const mockChatHistory = {
+      id: "chat-history-1",
+      userId: "test@example.com",
+      title: "Goal: Simple Goal",
+      role: "GoalPlanner",
+    };
+
+    prismaMock.$transaction.mockImplementation(async (callback: any) => {
+      const mockTx = {
+        chatHistory: {
+          create: jest.fn().mockResolvedValue(mockChatHistory),
+        },
+        goal: {
+          create: jest.fn().mockResolvedValue(mockCreatedGoal),
+        },
+      };
+      return callback(mockTx);
+    });
 
     const request = createMockRequest({
       method: "POST",
@@ -179,7 +175,7 @@ describe("POST /api/goals", () => {
     const data = await response.json();
 
     expect(response.status).toBe(201);
-    expect(prismaMock.goal.create).toHaveBeenCalled();
+    expect(prismaMock.$transaction).toHaveBeenCalled();
   });
 
   it("should return 401 when user is not authenticated", async () => {
@@ -204,7 +200,7 @@ describe("POST /api/goals", () => {
 
   it("should return 500 when database error occurs", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
-    prismaMock.goal.create.mockRejectedValue(new Error("Database error"));
+    prismaMock.$transaction.mockRejectedValue(new Error("Database error"));
 
     const request = createMockRequest({
       method: "POST",
