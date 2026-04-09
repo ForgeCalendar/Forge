@@ -1,7 +1,16 @@
 "use client";
-import { Flex, Heading, Text, Button, VStack, HStack } from "@chakra-ui/react";
+import {
+  Flex,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Link,
+} from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import { useThemeTokens } from "@/lib/theme-tokens";
+import { FaGithub } from "react-icons/fa";
 
 interface WelcomeScreenProps {
   onLoginClick: () => void;
@@ -84,6 +93,27 @@ export default function WelcomeScreen({
         <Text fontSize="sm" color={textColor} opacity={0.8} mt={2}>
           Create an account or sign in to access your calendar and goals
         </Text>
+
+        <Link
+          href="https://github.com/ForgeCalendar/Forge"
+          target="_blank"
+          rel="noopener noreferrer"
+          mt={4}
+        >
+          <Button
+            size="md"
+            variant="ghost"
+            color={textColor}
+            _hover={{
+              transform: "translateY(-2px)",
+              color: headingColor,
+            }}
+            transition="all 0.2s"
+          >
+            <FaGithub />
+            View on GitHub
+          </Button>
+        </Link>
       </VStack>
     </Flex>
   );
