@@ -1,12 +1,5 @@
 "use client";
-import {
-  Flex,
-  Heading,
-  Text,
-  Button,
-  VStack,
-  HStack,
-} from "@chakra-ui/react";
+import { Flex, Heading, Text, Button, VStack, HStack } from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { FaGithub } from "react-icons/fa";
