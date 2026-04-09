@@ -6,7 +6,6 @@ import {
   Button,
   VStack,
   HStack,
-  Link,
 } from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import { useThemeTokens } from "@/lib/theme-tokens";
@@ -94,26 +93,24 @@ export default function WelcomeScreen({
           Create an account or sign in to access your calendar and goals
         </Text>
 
-        <Link
+        <Button
+          as="a"
           href="https://github.com/ForgeCalendar/Forge"
           target="_blank"
           rel="noopener noreferrer"
           mt={4}
+          size="md"
+          variant="ghost"
+          color={textColor}
+          _hover={{
+            transform: "translateY(-2px)",
+            color: headingColor,
+          }}
+          transition="all 0.2s"
         >
-          <Button
-            size="md"
-            variant="ghost"
-            color={textColor}
-            _hover={{
-              transform: "translateY(-2px)",
-              color: headingColor,
-            }}
-            transition="all 0.2s"
-          >
-            <FaGithub />
-            View on GitHub
-          </Button>
-        </Link>
+          <FaGithub />
+          View on GitHub
+        </Button>
       </VStack>
     </Flex>
   );
