@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="public/brand/forge-logo-primary-black.svg" alt="Forge logo" width="640" />
+  <img src="public/brand/forge-logo-primary-black.svg" alt="Forge logo" width="70%" />
 </p>
-
-<h1 align="center">Forge Calendar</h1>
+<p align="center">
+  <img src="public/brand/forge_screenshot.jpg" alt="Forge Website" width="80%" />
+</p>
 
 [![Build and Push Docker Images](https://github.com/ForgeCalendar/Forge/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ForgeCalendar/Forge/actions/workflows/docker-publish.yml)
 [![Backend Tests](https://github.com/ForgeCalendar/Forge/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/ForgeCalendar/Forge/actions/workflows/backend-tests.yml)
