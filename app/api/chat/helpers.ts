@@ -2,7 +2,8 @@ import { tool } from "ai";
 import type { UIMessage } from "ai";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import type { Goal, ChatHistoryRole } from "@/lib/generated/prisma";
+import type { Goal, ChatHistoryRole, Event } from "@/lib/generated/prisma";
+import { RRule } from "rrule";
 
 const TAVILY_SEARCH_ENDPOINT = "https://api.tavily.com/search";
 
@@ -14,6 +15,108 @@ type TavilySearchApiResponse = {
   }>;
   error?: string;
 };
+
+// =============================================================================
+// Helper: Expand recurring events within a date range
+// =============================================================================
+
+type ExpandedEvent = {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  kind: string | null;
+  isRecurringInstance: boolean;
+  location: string | null;
+  description: string | null;
+};
+
+function expandEventsInRange(
+  events: Event[],
+  rangeStart: Date,
+  rangeEnd: Date
+): ExpandedEvent[] {
+  const results: ExpandedEvent[] = [];
+
+  for (const event of events) {
+    const isRecurringMaster = !!event.recurrenceRule && event.recurid === "";
+
+    if (isRecurringMaster) {
+      // Expand recurring event using rrule
+      try {
+        const rule = RRule.fromString(
+          `DTSTART:${
+            event.start.toISOString().replace(/[-:]/g, "").split(".")[0]
+          }Z\nRRULE:${event.recurrenceRule}`
+        );
+
+        // Get occurrences within the range
+        const occurrences = rule.between(rangeStart, rangeEnd, true);
+
+        // Parse excluded dates
+        const exdates: Set<string> = new Set();
+        if (event.exdates) {
+          const parsed = JSON.parse(event.exdates) as string[];
+          for (const d of parsed) {
+            exdates.add(new Date(d).toISOString().split("T")[0]);
+          }
+        }
+
+        // Calculate duration
+        const durationMs = event.end.getTime() - event.start.getTime();
+
+        for (const occStart of occurrences) {
+          // Skip excluded dates
+          if (exdates.has(occStart.toISOString().split("T")[0])) {
+            continue;
+          }
+
+          const occEnd = new Date(occStart.getTime() + durationMs);
+          results.push({
+            id: event.id,
+            title: event.title,
+            start: occStart.toISOString(),
+            end: occEnd.toISOString(),
+            kind: event.kind || (event.subscriptionId ? "ics" : "task"),
+            isRecurringInstance: true,
+            location: event.location,
+            description: event.description,
+          });
+        }
+      } catch {
+        // If rrule parsing fails, skip this event
+        console.error(
+          `[expandEventsInRange] Failed to parse rrule for event ${event.id}`
+        );
+      }
+    } else {
+      // Non-recurring event: check if it falls within range
+      const eventStart = event.start;
+      const eventEnd = event.end;
+
+      // Event overlaps with range if: eventStart < rangeEnd AND eventEnd > rangeStart
+      if (eventStart < rangeEnd && eventEnd > rangeStart) {
+        results.push({
+          id: event.id,
+          title: event.title,
+          start: eventStart.toISOString(),
+          end: eventEnd.toISOString(),
+          kind: event.kind || (event.subscriptionId ? "ics" : "task"),
+          isRecurringInstance: false,
+          location: event.location,
+          description: event.description,
+        });
+      }
+    }
+  }
+
+  // Sort by start time
+  results.sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+  );
+
+  return results;
+}
 
 // =============================================================================
 // Base Tools - Shared by all AI agents
@@ -283,6 +386,106 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
             success: false,
             error: "Failed to execute Search Online",
           };
+        }
+      },
+    }),
+    listEventsForPeriod: tool({
+      description:
+        "List all calendar events for a specific day or month. This includes user-created events, AI-proposed tasks, imported ICS calendar events, and recurring event instances. Use this when you need to see what's on the user's calendar for scheduling or context.",
+      inputSchema: z.object({
+        date: z
+          .string()
+          .optional()
+          .describe(
+            "Specific date in YYYY-MM-DD format to list events for that day. If provided, year and month are ignored."
+          ),
+        year: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Year (e.g., 2024) for month view. Required if date is not provided."
+          ),
+        month: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .optional()
+          .describe(
+            "Month (1-12) for month view. Required if date is not provided."
+          ),
+      }),
+      execute: async ({ date, year, month }) => {
+        try {
+          let rangeStart: Date;
+          let rangeEnd: Date;
+          let periodLabel: string;
+
+          if (date) {
+            // Day view: specific date
+            const parsedDate = new Date(date);
+            if (Number.isNaN(parsedDate.getTime())) {
+              return {
+                success: false,
+                error: "Invalid date format. Use YYYY-MM-DD.",
+              };
+            }
+            rangeStart = new Date(parsedDate);
+            rangeStart.setHours(0, 0, 0, 0);
+            rangeEnd = new Date(parsedDate);
+            rangeEnd.setHours(23, 59, 59, 999);
+            periodLabel = date;
+          } else if (year !== undefined && month !== undefined) {
+            // Month view: specific month
+            rangeStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
+            rangeEnd = new Date(year, month, 0, 23, 59, 59, 999); // Last day of month
+            periodLabel = `${year}-${String(month).padStart(2, "0")}`;
+          } else {
+            return {
+              success: false,
+              error:
+                "Either 'date' (YYYY-MM-DD) or both 'year' and 'month' must be provided.",
+            };
+          }
+
+          // Fetch all events for this user that might fall within range
+          // For recurring events, we need to fetch all recurring masters
+          // For non-recurring, we filter by date range
+          const events = await prisma.event.findMany({
+            where: {
+              userId,
+              OR: [
+                // Non-recurring events within range
+                {
+                  recurrenceRule: null,
+                  start: { lt: rangeEnd },
+                  end: { gt: rangeStart },
+                },
+                // Recurring master events (we'll expand them)
+                {
+                  recurrenceRule: { not: null },
+                  recurid: "",
+                },
+              ],
+            },
+          });
+
+          const expandedEvents = expandEventsInRange(
+            events,
+            rangeStart,
+            rangeEnd
+          );
+
+          return {
+            success: true,
+            period: periodLabel,
+            count: expandedEvents.length,
+            events: expandedEvents,
+          };
+        } catch (e) {
+          console.error("[listEventsForPeriod] Error:", e);
+          return { success: false, error: "Failed to list events" };
         }
       },
     }),
@@ -609,6 +812,7 @@ const BASE_GUIDELINES = `
 - When you learn something notable about the user (e.g. their occupation, work schedule, preferences, constraints, hobbies), use the saveMemory tool to remember it for future conversations. Only save information that would be useful across sessions — do not save trivial or one-off details.
 - At any point in the conversation when you need context about the user, call listMemoryQuestions to see what you already know, then call searchMemoryAnswer for the specific questions relevant to the topic at hand. Use readMemories when you need a broad overview of all stored knowledge about the user.
 - When you need current web information, call searchOnline before answering.
+- When you need to see the user's calendar for a specific day or month, use listEventsForPeriod. This includes all events: user tasks, imported calendar events, and recurring event instances.
 `.trim();
 
 export function buildGoalSystemPrompt(goal: Goal, timezone: string): string {
@@ -653,7 +857,7 @@ Managing events:
 Guidelines:
 ${BASE_GUIDELINES}
 - Keep tasks short and actionable.
-- Avoid collisions with existing calendar events.
+- Before scheduling tasks, use listEventsForPeriod to check the user's existing calendar for potential conflicts. Avoid collisions with existing calendar events.
 - Each task should need less than 2 hours.
 - Schedule tasks during reasonable working hours.
 - Spread tasks across available days before the due date.
