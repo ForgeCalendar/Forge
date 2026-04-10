@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/brand/forge-logo-primary-black.svg" alt="Forge logo" width="80%" />
+  <img src="public/brand/forge-logo-primary-black.svg" alt="Forge logo" width="70%" />
 </p>
 <p align="center">
   <img src="public/brand/forge_screenshot.jpg" alt="Forge Website" width="80%" />
