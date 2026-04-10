@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="public/brand/forge-logo-primary-black.svg" alt="Forge logo" width="640" />
+  <img src="public/brand/forge-logo-primary-darkbg.svg" alt="Forge logo" width="500" />
+</p>
+<p align="center">
+  <img src="public/brand/forge_screenshot.jpg" alt="Forge Website" width="500" />
 </p>
 
 <h1 align="center">Forge Calendar</h1>
