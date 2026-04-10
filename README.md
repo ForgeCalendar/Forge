@@ -1,207 +1,77 @@
-# Forge
+# <img src="public/brand/forge-logo-primary-black.svg" alt="Forge logo" height="32" /> Forge Calendar
 
-A goal-centric planning system where an AI collaborator helps you decide **what to do today** by generating context-aware daily events from your long-term goals.
+[![Build and Push Docker Images](https://github.com/ForgeCalendar/Forge/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ForgeCalendar/Forge/actions/workflows/docker-publish.yml)
+[![Backend Tests](https://github.com/ForgeCalendar/Forge/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/ForgeCalendar/Forge/actions/workflows/backend-tests.yml)
 
-## Overview
+Forge is a goal-centric planning system where an AI collaborator helps you decide **what to do today** by generating context-aware daily events from your long-term goals. Instead of micromanaging todo lists, Forge helps you answer "what should I work on today?" by reasoning about your goals, deadlines, and available time.
 
-Forge inverts the traditional productivity model:
-
-- **Goals are long-lived and primary** - Define your high-level objectives with due dates and context
-- **Tasks are temporary and AI-suggested** - The system proposes daily events based on your goals
-- **Calendar as execution surface** - Schedule suggested tasks as time blocks on your calendar
-- **AI proposes, you dispose** - All suggestions are optional; you maintain full autonomy
-
-Instead of micromanaging todo lists, Forge helps you answer "what should I work on today?" by reasoning about your goals, deadlines, and available time.
-
-## Architecture
-
-### Frontend Stack
-
-- **Next.js 16** - React framework with App Router
-- **React 19** - UI library
-- **TypeScript** - Type-safe development
-- **Chakra UI v3** - Component library with Ark UI primitives
-- **Tailwind CSS v4** - Utility-first styling
-- **FullCalendar** - Interactive calendar component with time grid view
-
-### State Management
-
-- **Zustand** - Lightweight state management for goals and calendar events
-- Goal data structure includes:
-  - Title, description, and due date
-  - Events with completion status and time estimates
-  - Custom info tags (owner, priority, etc.)
-
-### AI Integration
-
-- **@assistant-ui/react** - Chat interface components
-- **Vercel AI SDK** - Multi-provider AI integration
-- **Supported Providers** - Anthropic, OpenAI, Google AI, Mistral
-- Custom system prompts for goal breakdown and scheduling
-- Real-time streaming responses
-- Per-goal chat history persistence
-
-### Key Components
-
-#### `App.tsx`
-
-Main application layout coordinating:
-
-- Header with theme toggle and settings
-- Sidebar for goal management
-- Calendar view for scheduling
-
-#### `Sidebar.tsx`
-
-Goal management interface featuring:
-
-- Goal list with metadata display
-- Add/edit/delete goal dialogs
-- Integration with WorkDialog for task scheduling
-
-#### `WorkDialog.tsx`
-
-AI-powered work planning interface that:
-
-- Opens a chat session for a specific goal
-- Generates daily event suggestions based on goal context
-- Helps decide what to work on today with reasoning
-
-#### `Chatbox.tsx`
-
-Reusable AI assistant component with:
-
-- Configurable system and summary prompts
-- Streaming message support
-- Markdown rendering for rich responses
-
-#### Calendar Integration
-
-- FullCalendar with time grid plugin
-- Drag-and-drop event editing
-- Current time indicator
-- Event categorization (tasks, meetings, etc.)
-
-### API Layer
-
-- `/api/chat/route.ts` - Streaming chat endpoint using Vercel AI SDK
-- Multi-provider AI integration (Anthropic, OpenAI, Google, Mistral)
-- `/api/goals/`, `/api/events/` - Full REST CRUD endpoints
-- `/api/auth/` - Session-based authentication
-- `/api/providers/` - AI provider management
-- `/api/ics-subscriptions/` - External calendar subscription sync
-
-### Styling
-
-- Dark mode support via `next-themes`
-- Responsive design with mobile-first approach
-- Consistent color theming across light/dark modes
-- Chakra UI color mode integration
-
-## Getting Started
-
-```bash
-# install dependence
-npm install
-```
-
-```bash
-# Optional: enable Assistant web search tool (Tavily)
-export TAVILY_API_KEY="your-tavily-api-key"
-```
-
-```bash
-# Initialize database
-npm run db:init
-npm run db:seed
-```
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:3000` to access the application.
-
-## Development
-
-```bash
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Lint code
-npm run lint
-```
+Goals are the source of truth in Forge, not tasks. The AI proposes daily events based on your objectives, but you maintain full autonomy—all suggestions are optional. Forge exists to reduce activation energy and serve as a thinking partner, not to enforce discipline or create guilt.
 
 ## Documentation
 
-Detailed documentation lives in the [`wiki/`](wiki/) directory:
+For developers looking to contribute or run locally, see the [`wiki/`](wiki/) directory:
 
+- [**Development Guide**](wiki/DEVELOPMENT.md) — Local setup, architecture, and development workflow
 - [**API Documentation**](wiki/API_DOCUMENTATION.md) — REST API endpoint reference
-- [**Auth Documentation**](wiki/AUTH_DOCUMENTATION.md) — Authentication flow, session management, and security
-- [**Auth Summary**](wiki/AUTH_SUMMARY.md) — Authentication implementation overview
-- [**Backend Summary**](wiki/BACKEND_SUMMARY.md) — Backend architecture and setup
-- [**Testing**](wiki/TESTING.md) — Test structure, mocking strategy, and CI integration
-- [**Vision**](wiki/VISION.md) — Project vision, principles, and long-term direction
+- [**Backend Summary**](wiki/BACKEND_SUMMARY.md) — Backend architecture and database schema
+- [**Auth Documentation**](wiki/AUTH_DOCUMENTATION.md) — Authentication flow and security
+- [**Testing**](wiki/TESTING.md) — Test structure and CI integration
+- [**Vision**](wiki/VISION.md) — Project principles and long-term direction
 
-## Project Structure
+## Deployment
 
-```
-Forge/
-├── app/                    # Next.js app router
-│   ├── api/chat/          # AI chat API endpoint
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Home page
-├── components/            # React components
-│   ├── assistant-ui/     # AI chat UI components
-│   ├── ui/               # Shared UI primitives
-│   ├── App.tsx           # Main app component
-│   ├── Sidebar.tsx       # Goal management sidebar
-│   ├── Chatbox.tsx       # AI chat interface
-│   └── WorkDialog.tsx    # Task planning dialog
-├── wiki/                  # Project documentation
-│   ├── API_DOCUMENTATION.md
-│   ├── AUTH_DOCUMENTATION.md
-│   ├── AUTH_SUMMARY.md
-│   ├── BACKEND_SUMMARY.md
-│   ├── TESTING.md
-│   └── VISION.md
-├── states/               # State management
-│   ├── goals.ts         # Goal data types and samples
-│   ├── events.tsx       # Calendar event management
-│   └── InfoTag.tsx      # Tag type definitions
-├── lib/                 # Utility functions
-├── prisma/              # Database schema and migrations
-└── public/              # Static assets
+Forge provides pre-built Docker images via GitHub Container Registry.
+
+### Quick Start with Docker Compose
+
+1. Download the example compose file:
+
+```bash
+curl -O https://raw.githubusercontent.com/ForgeCalendar/Forge/master/examples/docker-compose.yml
 ```
 
-## Key Features
+2. Generate a cookie secret and update the compose file:
 
-- **Goal-Centric Planning**: Goals are the source of truth, not individual tasks
-- **AI-Generated Events**: Daily task suggestions derived from your long-term goals
-- **Context-Aware Suggestions**: AI reasons about deadlines, progress, and available time
-- **Calendar-Based Execution**: Visual time blocking with drag-and-drop scheduling
-- **Thinking Partner**: Chat with AI about your goals to decide what to work on
-- **User Autonomy**: All AI suggestions are optional; you maintain full control
-- **Theme Support**: Full light/dark mode support
-- **Responsive Design**: Works on desktop and mobile devices
+```bash
+openssl rand -base64 32
+```
 
-## Design Philosophy
+3. Edit `docker-compose.yml` and replace `COOKIE_SECRET` with your generated value.
 
-Forge follows these core principles:
+4. Start the application:
 
-1. **Goals over tasks** - Tasks are derived, not authored as truth
-2. **Suggestion over obligation** - AI outputs are always optional
-3. **Local clarity over global optimization** - Help you choose the next right thing, not the perfect plan
-4. **Minimal surfaces** - Every UI element justifies its existence
-5. **Human-interpretable reasoning** - AI suggestions are explainable
+```bash
+docker compose up -d
+```
 
-Forge exists to reduce activation energy and help you decide what to do today, not to enforce discipline or create guilt.
+Visit `http://localhost:3000` to access Forge.
+
+### Docker Images
+
+Two images are published:
+
+| Image                                          | Purpose             |
+| ---------------------------------------------- | ------------------- |
+| `ghcr.io/forgecalendar/forge:latest`           | Main application    |
+| `ghcr.io/forgecalendar/forge-migration:latest` | Database migrations |
+
+### Environment Variables
+
+| Variable        | Required | Description                                       |
+| --------------- | -------- | ------------------------------------------------- |
+| `DATABASE_URL`  | Yes      | SQLite database path (e.g., `file:/data/prod.db`) |
+| `COOKIE_SECRET` | Yes      | Secret for signing session cookies                |
+
+AI provider API keys are configured per-user through the application settings.
+
+### Data Persistence
+
+Mount a volume to `/data` to persist the SQLite database across container restarts:
+
+```yaml
+volumes:
+  - forge-data:/data
+```
 
 ## License
 
