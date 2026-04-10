@@ -1,5 +1,3 @@
-import type { InfoTag } from "./InfoTag";
-
 export type Event = {
   title: string;
   start?: string; // ISO datetime string
@@ -15,7 +13,6 @@ export type Goal = {
   dueDate: string | null;
   // Small list of events for the goal
   events: Event[];
-  infoTags: InfoTag[];
 };
 
 export const sampleGoals: Goal[] = [
@@ -41,10 +38,6 @@ export const sampleGoals: Goal[] = [
         minutesEstimate: 20,
       },
     ],
-    infoTags: [
-      { title: "Owner", info: "Patrick Li" },
-      { title: "Repo", info: "forge (repo setup)" },
-    ],
   },
   {
     title: "Polish frontend layout",
@@ -63,10 +56,6 @@ export const sampleGoals: Goal[] = [
         minutesEstimate: 25,
       },
     ],
-    infoTags: [
-      { title: "Priority", info: "Medium" },
-      { title: "Area", info: "UI/UX" },
-    ],
   },
   {
     title: "Add unit tests for auth",
@@ -76,10 +65,6 @@ export const sampleGoals: Goal[] = [
     events: [
       { title: "Test login flow", completed: false, minutesEstimate: 40 },
       { title: "Test token refresh", completed: false, minutesEstimate: 35 },
-    ],
-    infoTags: [
-      { title: "Priority", info: "High" },
-      { title: "Owner", info: "Backend team" },
     ],
   },
 ];

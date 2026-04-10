@@ -11,11 +11,6 @@ interface EventInput {
   minutesEstimate?: number;
 }
 
-interface InfoTagInput {
-  title: string;
-  info: string;
-}
-
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(
@@ -31,7 +26,6 @@ export async function GET(
         where: { id, userId },
         include: {
           events: { orderBy: { order: "asc" } },
-          infoTags: true,
         },
       }),
       "Goal not found"
@@ -62,7 +56,7 @@ export async function PUT(
     const userId = await requireAuth();
     const { id } = await ctx.params;
     const body = await req.json();
-    const { title, description, dueDate, events, infoTags } = body;
+    const { title, description, dueDate, events } = body;
 
     const existingGoal = await verifyOwnership(
       prisma.goal.findFirst({ where: { id, userId } }),
@@ -74,9 +68,6 @@ export async function PUT(
       where: { id },
       data: {
         events: {
-          deleteMany: {},
-        },
-        infoTags: {
           deleteMany: {},
         },
       },
@@ -100,13 +91,6 @@ export async function PUT(
               order: index,
             })) ?? [],
         },
-        infoTags: {
-          create:
-            infoTags?.map((tag: InfoTagInput) => ({
-              title: tag.title,
-              info: tag.info,
-            })) ?? [],
-        },
       },
       include: {
         events: {
@@ -114,7 +98,6 @@ export async function PUT(
             order: "asc",
           },
         },
-        infoTags: true,
       },
     });
 

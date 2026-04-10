@@ -35,7 +35,6 @@ describe("GET /api/goals", () => {
         events: {
           orderBy: { order: "asc" },
         },
-        infoTags: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -72,18 +71,18 @@ describe("POST /api/goals", () => {
     jest.clearAllMocks();
   });
 
-  it("should create a new goal with infoTags", async () => {
+  it("should create a new goal with events", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     const mockCreatedGoal = {
       ...mockGoal,
-      chatHistoryId: "chat-history-1",
-      events: [],
-      infoTags: [
+      events: [
         {
-          id: "tag-1",
-          title: "Priority",
-          info: "High",
+          id: "event-1",
+          title: "Task 1",
+          completed: false,
+          minutesEstimate: 60,
+          order: 0,
         },
       ],
     };
@@ -114,10 +113,11 @@ describe("POST /api/goals", () => {
         title: "Test Goal",
         description: "Test Description",
         dueDate: "2024-12-31",
-        infoTags: [
+        events: [
           {
-            title: "Priority",
-            info: "High",
+            title: "Task 1",
+            completed: false,
+            minutesEstimate: 60,
           },
         ],
       },
@@ -129,11 +129,33 @@ describe("POST /api/goals", () => {
     expect(response.status).toBe(201);
     expect(data.id).toBe(mockCreatedGoal.id);
     expect(data.title).toBe(mockCreatedGoal.title);
-    expect(data.infoTags).toHaveLength(1);
-    expect(prismaMock.$transaction).toHaveBeenCalled();
+    expect(data.events).toHaveLength(1);
+    expect(prismaMock.goal.create).toHaveBeenCalledWith({
+      data: {
+        userId: "test@example.com",
+        title: "Test Goal",
+        description: "Test Description",
+        dueDate: "2024-12-31",
+        events: {
+          create: [
+            {
+              title: "Task 1",
+              completed: false,
+              minutesEstimate: 60,
+              order: 0,
+            },
+          ],
+        },
+      },
+      include: {
+        events: {
+          orderBy: { order: "asc" },
+        },
+      },
+    });
   });
 
-  it("should create goal without infoTags", async () => {
+  it("should create goal without events", async () => {
     (auth.requireAuth as jest.Mock).mockResolvedValue("test@example.com");
 
     const mockCreatedGoal = {

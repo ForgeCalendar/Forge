@@ -53,22 +53,8 @@ model Goal {
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatHistory   ChatHistory?    @relation(fields: [chatHistoryId], references: [id], onDelete: SetNull)
   events        Event[]
-  infoTags      InfoTag[]
 
   @@index([userId])
-}
-
-model InfoTag {
-  id        String   @id @default(uuid())
-  goalId    String
-  title     String
-  info      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-
-  @@index([goalId])
 }
 
 model Event {

@@ -58,7 +58,6 @@ export const mockGoal = {
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
   events: [],
-  infoTags: [],
 };
 
 export const mockEvent = {

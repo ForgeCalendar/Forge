@@ -195,7 +195,7 @@ curl http://localhost:3000/api/goals -b cookies.txt
 # Create a goal (authenticated)
 curl -X POST http://localhost:3000/api/goals \
   -H "Content-Type: application/json" \
-  -d '{"title":"My Goal","description":"Test goal","dueDate":null,"infoTags":[]}' \
+  -d '{"title":"My Goal","description":"Test goal","dueDate":null}' \
   -b cookies.txt
 
 # Logout
@@ -286,7 +286,6 @@ model Goal {
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatHistory   ChatHistory?    @relation(fields: [chatHistoryId], references: [id], onDelete: SetNull)
   events        Event[]
-  infoTags      InfoTag[]
 
   @@index([userId])
 }
