@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { Goal, ChatHistoryRole, Event } from "@/lib/generated/prisma";
 import { RRule } from "rrule";
+import moment from "moment-timezone";
 
 const TAVILY_SEARCH_ENDPOINT = "https://api.tavily.com/search";
 
@@ -418,29 +419,40 @@ function buildBaseTools(chatHistoryId: string, userId: string) {
       }),
       execute: async ({ date, year, month }) => {
         try {
+          // Fetch user's IANA timezone so day/month boundaries are correct
+          const userRecord = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { timezone: true },
+          });
+          const userTimezone = userRecord?.timezone ?? "UTC";
+
           let rangeStart: Date;
           let rangeEnd: Date;
           let periodLabel: string;
 
           if (date) {
-            // Day view: specific date
-            const parsedDate = new Date(date);
-            if (Number.isNaN(parsedDate.getTime())) {
+            // Day view: specific date in user's local timezone
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
               return {
                 success: false,
                 error: "Invalid date format. Use YYYY-MM-DD.",
               };
             }
-            rangeStart = new Date(parsedDate);
-            rangeStart.setHours(0, 0, 0, 0);
-            rangeEnd = new Date(parsedDate);
-            rangeEnd.setHours(23, 59, 59, 999);
+            rangeStart = moment.tz(date, userTimezone).startOf("day").toDate();
+            rangeEnd = moment.tz(date, userTimezone).endOf("day").toDate();
             periodLabel = date;
           } else if (year !== undefined && month !== undefined) {
-            // Month view: specific month
-            rangeStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
-            rangeEnd = new Date(year, month, 0, 23, 59, 59, 999); // Last day of month
-            periodLabel = `${year}-${String(month).padStart(2, "0")}`;
+            // Month view: specific month in user's local timezone
+            const monthStr = `${year}-${String(month).padStart(2, "0")}`;
+            rangeStart = moment
+              .tz(monthStr, "YYYY-MM", userTimezone)
+              .startOf("month")
+              .toDate();
+            rangeEnd = moment
+              .tz(monthStr, "YYYY-MM", userTimezone)
+              .endOf("month")
+              .toDate();
+            periodLabel = monthStr;
           } else {
             return {
               success: false,
