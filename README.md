@@ -80,4 +80,4 @@ volumes:
 
 ## License
 
-Private project
+MIT License
