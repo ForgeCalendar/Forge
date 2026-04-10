@@ -282,15 +282,17 @@ export default function CalendarView({
                     colorPalette="orange"
                     size="sm"
                     onClick={async () => {
-                      if (selectedEvent?.id) {
+                      const eventId = selectedEvent?.id;
+                      if (eventId) {
                         try {
-                          await updateCalendarEvent(selectedEvent.id, {
+                          await updateCalendarEvent(eventId, {
                             confirmed: true,
                           });
-                          setSelectedEvent({
-                            ...selectedEvent,
-                            confirmed: true,
-                          });
+                          setSelectedEvent((prev) =>
+                            prev?.id === eventId
+                              ? { ...prev, confirmed: true }
+                              : prev
+                          );
                         } catch {
                           // update failed
                         }
