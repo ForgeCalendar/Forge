@@ -1,5 +1,8 @@
 # Forge
 
+[![Build and Push Docker Images](https://github.com/ForgeCalendar/Forge/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ForgeCalendar/Forge/actions/workflows/docker-publish.yml)
+[![Backend Tests](https://github.com/ForgeCalendar/Forge/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/ForgeCalendar/Forge/actions/workflows/backend-tests.yml)
+
 A goal-centric planning system where an AI collaborator helps you decide **what to do today** by generating context-aware daily events from your long-term goals.
 
 ## Overview
