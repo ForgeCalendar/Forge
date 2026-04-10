@@ -18,12 +18,6 @@ services:
       - DATABASE_URL=file:/data/prod.db
       # Required: Cookie signing secret — generate with: openssl rand -base64 32
       - COOKIE_SECRET=REPLACE_WITH_OUTPUT_OF_openssl_rand_base64_32
-      # Optional: Add your AI API keys
-      # - ANTHROPIC_API_KEY=your_claude_api_key_here
-      # - OPENAI_API_KEY=your_openai_api_key_here
-      # - GOOGLE_API_KEY=your_google_ai_api_key_here
-      # - MISTRAL_API_KEY=your_mistral_api_key_here
-      # - COHERE_API_KEY=your_cohere_api_key_here
     depends_on:
       migration:
         condition: service_completed_successfully
