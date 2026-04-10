@@ -51,6 +51,7 @@ export default function CalendarView({
     kind: string;
     start: Date | null;
     end: Date | null;
+    confirmed: boolean;
   } | null>(null);
 
   const { textHeading: headingColor, textMuted: subColor } = useThemeTokens();
@@ -189,6 +190,7 @@ export default function CalendarView({
                 kind: info.event.extendedProps?.kind ?? "task",
                 start: info.event.start,
                 end: info.event.end,
+                confirmed: info.event.extendedProps?.confirmed ?? true,
               });
             }}
             eventDidMount={(info) => {
@@ -275,6 +277,31 @@ export default function CalendarView({
                     Close
                   </Button>
                 </Dialog.ActionTrigger>
+                {selectedEvent && !selectedEvent.confirmed && (
+                  <Button
+                    colorPalette="orange"
+                    size="sm"
+                    onClick={async () => {
+                      const eventId = selectedEvent?.id;
+                      if (eventId) {
+                        try {
+                          await updateCalendarEvent(eventId, {
+                            confirmed: true,
+                          });
+                          setSelectedEvent((prev) =>
+                            prev?.id === eventId
+                              ? { ...prev, confirmed: true }
+                              : prev
+                          );
+                        } catch {
+                          // update failed
+                        }
+                      }
+                    }}
+                  >
+                    Confirm Event
+                  </Button>
+                )}
                 <Button
                   colorScheme="blue"
                   size="sm"
