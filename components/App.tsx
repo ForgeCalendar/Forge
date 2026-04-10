@@ -34,13 +34,47 @@ const viewOptions = createListCollection({
   ],
 });
 
+// Main app entry point - handles auth state
 export default function App() {
-  const { bgApp: appBg } = useThemeTokens();
   const { user, isLoading: authLoading, login, logout } = useAuth();
-  const { goals, create, delete: deleteGoal } = useGoals();
-  const { data: userData } = useUserQuery();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+
+  if (authLoading) {
+    return null;
+  }
+
+  if (!user) {
+    return (
+      <>
+        <WelcomeScreen
+          onLoginClick={() => setShowLoginDialog(true)}
+          onRegisterClick={() => setShowRegisterDialog(true)}
+        />
+        <LoginDialog
+          open={showLoginDialog}
+          onOpenChange={setShowLoginDialog}
+          onLoginSuccess={login}
+        />
+        <RegisterDialog
+          open={showRegisterDialog}
+          onOpenChange={setShowRegisterDialog}
+          onRegisterSuccess={login}
+        />
+      </>
+    );
+  }
+
+  // User is authenticated - render the main app
+  return <AuthenticatedApp logout={logout} />;
+}
+
+// Authenticated app content - only mounts when user is logged in
+// This ensures data fetching hooks only run for authenticated users
+function AuthenticatedApp({ logout }: { logout: () => void }) {
+  const { bgApp: appBg } = useThemeTokens();
+  const { goals, create, delete: deleteGoal } = useGoals();
+  const { data: userData } = useUserQuery();
   const [calendarTitle, setCalendarTitle] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const calendarRef = useRef<FullCalendar | null>(null);
@@ -72,15 +106,6 @@ export default function App() {
   const currentView = [view];
   const setCurrentView = (v: string[]) => setView(v[0]);
 
-  // Sync calendar when URL params change - DISABLED FOR TESTING
-  // useEffect(() => {
-  //   const calendarApi = calendarRef.current?.getApi();
-  //   if (calendarApi) {
-  //     calendarApi.changeView(view);
-  //     calendarApi.gotoDate(date);
-  //   }
-  // }, [view, date]);
-
   const handleCalendarChange = useCallback(
     (newDate: string, newView: string) => {
       setView(newView);
@@ -88,31 +113,6 @@ export default function App() {
     },
     [setView, setDate]
   );
-
-  if (authLoading) {
-    return null;
-  }
-
-  if (!user) {
-    return (
-      <>
-        <WelcomeScreen
-          onLoginClick={() => setShowLoginDialog(true)}
-          onRegisterClick={() => setShowRegisterDialog(true)}
-        />
-        <LoginDialog
-          open={showLoginDialog}
-          onOpenChange={setShowLoginDialog}
-          onLoginSuccess={login}
-        />
-        <RegisterDialog
-          open={showRegisterDialog}
-          onOpenChange={setShowRegisterDialog}
-          onRegisterSuccess={login}
-        />
-      </>
-    );
-  }
 
   const handleAddGoal = async (goal: CreateGoalInput) => {
     create(goal).then((created) => {
@@ -216,16 +216,14 @@ export default function App() {
                 >
                   <SettingsDialog />
                   <ColorModeButton aria-label="Toggle dark mode" />
-                  {user && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={logout}
-                      aria-label="Logout"
-                    >
-                      Logout
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={logout}
+                    aria-label="Logout"
+                  >
+                    Logout
+                  </Button>
                 </Box>
               </Drawer.Body>
             </Drawer.Content>
