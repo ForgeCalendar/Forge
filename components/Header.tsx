@@ -3,9 +3,9 @@
 import {
   Box,
   Flex,
-  Heading,
   Text,
   Button,
+  Image,
   Select,
   createListCollection,
 } from "@chakra-ui/react";
@@ -15,6 +15,7 @@ import LoginDialog from "@/components/LoginDialog";
 import type React from "react";
 import { useState } from "react";
 import { ColorModeButton } from "@/components/ui/color-mode";
+import { useColorModeValue } from "@/components/ui/color-mode";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -47,6 +48,14 @@ export default function Header({
   } = useThemeTokens();
   const { user, logout, login } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const primaryLogoSrc = useColorModeValue(
+    "/brand/forge-logo-primary-black.svg",
+    "/brand/forge-logo-primary-darkbg.svg"
+  );
+  const iconLogoSrc = useColorModeValue(
+    "/brand/forge-logo-icon-black.svg",
+    "/brand/forge-logo-icon-darkbg.svg"
+  );
 
   const goToday = () => calendarRef.current?.getApi().today();
   const goPrev = () => calendarRef.current?.getApi().prev();
@@ -73,15 +82,20 @@ export default function Header({
           >
             ☰
           </Button>
-          <Heading
-            as="h1"
-            size="xl"
-            m={0}
-            color={headingColor}
+          <Image
+            src={primaryLogoSrc}
+            alt="Forge"
+            h="32px"
+            w="auto"
             display={{ base: "none", md: "block" }}
-          >
-            Forge
-          </Heading>
+          />
+          <Image
+            src={iconLogoSrc}
+            alt="Forge"
+            h="28px"
+            w="28px"
+            display={{ base: "block", md: "none" }}
+          />
           <Text
             opacity={0.7}
             color={subheadingColor}
