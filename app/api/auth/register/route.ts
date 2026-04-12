@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, setAuthCookie } from "@/lib/auth";
+import { setAuthCookie } from "@/lib/auth";
+import { hashAuthkey } from "@/lib/crypto/server";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { email, authkey, salt } = body;
 
     // Validate input
-    if (!email || !password) {
+    if (!email || !authkey || !salt) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Email, authkey, and salt are required" },
         { status: 400 }
       );
     }
@@ -24,10 +25,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate password strength (minimum 8 characters)
-    if (password.length < 8) {
+    // Validate salt: must be valid base64 and decode to exactly 32 bytes
+    const base64Regex = /^[A-Za-z0-9+/]+=*$/;
+    if (!base64Regex.test(salt) || Buffer.from(salt, "base64").length !== 32) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters long" },
+        { error: "Invalid salt: must be a base64-encoded 32-byte value" },
+        { status: 400 }
+      );
+    }
+
+    // Validate authkey: must be valid base64 and decode to exactly 32 bytes (AES-256)
+    if (
+      !base64Regex.test(authkey) ||
+      Buffer.from(authkey, "base64").length !== 32
+    ) {
+      return NextResponse.json(
+        { error: "Invalid authkey: must be a base64-encoded 32-byte value" },
         { status: 400 }
       );
     }
@@ -44,13 +57,26 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password and create user
-    const passwordHash = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        id: email,
-        passwordHash,
-      },
+    // Hash authkey and create user with salt in a transaction
+    const authkeyHash = await hashAuthkey(authkey);
+    const user = await prisma.$transaction(async (tx) => {
+      // Create user
+      const newUser = await tx.user.create({
+        data: {
+          id: email,
+          authkeyHash: authkeyHash,
+        },
+      });
+
+      // Create salt for the user
+      await tx.userSalt.create({
+        data: {
+          userId: newUser.id,
+          salt: salt,
+        },
+      });
+
+      return newUser;
     });
 
     // Set auth cookie

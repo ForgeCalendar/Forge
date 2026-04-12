@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, setAuthCookie } from "@/lib/auth";
+import { setAuthCookie } from "@/lib/auth";
+import { verifyAuthkey } from "@/lib/crypto/server";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { email, authkey } = body;
 
     // Validate input
-    if (!email || !password) {
+    if (!email || !authkey) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Email and authkey are required" },
         { status: 400 }
       );
     }
@@ -22,17 +23,17 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Invalid email or authkey" },
         { status: 401 }
       );
     }
 
-    // Verify password
-    const isValidPassword = await verifyPassword(password, user.passwordHash);
+    // Verify authkey against stored hash
+    const isValidAuthkey = await verifyAuthkey(authkey, user.authkeyHash);
 
-    if (!isValidPassword) {
+    if (!isValidAuthkey) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Invalid email or authkey" },
         { status: 401 }
       );
     }

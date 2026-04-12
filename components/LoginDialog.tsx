@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
+import { deriveKey, exportKeyToString } from "@/lib/crypto/client";
 
 type LoginDialogProps = {
   open: boolean;
@@ -38,12 +39,31 @@ export default function LoginDialog({
     setIsLoading(true);
 
     try {
+      // Step 1: Fetch the user's salt from the server
+      const saltResponse = await fetch(
+        `/api/salt?username=${encodeURIComponent(email)}`
+      );
+
+      if (!saltResponse.ok) {
+        const saltData = await saltResponse.json();
+        setError(saltData.error || "Failed to fetch user salt");
+        setIsLoading(false);
+        return;
+      }
+
+      const { salt } = await saltResponse.json();
+
+      // Step 2: Derive authkey from password and salt
+      const authKeyObj = await deriveKey(password, salt, "authentication");
+      const authkey = await exportKeyToString(authKeyObj);
+
+      // Step 3: Send email and authkey to login endpoint
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, authkey }),
       });
 
       const data = await response.json();

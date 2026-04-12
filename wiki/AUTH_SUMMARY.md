@@ -2,32 +2,48 @@
 
 ## What Was Added
 
-Complete user authentication system with secure password storage and session management.
+Complete zero-knowledge user authentication system with client-side key derivation and secure authkey storage.
 
 ### 1. Database Layer
 
-**New User Model** (`prisma/schema.prisma`):
+**User Model** (`prisma/schema.prisma`):
 
 - Email as unique identifier (primary key)
-- Bcrypt-hashed password storage
-- Relationships to Goals, Events, Providers, ChatHistories, and IcsSubscriptions
+- Bcrypt-hashed authkey storage (derived from password + salt)
+- Relationships to Goals, Events, Providers, ChatHistories, IcsSubscriptions, and UserSalt
 - Automatic timestamps (createdAt, updatedAt)
+
+**UserSalt Model** (`prisma/schema.prisma`):
+
+- One salt per user (unique userId constraint)
+- Client-generated cryptographically secure random salt
+- Base64-encoded 32-byte salt value
+- Used for client-side key derivation
 
 **Updated Models**:
 
 - `Goal` — Added `userId` foreign key with cascade delete
-- `Event` — Unified model with `userId` foreign key (replaces old separate CalendarEvent model)
+- `Event` — Unified model with `userId` foreign key
 
-**Migrations**: Database schema versioned through multiple migrations in `prisma/migrations/`
+**Migrations**: Database schema versioned through migrations in `prisma/migrations/`
 
-### 2. Authentication Library
+### 2. Cryptography Library
 
-**File**: `lib/auth.ts`
+**Client-Side** (`lib/crypto/client.tsx`):
 
-Core authentication functions:
+- `generateSalt(byteLength?)` — Generate cryptographically secure random salt (Web Crypto API)
+- `deriveKey(password, salt, purpose, iterations?)` — PBKDF2 key derivation (100,000 iterations, SHA-256)
+- `exportKeyToString(key)` — Export CryptoKey to base64 string
+- `encrypt(key, plaintext)` — AES-GCM encryption
+- `decrypt(key, ciphertext)` — AES-GCM decryption
 
-- `hashPassword(password)` — Hash passwords with bcrypt (10 salt rounds)
-- `verifyPassword(password, hash)` — Verify passwords
+**Server-Side** (`lib/crypto/server.tsx`):
+
+- `hashAuthkey(authkey)` — Hash authkeys with bcrypt (10 salt rounds)
+- `verifyAuthkey(authkey, hash)` — Verify authkeys
+
+**Authentication Library** (`lib/auth.ts`):
+
 - `setAuthCookie(email)` — Create HTTP-only session cookie (7 day expiry)
 - `clearAuthCookie()` — Remove session cookie
 - `getCurrentUser()` — Get authenticated user's email from cookie
@@ -37,17 +53,49 @@ Core authentication functions:
 
 **Registration** — `POST /api/auth/register`
 
-- Validates email format
-- Enforces 8+ character password requirement
-- Checks for duplicate emails
-- Hashes password with bcrypt
-- Auto-logs in user after registration
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "authkey": "base64EncodedDerivedKey==",
+  "salt": "base64EncodedRandomSalt=="
+}
+```
+
+Flow:
+
+1. Client generates random salt (32 bytes)
+2. Client derives authkey from password + salt using PBKDF2
+3. Server validates email format
+4. Server hashes authkey with bcrypt
+5. Server creates User + UserSalt in transaction
+6. Auto-logs in user after registration
 
 **Login** — `POST /api/auth/login`
 
-- Verifies email and password
-- Sets secure HTTP-only session cookie
-- Returns user info (email, createdAt)
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "authkey": "base64EncodedDerivedKey=="
+}
+```
+
+Flow:
+
+1. Client fetches user's salt from `/api/salt?username=email`
+2. Client derives authkey from password + salt using PBKDF2
+3. Server verifies authkey against stored authkeyHash
+4. Sets secure HTTP-only session cookie
+5. Returns user info (email, createdAt)
+
+**Get Salt** — `GET /api/salt?username=<email>` (PUBLIC)
+
+- Returns user's salt for client-side key derivation
+- Required for login flow
+- No authentication needed
 
 **Logout** — `POST /api/auth/logout`
 
@@ -91,7 +139,7 @@ All existing endpoints require authentication:
 
 **Updated Seed Script** (`prisma/seed.ts`):
 
-- Creates test user: `test@example.com` / `password123`
+- Creates test user with derived authkey
 - Associates all sample goals with test user
 - Associates all sample events with test user
 - Creates AI provider configurations from environment variables
@@ -101,7 +149,7 @@ All existing endpoints require authentication:
 
 **AUTH_DOCUMENTATION.md**:
 
-- Complete authentication guide
+- Complete authentication guide with zero-knowledge flow
 - API endpoint reference with examples
 - Security features explanation
 - curl command examples for testing
@@ -111,11 +159,26 @@ All existing endpoints require authentication:
 
 ## Security Features
 
-✅ **Password Security**:
+✅ **Zero-Knowledge Architecture**:
+
+- Server never sees user passwords
+- Client-side key derivation using PBKDF2
+- 100,000 iterations with SHA-256 hash
+- Authkey derived from password + salt
+
+✅ **Authkey Security**:
 
 - Bcrypt hashing with 10 salt rounds
-- Passwords never stored in plain text
-- Passwords never returned in API responses
+- Authkeys never stored in plain text
+- Authkeys never returned in API responses
+- Each user has unique salt
+
+✅ **Cryptographic Security**:
+
+- Client-side salt generation (Web Crypto API)
+- PBKDF2 for key derivation (industry standard)
+- AES-GCM encryption support (256-bit keys)
+- Base64 encoding for transport
 
 ✅ **Session Security**:
 
@@ -136,8 +199,49 @@ All existing endpoints require authentication:
 
 - 401 Unauthorized for missing auth
 - 404 Not Found for unauthorized resource access
-- Input validation (email format, password length)
+- Input validation (email format)
 - Proper error messages without leaking info
+- Public salt endpoint (required for login)
+
+## Client-Side Authentication Flow
+
+### Registration
+
+```typescript
+// 1. Generate random salt
+const salt = generateSalt(); // 32 bytes, base64-encoded
+
+// 2. Derive authkey from password + salt
+const authKeyObj = await deriveKey(password, salt, "authentication");
+const authkey = await exportKeyToString(authKeyObj);
+
+// 3. Send to server
+await fetch("/api/auth/register", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, authkey, salt }),
+});
+```
+
+### Login
+
+```typescript
+// 1. Fetch user's salt
+const { salt } = await fetch(`/api/salt?username=${email}`).then((r) =>
+  r.json()
+);
+
+// 2. Derive authkey from password + salt
+const authKeyObj = await deriveKey(password, salt, "authentication");
+const authkey = await exportKeyToString(authKeyObj);
+
+// 3. Send to server
+await fetch("/api/auth/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, authkey }),
+});
+```
 
 ## Testing
 
@@ -148,19 +252,22 @@ Email: test@example.com
 Password: password123
 ```
 
+Note: The test user's authkey is derived from the password using the stored salt.
+
 ### Quick Test Commands
 
 ```bash
-# Login and save cookie
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}' \
-  -c cookies.txt
+# Get user's salt
+curl http://localhost:3000/api/salt?username=test@example.com
+
+# Note: For actual login/register, you need to derive the authkey client-side
+# The curl examples below are simplified - actual implementation requires
+# PBKDF2 key derivation in the client
 
 # Check authentication
 curl http://localhost:3000/api/auth/me -b cookies.txt
 
-# Fetch user's goals (should return 3 sample goals)
+# Fetch user's goals (should return sample goals)
 curl http://localhost:3000/api/goals -b cookies.txt
 
 # Try without auth (should return 401)
@@ -172,13 +279,24 @@ curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
 
 ## Key Files
 
+**Cryptography Files**:
+
+- `lib/crypto/client.tsx` — Client-side crypto (salt generation, key derivation, encryption)
+- `lib/crypto/server.tsx` — Server-side crypto (authkey hashing)
+
 **Authentication Files**:
 
-- `lib/auth.ts` — Authentication utilities
+- `lib/auth.ts` — Authentication utilities (session management)
 - `app/api/auth/register/route.ts` — User registration
 - `app/api/auth/login/route.ts` — User login
 - `app/api/auth/logout/route.ts` — User logout
 - `app/api/auth/me/route.ts` — Get current user
+- `app/api/salt/route.ts` — Get user salt (public)
+
+**Frontend Components**:
+
+- `components/RegisterDialog.tsx` — Registration with client-side key derivation
+- `components/LoginDialog.tsx` — Login with salt fetch and key derivation
 
 **Protected Route Files**:
 
@@ -202,22 +320,29 @@ curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
 }
 ```
 
+Note: Web Crypto API is built into modern browsers (no additional dependencies needed for client-side crypto).
+
 ## Architecture Decisions
 
-1. **Email as Primary Key**: Simplified design, email is naturally unique
-2. **HTTP-Only Cookies**: More secure than localStorage for web apps
-3. **Session-Based Auth**: Simple, no JWT complexity for single-server setup
-4. **Bcrypt**: Industry standard for password hashing
-5. **HMAC-SHA256 Cookie Signing**: Signed cookie values (`COOKIE_SECRET`) prevent client-side tampering of the stored email without adding JWT complexity
-6. **Ownership Verification**: Database queries filter by userId to prevent data leaks
-7. **Cascade Delete**: Automatic cleanup when user is deleted
+1. **Zero-Knowledge Design**: Server never sees passwords, only derived authkeys
+2. **Client-Side Key Derivation**: PBKDF2 with 100,000 iterations for strong key derivation
+3. **Email as Primary Key**: Simplified design, email is naturally unique
+4. **HTTP-Only Cookies**: More secure than localStorage for web apps
+5. **Session-Based Auth**: Simple, no JWT complexity for single-server setup
+6. **Bcrypt for Authkeys**: Industry standard for hashing
+7. **HMAC-SHA256 Cookie Signing**: Signed cookie values (`COOKIE_SECRET`) prevent client-side tampering
+8. **Public Salt Endpoint**: Required for login flow (not sensitive data)
+9. **Single Salt Per User**: Simplified model, one salt used for all purposes
+10. **Ownership Verification**: Database queries filter by userId to prevent data leaks
+11. **Cascade Delete**: Automatic cleanup when user is deleted
 
 ## API Endpoint Summary
 
 **Public Endpoints** (no auth required):
 
-- `POST /api/auth/register` — Register new user
-- `POST /api/auth/login` — Login user
+- `POST /api/auth/register` — Register new user (requires authkey + salt)
+- `POST /api/auth/login` — Login user (requires authkey)
+- `GET /api/salt?username=<email>` — Get user's salt for key derivation
 
 **Authenticated Endpoints** (session cookie required):
 
