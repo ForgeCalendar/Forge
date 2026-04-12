@@ -17,7 +17,7 @@ export type ProviderWithModels = {
   type: string;
   name: string;
   baseUrl: string | null;
-  apiKey: string;
+  // NOTE: apiKey removed - now stored client-side only (encrypted in browser)
   createdAt: string;
   updatedAt: string;
   models: ProviderModel[];
@@ -26,13 +26,13 @@ export type ProviderWithModels = {
 export type CreateProviderInput = {
   type: string;
   name: string;
-  apiKey: string;
+  // NOTE: apiKey removed - now stored client-side only via ApiKeyManager
   baseUrl?: string;
 };
 
 export type UpdateProviderInput = {
   name?: string;
-  apiKey?: string;
+  // NOTE: apiKey removed - now stored client-side only via ApiKeyManager
   baseUrl?: string;
 };
 

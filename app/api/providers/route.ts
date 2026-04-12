@@ -37,11 +37,11 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     const userId = await requireAuth();
     const body = await req.json();
-    const { type, name, baseUrl, apiKey } = body;
+    const { type, name, baseUrl } = body;
 
-    if (!type || !apiKey || !name) {
+    if (!type || !name) {
       return NextResponse.json(
-        { error: "type, name, and apiKey are required" },
+        { error: "type and name are required" },
         { status: 400 }
       );
     }
@@ -61,13 +61,14 @@ export async function POST(req: Request): Promise<NextResponse> {
       );
     }
 
+    // NOTE: API keys are now stored client-side (encrypted in browser)
+    // Provider model only tracks preferences: type, name, baseUrl
     const provider = await prisma.provider.create({
       data: {
         userId,
         type,
         name,
         baseUrl: baseUrl || null,
-        apiKey,
       },
     });
 

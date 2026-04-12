@@ -7,6 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import { clearAllApiKeys } from "@/lib/crypto/storage";
 
 type User = {
   email: string;
@@ -50,7 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      // 1. Clear all session-stored API keys FIRST
+      clearAllApiKeys();
+
+      // 2. Call backend logout
       await fetch("/api/auth/logout", { method: "POST" });
+
+      // 3. Clear user state
       setUser(null);
     } catch (error) {
       console.error("Logout failed:", error);

@@ -125,7 +125,8 @@ model Provider {
   type      String   // "anthropic" | "openai" | "google" | "mistral" | "cohere" | "openai-compatible"
   name      String   // User-friendly label, e.g. "My Ollama", "Anthropic"
   baseUrl   String?  // null = use SDK default; set for self-hosted
-  apiKey    String   // API key for the provider
+  // NOTE: API keys are now stored client-side (encrypted in browser sessionStorage)
+  // and never sent to the server
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

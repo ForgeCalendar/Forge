@@ -57,6 +57,10 @@ export default function LoginDialog({
       const authKeyObj = await deriveKey(password, salt, "authentication");
       const authkey = await exportKeyToString(authKeyObj);
 
+      // Step 2.5: Derive chatapi key (for encrypting API keys in browser)
+      const chatApiKeyObj = await deriveKey(password, salt, "chatapi");
+      const chatApiKey = await exportKeyToString(chatApiKeyObj);
+
       // Step 3: Send email and authkey to login endpoint
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -75,6 +79,9 @@ export default function LoginDialog({
       }
 
       // Login successful
+      // Store chatapi key in sessionStorage for encrypting API keys
+      sessionStorage.setItem("chatapi_key_material", chatApiKey);
+
       onLoginSuccess(data.user.email);
       setEmail("");
       setPassword("");

@@ -47,7 +47,7 @@ export async function PUT(
     const userId = await requireAuth();
     const { id } = await ctx.params;
     const body = await req.json();
-    const { type, name, baseUrl, apiKey } = body;
+    const { type, name, baseUrl } = body;
 
     const existing = await verifyOwnership(
       prisma.provider.findFirst({ where: { id, userId } }),
@@ -70,11 +70,11 @@ export async function PUT(
       );
     }
 
+    // NOTE: API keys are now stored client-side only
     const updateData: Record<string, unknown> = {};
     if (type !== undefined) updateData.type = type;
     if (name !== undefined) updateData.name = name;
     if (baseUrl !== undefined) updateData.baseUrl = baseUrl || null;
-    if (apiKey !== undefined) updateData.apiKey = apiKey;
 
     const updated = await prisma.provider.update({
       where: { id },

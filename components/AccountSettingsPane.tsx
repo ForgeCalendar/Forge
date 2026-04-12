@@ -89,7 +89,7 @@ type ProviderRecord = {
   type: string;
   name: string;
   baseUrl: string | null;
-  apiKey: string;
+  // NOTE: apiKey removed - now managed client-side via /settings
   models: {
     id: string;
     modelId: string;
@@ -123,10 +123,7 @@ function providerTypeLabel(type: string): string {
   return labels[type] ?? type;
 }
 
-function maskKey(key: string): string {
-  if (key.length <= 8) return "****";
-  return key.slice(0, 4) + "..." + key.slice(-4);
-}
+// NOTE: maskKey function removed - API keys no longer stored server-side
 
 export default function AccountSettingsPane() {
   const {
@@ -181,14 +178,14 @@ export default function AccountSettingsPane() {
 
   const [newType, setNewType] = useState<string[]>([]);
   const [newName, setNewName] = useState("");
-  const [newApiKey, setNewApiKey] = useState("");
+  // NOTE: newApiKey removed - API keys managed in /settings
   const [newBaseUrl, setNewBaseUrl] = useState("");
   const [searchEditing, setSearchEditing] = useState(!hasTavilyApiKey);
   const [tavilyApiKeyInput, setTavilyApiKeyInput] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [editApiKey, setEditApiKey] = useState("");
+  // NOTE: editApiKey removed - API keys managed in /settings
   const [editBaseUrl, setEditBaseUrl] = useState("");
 
   const saving =
@@ -196,12 +193,12 @@ export default function AccountSettingsPane() {
   const searchSaving = updateSearchConfigMutation.isPending;
 
   async function handleAdd() {
-    if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;
+    if (!newType[0] || !newName.trim()) return;
     createProviderMutation
       .mutateAsync({
         type: newType[0],
         name: newName.trim(),
-        apiKey: newApiKey.trim(),
+        // NOTE: apiKey removed - managed in /settings
         ...(newType[0] === "openai-compatible" && newBaseUrl.trim()
           ? { baseUrl: newBaseUrl.trim() }
           : {}),
@@ -209,7 +206,6 @@ export default function AccountSettingsPane() {
       .then(() => {
         setNewType([]);
         setNewName("");
-        setNewApiKey("");
         setNewBaseUrl("");
       });
   }
@@ -217,7 +213,7 @@ export default function AccountSettingsPane() {
   async function handleUpdate(id: string) {
     const input: Record<string, string> = {};
     if (editName.trim()) input.name = editName.trim();
-    if (editApiKey.trim()) input.apiKey = editApiKey.trim();
+    // NOTE: apiKey removed - managed in /settings
     const provider = providers.find((p) => p.id === id);
     if (provider?.type === "openai-compatible") {
       input.baseUrl = editBaseUrl.trim();
@@ -226,7 +222,6 @@ export default function AccountSettingsPane() {
     updateProviderMutation.mutateAsync({ id, input }).then(() => {
       setEditingId(null);
       setEditName("");
-      setEditApiKey("");
       setEditBaseUrl("");
     });
   }
@@ -259,7 +254,7 @@ export default function AccountSettingsPane() {
   function startEditing(provider: ProviderRecord) {
     setEditingId(provider.id);
     setEditName(provider.name);
-    setEditApiKey("");
+    // NOTE: editApiKey removed - managed in /settings
     setEditBaseUrl(provider.baseUrl ?? "");
   }
 
@@ -342,30 +337,16 @@ export default function AccountSettingsPane() {
             >
               {editingId === provider.id ? (
                 <Box>
-                  <Flex gap={2} mb={2}>
-                    <Box flex={1}>
-                      <Text fontSize="xs" mb={1}>
-                        Name
-                      </Text>
-                      <Input
-                        size="sm"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                      />
-                    </Box>
-                    <Box flex={1}>
-                      <Text fontSize="xs" mb={1}>
-                        API Key
-                      </Text>
-                      <Input
-                        size="sm"
-                        type="password"
-                        placeholder="Leave blank to keep current"
-                        value={editApiKey}
-                        onChange={(e) => setEditApiKey(e.target.value)}
-                      />
-                    </Box>
-                  </Flex>
+                  <Box mb={2}>
+                    <Text fontSize="xs" mb={1}>
+                      Name
+                    </Text>
+                    <Input
+                      size="sm"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  </Box>
                   {provider.type === "openai-compatible" && (
                     <Box mb={2}>
                       <Text fontSize="xs" mb={1}>
@@ -393,7 +374,6 @@ export default function AccountSettingsPane() {
                       onClick={() => {
                         setEditingId(null);
                         setEditName("");
-                        setEditApiKey("");
                         setEditBaseUrl("");
                       }}
                     >
@@ -409,9 +389,9 @@ export default function AccountSettingsPane() {
                     </Text>
                     <Text fontSize="xs" color={subtitleColor}>
                       {providerTypeLabel(provider.type)} &middot;{" "}
-                      {maskKey(provider.apiKey)} &middot;{" "}
                       {provider.models.length} model
-                      {provider.models.length !== 1 ? "s" : ""}
+                      {provider.models.length !== 1 ? "s" : ""} &middot; API key
+                      in /settings
                     </Text>
                   </Box>
                   <Flex gap={2}>
@@ -447,6 +427,10 @@ export default function AccountSettingsPane() {
       >
         <Text fontWeight="medium" fontSize="sm" mb={2}>
           Add Provider
+        </Text>
+        <Text fontSize="xs" color={subtitleColor} mb={3}>
+          API keys are managed separately in the <strong>Settings</strong> page
+          (/settings)
         </Text>
         <Flex gap={2} flexWrap="wrap" align="flex-end">
           <Box flex={1} minW="140px">
@@ -484,18 +468,6 @@ export default function AccountSettingsPane() {
               onChange={(e) => setNewName(e.target.value)}
             />
           </Box>
-          <Box flex={2} minW="160px">
-            <Text fontSize="xs" mb={1}>
-              API Key
-            </Text>
-            <Input
-              size="sm"
-              type="password"
-              placeholder="sk-..."
-              value={newApiKey}
-              onChange={(e) => setNewApiKey(e.target.value)}
-            />
-          </Box>
         </Flex>
         {newType[0] === "openai-compatible" && (
           <Box mt={2}>
@@ -514,9 +486,7 @@ export default function AccountSettingsPane() {
           size="sm"
           mt={3}
           onClick={handleAdd}
-          disabled={
-            saving || !newType[0] || !newName.trim() || !newApiKey.trim()
-          }
+          disabled={saving || !newType[0] || !newName.trim()}
         >
           Add
         </Button>
