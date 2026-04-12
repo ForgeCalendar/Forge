@@ -18,7 +18,7 @@ describe("POST /api/auth/register", () => {
     jest.clearAllMocks();
   });
 
-  it("should register a new user successfully and create salts for all purposes", async () => {
+  it("should register a new user successfully and create a salt", async () => {
     const mockHashedPassword = "$2a$10$hashedpassword";
     const mockSalt = "mockGeneratedSalt123==";
 
@@ -38,7 +38,6 @@ describe("POST /api/auth/register", () => {
           create: jest.fn().mockResolvedValue({
             id: "salt-id",
             userId: mockUser.id,
-            purpose: "authentication",
             salt: mockSalt,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -68,8 +67,8 @@ describe("POST /api/auth/register", () => {
     // Verify transaction was called
     expect(prismaMock.$transaction).toHaveBeenCalled();
 
-    // Verify generateSalt was called for each purpose (authentication and apikey)
-    expect(cryptoServer.generateSalt).toHaveBeenCalledTimes(2);
+    // Verify generateSalt was called once
+    expect(cryptoServer.generateSalt).toHaveBeenCalledTimes(1);
   });
 
   it("should return 400 when email is missing", async () => {

@@ -156,11 +156,6 @@ enum ChatHistoryRole {
   TaskHelper
 }
 
-enum SaltPurpose {
-  authentication
-  apikey
-}
-
 model ChatHistory {
   id         String           @id @default(uuid())
   userId     String
@@ -223,15 +218,11 @@ model IcsSubscription {
 }
 
 model UserSalt {
-  id        String      @id @default(uuid())
-  userId    String
-  purpose   SaltPurpose // Purpose identifier: authentication or apikey
-  salt      String      // The salt value (base64 or hex encoded)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique // Each user has only one salt
+  salt      String   // The salt value (base64 or hex encoded)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, purpose]) // Each user can have only one salt per purpose
-  @@index([userId])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setAuthCookie } from "@/lib/auth";
 import { generateSalt } from "@/lib/crypto/server";
-import { SaltPurpose } from "@/lib/generated/prisma";
 
 export async function POST(req: Request) {
   try {
@@ -46,7 +45,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password and create user with salts in a transaction
+    // Hash password and create user with salt in a transaction
     const passwordHash = await hashPassword(password);
     const user = await prisma.$transaction(async (tx) => {
       // Create user
@@ -57,19 +56,13 @@ export async function POST(req: Request) {
         },
       });
 
-      // Create salts for all purposes
-      const saltPurposes = Object.values(SaltPurpose);
-      await Promise.all(
-        saltPurposes.map((purpose) =>
-          tx.userSalt.create({
-            data: {
-              userId: newUser.id,
-              purpose,
-              salt: generateSalt(),
-            },
-          })
-        )
-      );
+      // Create salt for the user
+      await tx.userSalt.create({
+        data: {
+          userId: newUser.id,
+          salt: generateSalt(),
+        },
+      });
 
       return newUser;
     });
