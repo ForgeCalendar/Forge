@@ -10,16 +10,14 @@ import {
   type ProviderType,
   getProviderModels,
 } from "@/lib/ai/client";
-import { getApiKey } from "@/lib/crypto/storage";
 import { toolSchemas, getToolsForRole } from "@/lib/tools/schemas";
+import type { Provider } from "@/storage/secure/useProviders";
 
 type ChatRole = "Assistant" | "GoalPlanner" | "TaskHelper";
 
 type UseChatClientOptions = {
-  providerId: string;
-  providerType: ProviderType;
+  provider: Provider;
   modelId: string;
-  baseUrl?: string;
   chatHistoryId?: string;
   role?: ChatRole;
   goalId?: string;
@@ -30,10 +28,8 @@ type UseChatClientOptions = {
 type MessageStatus = "pending" | "streaming" | "complete" | "error";
 
 export function useChatClient({
-  providerId,
-  providerType,
+  provider,
   modelId,
-  baseUrl,
   chatHistoryId,
   role = "Assistant",
   goalId,
@@ -126,32 +122,28 @@ export function useChatClient({
       setCurrentMessage("");
 
       try {
-        // Get API key from encrypted storage
-        console.log(
-          "[useChatClient] Attempting to get API key for provider:",
-          providerId
-        );
-        const apiKey = await getApiKey(providerId);
-        console.log(
-          "[useChatClient] API key retrieved:",
-          apiKey ? "YES (length: " + apiKey.length + ")" : "NO"
-        );
+        // Use provider from secure storage
+        console.log("[useChatClient] Using provider:", {
+          name: provider.name,
+          type: provider.type,
+          modelId,
+        });
 
-        if (!apiKey) {
+        if (!provider.apiKey) {
           setError(
-            `No API key found for provider "${providerId}". Please add your API key in Settings (/settings).`
+            `No API key found for provider "${provider.name}". Please add your API key in Settings (/settings).`
           );
           setStatus("error");
           return;
         }
 
         // Create model instance
-        console.log("[useChatClient] Creating model:", {
-          providerType,
+        const model = createClientModel(
+          provider.type,
+          provider.apiKey,
           modelId,
-          baseUrl,
-        });
-        const model = createClientModel(providerType, apiKey, modelId, baseUrl);
+          provider.baseUrl
+        );
 
         // Build conversation history
         const newUserMessage: CoreMessage = {
@@ -212,9 +204,9 @@ export function useChatClient({
         // Detect specific error types
         if (err.statusCode === 404) {
           setError(
-            `Model not found (404). The model ID "${modelId}" may be incorrect for ${providerType}. Try: ${
-              getProviderModels(providerType as ProviderType)[0]
-            }`
+            `Model not found (404). The model ID "${modelId}" may be incorrect for ${
+              provider.type
+            }. Try: ${getProviderModels(provider.type as ProviderType)[0]}`
           );
         } else if (
           err.name === "TypeError" ||
@@ -233,16 +225,7 @@ export function useChatClient({
         setStatus("error");
       }
     },
-    [
-      providerId,
-      providerType,
-      modelId,
-      baseUrl,
-      messages,
-      systemPrompt,
-      buildTools,
-      onFinish,
-    ]
+    [provider, modelId, messages, systemPrompt, buildTools, onFinish]
   );
 
   /**
@@ -258,7 +241,7 @@ export function useChatClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: messagesToSave,
-            providerId,
+            providerId: provider.id,
             modelId,
           }),
         });
@@ -266,7 +249,7 @@ export function useChatClient({
         console.error("Failed to save chat history:", err);
       }
     },
-    [chatHistoryId, providerId, modelId]
+    [chatHistoryId, provider.id, modelId]
   );
 
   /**

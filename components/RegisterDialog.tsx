@@ -51,10 +51,6 @@ export default function RegisterDialog({
       const authKeyObj = await deriveKey(password, salt, "authentication");
       const authkey = await exportKeyToString(authKeyObj);
 
-      // Step 2.5: Derive chatapi key (for encrypting API keys in browser)
-      const chatApiKeyObj = await deriveKey(password, salt, "chatapi");
-      const chatApiKey = await exportKeyToString(chatApiKeyObj);
-
       // Step 3: Send email, authkey, and salt to server
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -73,8 +69,9 @@ export default function RegisterDialog({
       }
 
       // Registration successful - user is automatically logged in by backend
-      // Store chatapi key in sessionStorage for encrypting API keys
-      sessionStorage.setItem("chatapi_key_material", chatApiKey);
+      // Store password and salt in sessionStorage for deriving chatapi key later
+      sessionStorage.setItem("user_password", password);
+      sessionStorage.setItem("user_salt", salt);
 
       onRegisterSuccess(data.user.email);
       setEmail("");

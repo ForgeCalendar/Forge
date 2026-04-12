@@ -1,50 +1,38 @@
 /**
  * Client-side API key storage with encryption
  * Keys are stored in sessionStorage (cleared on browser close)
- * and encrypted using the user's chatapi key (derived from password)
+ * and encrypted using the user's chatapi key (derived from password + salt)
  */
 
-import { encrypt, decrypt } from "@/lib/crypto/client";
+import { encrypt, decrypt, deriveKey } from "@/lib/crypto/client";
 
 /**
- * Get the chatapi encryption key from sessionStorage.
- * This key is derived from the user's password during login/registration.
+ * Get the chatapi encryption key by deriving it from stored password and salt.
+ * Password and salt are stored in sessionStorage after login/registration.
  *
  * @returns CryptoKey or null if not logged in
  */
 export async function getChatApiKey(): Promise<CryptoKey | null> {
-  const keyMaterial = sessionStorage.getItem("chatapi_key_material");
-  console.log(
-    `[getChatApiKey] chatapi_key_material exists:`,
-    keyMaterial ? "YES (length: " + keyMaterial.length + ")" : "NO"
-  );
+  const password = sessionStorage.getItem("user_password");
+  const salt = sessionStorage.getItem("user_salt");
 
-  if (!keyMaterial) {
+  console.log(`[getChatApiKey] user_password exists:`, password ? "YES" : "NO");
+  console.log(`[getChatApiKey] user_salt exists:`, salt ? "YES" : "NO");
+
+  if (!password || !salt) {
     console.log(
-      `[getChatApiKey] No chatapi_key_material in sessionStorage - user not logged in or key not set`
+      `[getChatApiKey] Missing password or salt in sessionStorage - user not logged in`
     );
     return null;
   }
 
   try {
-    // Convert base64 string back to CryptoKey
-    const rawKey = Uint8Array.from(atob(keyMaterial), (c) => c.charCodeAt(0));
-    console.log(
-      `[getChatApiKey] Decoded key material, length: ${rawKey.length} bytes`
-    );
-
-    const cryptoKey = await crypto.subtle.importKey(
-      "raw",
-      rawKey,
-      "AES-GCM",
-      true,
-      ["encrypt", "decrypt"]
-    );
-    console.log(`[getChatApiKey] Successfully imported CryptoKey`);
-
-    return cryptoKey;
+    // Derive the chatapi key from password + salt
+    const chatApiKey = await deriveKey(password, salt, "chatapi");
+    console.log(`[getChatApiKey] Successfully derived chatapi key`);
+    return chatApiKey;
   } catch (error) {
-    console.error("[getChatApiKey] Failed to import chatapi key:", error);
+    console.error("[getChatApiKey] Failed to derive chatapi key:", error);
     return null;
   }
 }
@@ -70,9 +58,7 @@ export async function saveApiKey(
   );
 
   if (!chatApiKey) {
-    console.error(
-      `[saveApiKey] No chatapi_key_material found in sessionStorage`
-    );
+    console.error(`[saveApiKey] No user credentials found in sessionStorage`);
     throw new Error("Not logged in - please log in first");
   }
 
@@ -119,7 +105,7 @@ export async function getApiKey(provider: string): Promise<string | null> {
   console.log(`[getApiKey] Chat API key found:`, chatApiKey ? "YES" : "NO");
 
   if (!chatApiKey) {
-    console.log(`[getApiKey] No chatapi_key_material in sessionStorage`);
+    console.log(`[getApiKey] No user credentials in sessionStorage`);
     return null;
   }
 
@@ -158,13 +144,17 @@ export function listStoredApiKeys(): string[] {
 }
 
 /**
- * Clear all API keys from sessionStorage.
+ * Clear all API keys and user credentials from sessionStorage.
  * Called on logout or when user explicitly clears keys.
  */
 export function clearAllApiKeys(): void {
   const keys = Object.keys(sessionStorage);
   keys.forEach((key) => {
-    if (key.startsWith("apikey_") || key === "chatapi_key_material") {
+    if (
+      key.startsWith("apikey_") ||
+      key === "user_password" ||
+      key === "user_salt"
+    ) {
       sessionStorage.removeItem(key);
     }
   });

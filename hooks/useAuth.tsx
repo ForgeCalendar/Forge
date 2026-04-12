@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      // 1. Clear all session-stored API keys FIRST
+      // 1. Clear session-stored credentials
       clearAllApiKeys();
 
       // 2. Call backend logout

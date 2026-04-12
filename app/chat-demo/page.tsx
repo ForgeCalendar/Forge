@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Box,
   Container,
@@ -11,31 +11,99 @@ import {
   Textarea,
   Text,
   Card,
+  Link,
 } from "@chakra-ui/react";
 import { useChatClient } from "@/hooks/useChatClient";
 import { useThemeTokens } from "@/lib/theme-tokens";
+import { useProviders } from "@/storage/secure/useProviders";
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+} from "@chakra-ui/react";
+import { getDefaultModel } from "@/lib/ai/client";
 
 export default function ChatDemoPage() {
-  const [input, setInput] = useState("");
+  const { providers, loading: loadingProviders } = useProviders();
   const { textMuted } = useThemeTokens();
+
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+  const [input, setInput] = useState("");
+
+  // Get the selected provider
+  const selectedProvider = useMemo(
+    () => providers.find((p) => p.id === selectedProviderId),
+    [providers, selectedProviderId]
+  );
+
+  // Auto-select first provider if available
+  useMemo(() => {
+    if (providers.length > 0 && !selectedProviderId) {
+      setSelectedProviderId(providers[0].id);
+    }
+  }, [providers, selectedProviderId]);
+
+  // Don't render until we have a selected provider
+  if (!selectedProvider && providers.length > 0) {
+    return (
+      <Container maxW="container.md" py={8}>
+        <Text>Loading...</Text>
+      </Container>
+    );
+  }
+
+  // Get default model for selected provider
+  const modelId = useMemo(() => {
+    if (!selectedProvider) return "";
+    return getDefaultModel(selectedProvider.type);
+  }, [selectedProvider]);
 
   const { messages, currentMessage, status, error, sendMessage } =
     useChatClient({
-      providerId: "anthropic",
-      providerType: "anthropic",
-      // Use Claude Sonnet 4.5 (current stable model)
-      modelId: "claude-sonnet-4-5-20250929",
+      provider: selectedProvider || {
+        id: "",
+        type: "anthropic",
+        name: "",
+        apiKey: "",
+      },
+      modelId,
       role: "Assistant",
       systemPrompt: "You are a helpful AI assistant.",
     });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim() && status !== "streaming") {
+    if (input.trim() && status !== "streaming" && selectedProvider) {
       sendMessage(input.trim());
       setInput("");
     }
   };
+
+  if (loadingProviders) {
+    return (
+      <Container maxW="container.md" py={8}>
+        <Text>Loading...</Text>
+      </Container>
+    );
+  }
+
+  if (providers.length === 0) {
+    return (
+      <Container maxW="container.md" py={8}>
+        <VStack gap={4} align="stretch">
+          <Heading size="lg">No Providers Found</Heading>
+          <Text color={textMuted}>
+            Please add an AI provider in{" "}
+            <Link href="/settings" color="blue.500">
+              Settings
+            </Link>{" "}
+            before using the chat demo.
+          </Text>
+        </VStack>
+      </Container>
+    );
+  }
 
   return (
     <Container maxW="container.md" py={8}>
@@ -48,6 +116,28 @@ export default function ChatDemoPage() {
             This chat uses client-side AI with encrypted API keys stored in your
             browser.
           </Text>
+        </Box>
+
+        {/* Provider Selector */}
+        <Box>
+          <Text fontSize="sm" mb={2}>
+            Select Provider
+          </Text>
+          {selectedProvider && (
+            <SelectRoot
+              value={[selectedProviderId]}
+              onValueChange={(e) => setSelectedProviderId(e.value[0])}
+            >
+              <SelectTrigger>{selectedProvider.name}</SelectTrigger>
+              <SelectContent>
+                {providers.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>
+                    {provider.name} ({provider.type})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </SelectRoot>
+          )}
         </Box>
 
         <Card.Root>
@@ -140,13 +230,17 @@ export default function ChatDemoPage() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your message..."
                   rows={3}
-                  disabled={status === "streaming"}
+                  disabled={status === "streaming" || !selectedProvider}
                 />
                 <HStack justify="flex-end">
                   <Button
                     type="submit"
                     colorScheme="blue"
-                    disabled={status === "streaming" || !input.trim()}
+                    disabled={
+                      status === "streaming" ||
+                      !input.trim() ||
+                      !selectedProvider
+                    }
                   >
                     {status === "streaming" ? "Sending..." : "Send"}
                   </Button>
@@ -156,15 +250,11 @@ export default function ChatDemoPage() {
           </VStack>
         </Card.Root>
 
-        <Box
-          p={3}
-          bg="yellow.50"
-          _dark={{ bg: "yellow.900" }}
-          borderRadius="md"
-        >
+        <Box p={3} bg="blue.50" _dark={{ bg: "blue.900" }} borderRadius="md">
           <Text fontSize="xs" color={textMuted}>
-            <strong>Note:</strong> Make sure you have added your Anthropic API
-            key in the Settings page before using this demo.
+            <strong>Note:</strong> Using{" "}
+            {selectedProvider?.name || "no provider"} with model{" "}
+            {modelId || "none"}
           </Text>
         </Box>
       </VStack>

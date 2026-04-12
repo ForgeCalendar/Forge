@@ -15,16 +15,15 @@ This document describes the implementation of the hybrid chat architecture where
 
 - **Modified Files:**
 
-  - `components/RegisterDialog.tsx` - Now derives and stores 'chatapi' key after registration
-  - `components/LoginDialog.tsx` - Now derives and stores 'chatapi' key after login
-  - `hooks/useAuth.tsx` - Updated logout to clear all API keys
+  - `components/RegisterDialog.tsx` - Stores password and salt in sessionStorage after registration
+  - `components/LoginDialog.tsx` - Stores password and salt in sessionStorage after login
+  - `hooks/useAuth.tsx` - Updated logout to clear all API keys and credentials
 
 - **How It Works:**
-  - During login/registration, the system derives two keys from the user's password:
-    1. `authkey` - Used for authentication (sent to server)
-    2. `chatapi` - Used for encrypting API keys (never sent to server)
-  - The `chatapi` key is stored in sessionStorage as `chatapi_key_material`
-  - This key is automatically cleared on logout or when the browser closes
+  - During login/registration, the user's password and salt are stored in sessionStorage
+  - When encrypting/decrypting API keys, the `chatapi` key is derived from password + salt on-demand
+  - Password and salt are stored as `user_password` and `user_salt` in sessionStorage
+  - These credentials are automatically cleared on logout or when the browser closes
 
 ### ✅ Phase 1: Backend Tool Execution API
 
@@ -55,17 +54,18 @@ This document describes the implementation of the hybrid chat architecture where
 
 - **How It Works:**
 
-  - API keys are encrypted using the `chatapi` key (derived from password)
-  - Encrypted keys are stored in sessionStorage with the pattern `apikey_{provider}`
+  - User password and salt are stored in sessionStorage during login/registration
+  - When encrypting/decrypting API keys, the `chatapi` key is derived on-demand from password + salt
+  - Encrypted API keys are stored in sessionStorage with the pattern `apikey_{provider}`
   - Keys are automatically decrypted when needed for AI calls
-  - Keys are cleared on logout or when the browser closes
+  - Password, salt, and API keys are cleared on logout or when the browser closes
 
 - **Security Features:**
-  - ✅ Keys encrypted with user's chatapi key
-  - ✅ Keys stored in sessionStorage (cleared on browser close)
-  - ✅ Keys never sent to server
-  - ✅ Keys cleared on explicit logout
-  - ✅ Keys unavailable after session ends
+  - ✅ API keys encrypted with user's chatapi key (derived from password + salt)
+  - ✅ Password and salt stored in sessionStorage (cleared on browser close)
+  - ✅ API keys never sent to server
+  - ✅ Credentials cleared on explicit logout
+  - ✅ All data unavailable after session ends
 
 ### ✅ Phase 3: Client-Side AI Integration
 
@@ -146,8 +146,8 @@ Frontend → Direct Provider API call (with encrypted key) → Stream to UI
 ### 1. User Registration/Login
 
 - User creates account or logs in
-- System derives `chatapi` key and stores in sessionStorage
-- Key is available for encrypting API keys
+- System stores password and salt in sessionStorage
+- These credentials are used to derive the `chatapi` key on-demand for encrypting/decrypting API keys
 
 ### 2. Add API Keys
 
@@ -224,8 +224,8 @@ Frontend → Direct Provider API call (with encrypted key) → Stream to UI
 
 ### Manual Testing
 
-- [ ] Register new user → Check sessionStorage for `chatapi_key_material`
-- [ ] Login → Check sessionStorage for `chatapi_key_material`
+- [ ] Register new user → Check sessionStorage for `user_password` and `user_salt`
+- [ ] Login → Check sessionStorage for `user_password` and `user_salt`
 - [ ] Add API key in Settings → Verify encrypted storage
 - [ ] Send chat message in demo → Verify AI responds
 - [ ] Call a tool (e.g., "remember my name is John") → Verify tool executes
