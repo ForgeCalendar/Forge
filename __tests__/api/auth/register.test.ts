@@ -2,11 +2,20 @@ import { POST } from "@/app/api/auth/register/route";
 import { prismaMock } from "@/__tests__/utils/prisma-mock";
 import { createMockRequest, mockUser } from "@/__tests__/utils/test-helpers";
 import * as auth from "@/lib/auth";
+import * as cryptoServer from "@/lib/crypto/server";
 
 jest.mock("@/lib/auth", () => ({
   hashPassword: jest.fn(),
   setAuthCookie: jest.fn(),
 }));
+
+jest.mock("@/lib/crypto/server", () => ({
+  hashAuthkey: jest.fn(),
+}));
+
+// Valid base64-encoded 32-byte values (as produced by client-side PBKDF2/generateSalt)
+const VALID_SALT = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+const VALID_AUTHKEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 describe("POST /api/auth/register", () => {
   beforeEach(() => {
@@ -15,14 +24,8 @@ describe("POST /api/auth/register", () => {
 
   it("should register a new user successfully with authkey and salt", async () => {
     const mockAuthkeyHash = "$2a$10$hashedauthkey";
-    const mockSalt = "mockClientGeneratedSalt123==";
-    const mockAuthkey = "mockDerivedAuthkey456==";
 
-    const mockHashAuthkey = jest.fn().mockResolvedValue(mockAuthkeyHash);
-    jest.mock("@/lib/crypto/server", () => ({
-      hashAuthkey: mockHashAuthkey,
-    }));
-
+    (cryptoServer.hashAuthkey as jest.Mock).mockResolvedValue(mockAuthkeyHash);
     (auth.setAuthCookie as jest.Mock).mockResolvedValue(undefined);
 
     prismaMock.user.findUnique.mockResolvedValue(null);
@@ -37,7 +40,7 @@ describe("POST /api/auth/register", () => {
           create: jest.fn().mockResolvedValue({
             id: "salt-id",
             userId: mockUser.id,
-            salt: mockSalt,
+            salt: VALID_SALT,
             createdAt: new Date(),
             updatedAt: new Date(),
           }),
@@ -50,8 +53,8 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        authkey: mockAuthkey,
-        salt: mockSalt,
+        authkey: VALID_AUTHKEY,
+        salt: VALID_SALT,
       },
     });
 
@@ -61,6 +64,7 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(201);
     expect(data.message).toBe("User registered successfully");
     expect(data.user.email).toBe("test@example.com");
+    expect(cryptoServer.hashAuthkey).toHaveBeenCalledWith(VALID_AUTHKEY);
     expect(auth.setAuthCookie).toHaveBeenCalledWith("test@example.com");
 
     // Verify transaction was called
@@ -71,8 +75,8 @@ describe("POST /api/auth/register", () => {
     const request = createMockRequest({
       method: "POST",
       body: {
-        authkey: "authkey123==",
-        salt: "someSalt==",
+        authkey: VALID_AUTHKEY,
+        salt: VALID_SALT,
       },
     });
 
@@ -88,7 +92,7 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        salt: "someSalt==",
+        salt: VALID_SALT,
       },
     });
 
@@ -104,7 +108,7 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        authkey: "authkey123==",
+        authkey: VALID_AUTHKEY,
       },
     });
 
@@ -120,8 +124,8 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "invalid-email",
-        authkey: "authkey123==",
-        salt: "someSalt==",
+        authkey: VALID_AUTHKEY,
+        salt: VALID_SALT,
       },
     });
 
@@ -132,6 +136,44 @@ describe("POST /api/auth/register", () => {
     expect(data.error).toBe("Invalid email format");
   });
 
+  it("should return 400 when salt is not a valid 32-byte base64 value", async () => {
+    const request = createMockRequest({
+      method: "POST",
+      body: {
+        email: "test@example.com",
+        authkey: VALID_AUTHKEY,
+        salt: "dG9vU2hvcnQ=", // "tooShort" – only 8 bytes
+      },
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe(
+      "Invalid salt: must be a base64-encoded 32-byte value"
+    );
+  });
+
+  it("should return 400 when authkey is not a valid 32-byte base64 value", async () => {
+    const request = createMockRequest({
+      method: "POST",
+      body: {
+        email: "test@example.com",
+        authkey: "dG9vU2hvcnQ=", // "tooShort" – only 8 bytes
+        salt: VALID_SALT,
+      },
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe(
+      "Invalid authkey: must be a base64-encoded 32-byte value"
+    );
+  });
+
   it("should return 409 when user already exists", async () => {
     prismaMock.user.findUnique.mockResolvedValue(mockUser);
 
@@ -139,8 +181,8 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        authkey: "authkey123==",
-        salt: "someSalt==",
+        authkey: VALID_AUTHKEY,
+        salt: VALID_SALT,
       },
     });
 
@@ -158,8 +200,8 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        authkey: "authkey123==",
-        salt: "someSalt==",
+        authkey: VALID_AUTHKEY,
+        salt: VALID_SALT,
       },
     });
 
@@ -170,3 +212,4 @@ describe("POST /api/auth/register", () => {
     expect(data.error).toBe("Failed to register user");
   });
 });
+

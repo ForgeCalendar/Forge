@@ -25,6 +25,22 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate salt: must be valid base64 and decode to exactly 32 bytes
+    if (Buffer.from(salt, "base64").length !== 32) {
+      return NextResponse.json(
+        { error: "Invalid salt: must be a base64-encoded 32-byte value" },
+        { status: 400 }
+      );
+    }
+
+    // Validate authkey: must be valid base64 and decode to exactly 32 bytes (AES-256)
+    if (Buffer.from(authkey, "base64").length !== 32) {
+      return NextResponse.json(
+        { error: "Invalid authkey: must be a base64-encoded 32-byte value" },
+        { status: 400 }
+      );
+    }
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { id: email },
