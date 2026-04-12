@@ -17,9 +17,16 @@ import {
   ThreadPrimitive,
   useThreadRuntime,
 } from "@assistant-ui/react";
-import { ArrowUpIcon, CheckIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
+import {
+  ArrowUpIcon,
+  CheckIcon,
+  CopyIcon,
+  RefreshCwIcon,
+  PaperclipIcon,
+  XIcon,
+} from "lucide-react";
 import { Spinner } from "@chakra-ui/react";
-import { useState, type FC } from "react";
+import { useState, useRef, type FC } from "react";
 
 export const Thread: FC = () => {
   return (
@@ -164,6 +171,189 @@ const ComposerWithChoices: FC = () => {
 };
 
 const Composer: FC = () => {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const runtime = useThreadRuntime();
+
+  // Check if goalId is available from URL params
+  const goalId = (() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    return params.get("goalId");
+  })();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      if (!goalId) {
+        alert("File uploads are only available in goal-specific chats");
+        e.target.value = "";
+        return;
+      }
+      setSelectedFiles((prev) => [...prev, ...files]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCustomSend = async () => {
+    if (selectedFiles.length === 0 || !goalId) return;
+
+    const inputElement = document.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="Message..."]'
+    );
+    const messageText = inputElement?.value?.trim() || "";
+
+    try {
+      setUploading(true);
+
+      // Read file contents for text files
+      const fileContents = await Promise.all(
+        selectedFiles.map(async (file) => {
+          if (
+            file.type.startsWith("text/") ||
+            file.name.endsWith(".txt") ||
+            file.name.endsWith(".md") ||
+            file.name.endsWith(".json") ||
+            file.name.endsWith(".csv")
+          ) {
+            try {
+              return { file, content: await file.text() };
+            } catch {
+              return { file, content: null };
+            }
+          }
+          return { file, content: null };
+        })
+      );
+
+      // Upload files
+      const uploadedFiles = await Promise.all(
+        selectedFiles.map(async (file) => {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("goalId", goalId);
+
+          const response = await fetch("/api/files/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) throw new Error(`Failed to upload ${file.name}`);
+          return await response.json();
+        })
+      );
+
+      // Build message with file info
+      let fullMessage = messageText;
+      if (uploadedFiles.length > 0) {
+        fullMessage += "\n\n**Attached files:**\n";
+        for (let i = 0; i < uploadedFiles.length; i++) {
+          const f = uploadedFiles[i];
+          const content = fileContents[i];
+          fullMessage += `\n📎 **${f.filename}** (${(f.size / 1024).toFixed(
+            1
+          )} KB)\n`;
+          if (content.content) {
+            fullMessage += `\`\`\`\n${content.content}\n\`\`\`\n`;
+          }
+        }
+      }
+
+      // Send message
+      runtime.append({
+        role: "user",
+        content: [{ type: "text", text: fullMessage }],
+      });
+
+      // Clear state
+      setSelectedFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (inputElement) inputElement.value = "";
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      alert("Failed to upload files. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (selectedFiles.length > 0) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2 px-2">
+          {selectedFiles.map((file, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-xs"
+            >
+              <PaperclipIcon className="size-3" />
+              <span className="max-w-[150px] truncate">{file.name}</span>
+              <span className="text-muted-foreground">
+                ({(file.size / 1024).toFixed(1)} KB)
+              </span>
+              <button
+                onClick={() => removeFile(index)}
+                className="ml-1 p-0.5 hover:bg-background rounded"
+                disabled={uploading}
+              >
+                <XIcon className="size-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="relative flex w-full items-end rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-background shadow-sm">
+          <ComposerPrimitive.Input
+            placeholder="Message..."
+            rows={1}
+            autoFocus
+            className="flex-1 resize-none bg-transparent text-sm placeholder:text-muted-foreground min-h-[48px] max-h-[200px]"
+            style={{
+              outline: "none",
+              boxShadow: "none",
+              padding: "12px 16px",
+              resize: "none",
+            }}
+          />
+          <div className="flex items-center gap-2 pr-2 pb-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <TooltipIconButton
+              tooltip="Attach file"
+              variant="ghost"
+              className="size-8 rounded-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <PaperclipIcon className="size-4" />
+            </TooltipIconButton>
+            <TooltipIconButton
+              tooltip="Send"
+              variant="default"
+              className="size-8 rounded-full"
+              onClick={handleCustomSend}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <Spinner size="sm" />
+              ) : (
+                <ArrowUpIcon className="size-4" />
+              )}
+            </TooltipIconButton>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ComposerPrimitive.Root className="relative flex w-full items-end rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-background shadow-sm">
       <ComposerPrimitive.Input
@@ -179,6 +369,26 @@ const Composer: FC = () => {
         }}
       />
       <div className="flex items-center gap-2 pr-2 pb-2">
+        {goalId && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="*/*"
+            />
+            <TooltipIconButton
+              tooltip="Attach file"
+              variant="ghost"
+              className="size-8 rounded-full"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <PaperclipIcon className="size-4" />
+            </TooltipIconButton>
+          </>
+        )}
         <ThreadPrimitive.If running={false}>
           <ComposerPrimitive.Send asChild>
             <TooltipIconButton

@@ -40,7 +40,10 @@ export default function GoalDecomposeDialog({
 
   const isUpdate = mode === "update";
 
-  const extraParams = useMemo(() => ({ chatHistoryId }), [chatHistoryId]);
+  const extraParams = useMemo(
+    () => ({ chatHistoryId, goalId }),
+    [chatHistoryId, goalId]
+  );
 
   function handleClose() {
     queryClient.invalidateQueries({ queryKey: goalKeys.all });
