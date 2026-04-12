@@ -1,4 +1,4 @@
-import { deriveKey } from "@/lib/crypto";
+import { deriveKey, encrypt, decrypt } from "@/lib/crypto";
 
 describe("deriveKey", () => {
   const testPassword = "testPassword123";
@@ -194,5 +194,249 @@ describe("deriveKey", () => {
 
     const decryptedText = new TextDecoder().decode(decrypted);
     expect(decryptedText).toBe("Hello, World!");
+  });
+});
+
+describe("encrypt", () => {
+  let testKey: CryptoKey;
+
+  beforeEach(async () => {
+    testKey = await deriveKey("testPassword", "testSalt", "encryption");
+  });
+
+  it("should encrypt plaintext successfully", async () => {
+    const plaintext = "Hello, World!";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    expect(ciphertext).toBeDefined();
+    expect(typeof ciphertext).toBe("string");
+    expect(ciphertext.length).toBeGreaterThan(0);
+  });
+
+  it("should produce different ciphertext for each encryption (due to random IV)", async () => {
+    const plaintext = "Same message";
+    const ciphertext1 = await encrypt(testKey, plaintext);
+    const ciphertext2 = await encrypt(testKey, plaintext);
+
+    // Should be different because of random IV
+    expect(ciphertext1).not.toBe(ciphertext2);
+  });
+
+  it("should return base64-encoded string", async () => {
+    const plaintext = "Test message";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    // Should be valid base64
+    expect(() => atob(ciphertext)).not.toThrow();
+  });
+
+  it("should handle empty string", async () => {
+    const plaintext = "";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    expect(ciphertext).toBeDefined();
+    expect(typeof ciphertext).toBe("string");
+  });
+
+  it("should handle long strings", async () => {
+    const plaintext = "A".repeat(10000);
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    expect(ciphertext).toBeDefined();
+    expect(typeof ciphertext).toBe("string");
+  });
+
+  it("should handle unicode characters", async () => {
+    const plaintext = "Hello 世界 🌍 مرحبا";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    expect(ciphertext).toBeDefined();
+    expect(typeof ciphertext).toBe("string");
+  });
+
+  it("should handle special characters", async () => {
+    const plaintext = "Special: !@#$%^&*()_+-=[]{}|;':\",./<>?";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    expect(ciphertext).toBeDefined();
+    expect(typeof ciphertext).toBe("string");
+  });
+
+  it("should handle newlines and tabs", async () => {
+    const plaintext = "Line 1\nLine 2\tTabbed";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    expect(ciphertext).toBeDefined();
+    expect(typeof ciphertext).toBe("string");
+  });
+});
+
+describe("decrypt", () => {
+  let testKey: CryptoKey;
+
+  beforeEach(async () => {
+    testKey = await deriveKey("testPassword", "testSalt", "encryption");
+  });
+
+  it("should decrypt ciphertext successfully", async () => {
+    const plaintext = "Hello, World!";
+    const ciphertext = await encrypt(testKey, plaintext);
+    const decrypted = await decrypt(testKey, ciphertext);
+
+    expect(decrypted).toBe(plaintext);
+  });
+
+  it("should handle empty string", async () => {
+    const plaintext = "";
+    const ciphertext = await encrypt(testKey, plaintext);
+    const decrypted = await decrypt(testKey, ciphertext);
+
+    expect(decrypted).toBe(plaintext);
+  });
+
+  it("should handle long strings", async () => {
+    const plaintext = "B".repeat(10000);
+    const ciphertext = await encrypt(testKey, plaintext);
+    const decrypted = await decrypt(testKey, ciphertext);
+
+    expect(decrypted).toBe(plaintext);
+  });
+
+  it("should handle unicode characters", async () => {
+    const plaintext = "Hello 世界 🌍 مرحبا";
+    const ciphertext = await encrypt(testKey, plaintext);
+    const decrypted = await decrypt(testKey, ciphertext);
+
+    expect(decrypted).toBe(plaintext);
+  });
+
+  it("should handle special characters", async () => {
+    const plaintext = "Special: !@#$%^&*()_+-=[]{}|;':\",./<>?";
+    const ciphertext = await encrypt(testKey, plaintext);
+    const decrypted = await decrypt(testKey, ciphertext);
+
+    expect(decrypted).toBe(plaintext);
+  });
+
+  it("should handle newlines and tabs", async () => {
+    const plaintext = "Line 1\nLine 2\tTabbed";
+    const ciphertext = await encrypt(testKey, plaintext);
+    const decrypted = await decrypt(testKey, ciphertext);
+
+    expect(decrypted).toBe(plaintext);
+  });
+
+  it("should handle JSON strings", async () => {
+    const plaintext = JSON.stringify({ name: "John", age: 30, active: true });
+    const ciphertext = await encrypt(testKey, plaintext);
+    const decrypted = await decrypt(testKey, ciphertext);
+
+    expect(decrypted).toBe(plaintext);
+    expect(JSON.parse(decrypted)).toEqual({
+      name: "John",
+      age: 30,
+      active: true,
+    });
+  });
+
+  it("should fail to decrypt with wrong key", async () => {
+    const plaintext = "Secret message";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    // Create a different key
+    const wrongKey = await deriveKey("wrongPassword", "testSalt", "encryption");
+
+    // Should throw an error when trying to decrypt with wrong key
+    await expect(decrypt(wrongKey, ciphertext)).rejects.toThrow();
+  });
+
+  it("should fail to decrypt tampered ciphertext", async () => {
+    const plaintext = "Secret message";
+    const ciphertext = await encrypt(testKey, plaintext);
+
+    // Tamper with the ciphertext
+    const tamperedCiphertext = ciphertext.slice(0, -5) + "XXXXX";
+
+    // Should throw an error when trying to decrypt tampered data
+    await expect(decrypt(testKey, tamperedCiphertext)).rejects.toThrow();
+  });
+
+  it("should fail to decrypt invalid base64", async () => {
+    const invalidCiphertext = "not-valid-base64!!!";
+
+    // Should throw an error
+    await expect(decrypt(testKey, invalidCiphertext)).rejects.toThrow();
+  });
+});
+
+describe("encrypt/decrypt integration", () => {
+  it("should work with keys derived for different purposes", async () => {
+    const password = "userPassword123";
+    const salt = "randomUserSalt";
+
+    // Derive keys for different purposes
+    const encryptionKey = await deriveKey(password, salt, "data-encryption");
+    const authKey = await deriveKey(password, salt, "authentication");
+
+    const plaintext = "Sensitive user data";
+
+    // Encrypt with encryption key
+    const ciphertext = await encrypt(encryptionKey, plaintext);
+
+    // Decrypt with encryption key should work
+    const decrypted = await decrypt(encryptionKey, ciphertext);
+    expect(decrypted).toBe(plaintext);
+
+    // Decrypt with auth key should fail
+    await expect(decrypt(authKey, ciphertext)).rejects.toThrow();
+  });
+
+  it("should support multiple encryptions with same key", async () => {
+    const key = await deriveKey("password", "salt", "encryption");
+
+    const messages = [
+      "First message",
+      "Second message",
+      "Third message",
+      "Fourth message",
+    ];
+
+    const ciphertexts = await Promise.all(
+      messages.map((msg) => encrypt(key, msg))
+    );
+
+    // All ciphertexts should be different (random IVs)
+    const uniqueCiphertexts = new Set(ciphertexts);
+    expect(uniqueCiphertexts.size).toBe(messages.length);
+
+    // All should decrypt correctly
+    const decrypted = await Promise.all(
+      ciphertexts.map((ct) => decrypt(key, ct))
+    );
+
+    expect(decrypted).toEqual(messages);
+  });
+
+  it("should handle round-trip encryption/decryption", async () => {
+    const key = await deriveKey("myPassword", "mySalt", "test");
+
+    const testCases = [
+      "",
+      "a",
+      "Hello, World!",
+      "The quick brown fox jumps over the lazy dog",
+      "1234567890",
+      "Special chars: !@#$%^&*()",
+      "Unicode: 你好世界 🚀",
+      '{"json": true, "nested": {"value": 42}}',
+      "\n\t\r",
+      "A".repeat(1000),
+    ];
+
+    for (const plaintext of testCases) {
+      const ciphertext = await encrypt(key, plaintext);
+      const decrypted = await decrypt(key, ciphertext);
+      expect(decrypted).toBe(plaintext);
+    }
   });
 });
