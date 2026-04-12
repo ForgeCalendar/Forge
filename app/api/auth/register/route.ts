@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, setAuthCookie } from "@/lib/auth";
+import { setAuthCookie } from "@/lib/auth";
+import { hashAuthkey } from "@/lib/crypto/server";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password, salt } = body;
+    const { email, authkey, salt } = body;
 
     // Validate input
-    if (!email || !password || !salt) {
+    if (!email || !authkey || !salt) {
       return NextResponse.json(
-        { error: "Email, password, and salt are required" },
+        { error: "Email, authkey, and salt are required" },
         { status: 400 }
       );
     }
@@ -20,14 +21,6 @@ export async function POST(req: Request) {
     if (!emailRegex.test(email)) {
       return NextResponse.json(
         { error: "Invalid email format" },
-        { status: 400 }
-      );
-    }
-
-    // Validate password strength (minimum 8 characters)
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: "Password must be at least 8 characters long" },
         { status: 400 }
       );
     }
@@ -44,14 +37,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password and create user with salt in a transaction
-    const passwordHash = await hashPassword(password);
+    // Hash authkey and create user with salt in a transaction
+    const authkeyHash = await hashAuthkey(authkey);
     const user = await prisma.$transaction(async (tx) => {
       // Create user
       const newUser = await tx.user.create({
         data: {
           id: email,
-          passwordHash,
+          authkeyHash: authkeyHash,
         },
       });
 

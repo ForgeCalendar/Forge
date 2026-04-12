@@ -13,7 +13,11 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
-import { generateSalt } from "@/lib/crypto/client";
+import {
+  generateSalt,
+  deriveKey,
+  exportKeyToString,
+} from "@/lib/crypto/client";
 
 type RegisterDialogProps = {
   open: boolean;
@@ -40,15 +44,20 @@ export default function RegisterDialog({
     setIsLoading(true);
 
     try {
-      // Generate a cryptographically secure salt on the client
+      // Step 1: Generate a cryptographically secure salt on the client
       const salt = generateSalt();
 
+      // Step 2: Derive authkey from password and salt
+      const authKeyObj = await deriveKey(password, salt, "authentication");
+      const authkey = await exportKeyToString(authKeyObj);
+
+      // Step 3: Send email, authkey, and salt to server
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password, salt }),
+        body: JSON.stringify({ email, authkey, salt }),
       });
 
       const data = await response.json();

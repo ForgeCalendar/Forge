@@ -13,11 +13,16 @@ describe("POST /api/auth/register", () => {
     jest.clearAllMocks();
   });
 
-  it("should register a new user successfully with provided salt", async () => {
-    const mockHashedPassword = "$2a$10$hashedpassword";
+  it("should register a new user successfully with authkey and salt", async () => {
+    const mockAuthkeyHash = "$2a$10$hashedauthkey";
     const mockSalt = "mockClientGeneratedSalt123==";
+    const mockAuthkey = "mockDerivedAuthkey456==";
 
-    (auth.hashPassword as jest.Mock).mockResolvedValue(mockHashedPassword);
+    const mockHashAuthkey = jest.fn().mockResolvedValue(mockAuthkeyHash);
+    jest.mock("@/lib/crypto/server", () => ({
+      hashAuthkey: mockHashAuthkey,
+    }));
+
     (auth.setAuthCookie as jest.Mock).mockResolvedValue(undefined);
 
     prismaMock.user.findUnique.mockResolvedValue(null);
@@ -45,7 +50,7 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        password: "password123",
+        authkey: mockAuthkey,
         salt: mockSalt,
       },
     });
@@ -56,7 +61,6 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(201);
     expect(data.message).toBe("User registered successfully");
     expect(data.user.email).toBe("test@example.com");
-    expect(auth.hashPassword).toHaveBeenCalledWith("password123");
     expect(auth.setAuthCookie).toHaveBeenCalledWith("test@example.com");
 
     // Verify transaction was called
@@ -67,7 +71,7 @@ describe("POST /api/auth/register", () => {
     const request = createMockRequest({
       method: "POST",
       body: {
-        password: "password123",
+        authkey: "authkey123==",
         salt: "someSalt==",
       },
     });
@@ -76,10 +80,10 @@ describe("POST /api/auth/register", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Email, password, and salt are required");
+    expect(data.error).toBe("Email, authkey, and salt are required");
   });
 
-  it("should return 400 when password is missing", async () => {
+  it("should return 400 when authkey is missing", async () => {
     const request = createMockRequest({
       method: "POST",
       body: {
@@ -92,7 +96,7 @@ describe("POST /api/auth/register", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Email, password, and salt are required");
+    expect(data.error).toBe("Email, authkey, and salt are required");
   });
 
   it("should return 400 when salt is missing", async () => {
@@ -100,7 +104,7 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        password: "password123",
+        authkey: "authkey123==",
       },
     });
 
@@ -108,7 +112,7 @@ describe("POST /api/auth/register", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Email, password, and salt are required");
+    expect(data.error).toBe("Email, authkey, and salt are required");
   });
 
   it("should return 400 when email format is invalid", async () => {
@@ -116,7 +120,7 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "invalid-email",
-        password: "password123",
+        authkey: "authkey123==",
         salt: "someSalt==",
       },
     });
@@ -128,23 +132,6 @@ describe("POST /api/auth/register", () => {
     expect(data.error).toBe("Invalid email format");
   });
 
-  it("should return 400 when password is less than 8 characters", async () => {
-    const request = createMockRequest({
-      method: "POST",
-      body: {
-        email: "test@example.com",
-        password: "short",
-        salt: "someSalt==",
-      },
-    });
-
-    const response = await POST(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.error).toBe("Password must be at least 8 characters long");
-  });
-
   it("should return 409 when user already exists", async () => {
     prismaMock.user.findUnique.mockResolvedValue(mockUser);
 
@@ -152,7 +139,7 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        password: "password123",
+        authkey: "authkey123==",
         salt: "someSalt==",
       },
     });
@@ -171,7 +158,7 @@ describe("POST /api/auth/register", () => {
       method: "POST",
       body: {
         email: "test@example.com",
-        password: "password123",
+        authkey: "authkey123==",
         salt: "someSalt==",
       },
     });

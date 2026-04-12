@@ -1,4 +1,10 @@
-import { generateSalt, deriveKey, encrypt, decrypt } from "@/lib/crypto/client";
+import {
+  generateSalt,
+  deriveKey,
+  encrypt,
+  decrypt,
+  exportKeyToString,
+} from "@/lib/crypto/client";
 
 describe("generateSalt", () => {
   it("should generate a salt", () => {
@@ -510,5 +516,65 @@ describe("encrypt/decrypt integration", () => {
       const decrypted = await decrypt(key, ciphertext);
       expect(decrypted).toBe(plaintext);
     }
+  });
+});
+
+describe("exportKeyToString", () => {
+  it("should export a key to base64 string", async () => {
+    const key = await deriveKey("password", "salt", "test");
+    const keyString = await exportKeyToString(key);
+
+    expect(keyString).toBeDefined();
+    expect(typeof keyString).toBe("string");
+    expect(keyString.length).toBeGreaterThan(0);
+  });
+
+  it("should produce valid base64", async () => {
+    const key = await deriveKey("password", "salt", "test");
+    const keyString = await exportKeyToString(key);
+
+    // Should be valid base64
+    expect(() => atob(keyString)).not.toThrow();
+  });
+
+  it("should export to correct byte length", async () => {
+    const key = await deriveKey("password", "salt", "test");
+    const keyString = await exportKeyToString(key);
+
+    // Decode and check it's 256 bits (32 bytes)
+    const decoded = Uint8Array.from(atob(keyString), (c) => c.charCodeAt(0));
+    expect(decoded.length).toBe(32);
+  });
+
+  it("should produce same string for same key", async () => {
+    const key1 = await deriveKey("password", "salt", "test");
+    const key2 = await deriveKey("password", "salt", "test");
+
+    const keyString1 = await exportKeyToString(key1);
+    const keyString2 = await exportKeyToString(key2);
+
+    expect(keyString1).toBe(keyString2);
+  });
+
+  it("should produce different strings for different keys", async () => {
+    const key1 = await deriveKey("password1", "salt", "test");
+    const key2 = await deriveKey("password2", "salt", "test");
+
+    const keyString1 = await exportKeyToString(key1);
+    const keyString2 = await exportKeyToString(key2);
+
+    expect(keyString1).not.toBe(keyString2);
+  });
+
+  it("should work with keys from different purposes", async () => {
+    const authKey = await deriveKey("password", "salt", "authentication");
+    const encKey = await deriveKey("password", "salt", "encryption");
+
+    const authKeyString = await exportKeyToString(authKey);
+    const encKeyString = await exportKeyToString(encKey);
+
+    expect(authKeyString).not.toBe(encKeyString);
+    expect(authKeyString.length).toBeGreaterThan(0);
+    expect(encKeyString.length).toBeGreaterThan(0);
   });
 });

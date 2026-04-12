@@ -13,7 +13,7 @@ datasource db {
 
 model User {
   id            String          @id // email address
-  passwordHash  String
+  authkeyHash   String
   timezone      String          @default("UTC") // IANA timezone (e.g. "America/New_York")
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

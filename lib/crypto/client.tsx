@@ -10,6 +10,19 @@ export function generateSalt(byteLength: number = 32): string {
 }
 
 /**
+ * Exports a CryptoKey to a base64-encoded string.
+ * Used to send derived keys to the server.
+ *
+ * @param key - The CryptoKey to export
+ * @returns A base64-encoded string representation of the key
+ */
+export async function exportKeyToString(key: CryptoKey): Promise<string> {
+  const rawKey = await crypto.subtle.exportKey("raw", key);
+  const keyBytes = new Uint8Array(rawKey);
+  return btoa(String.fromCharCode(...keyBytes));
+}
+
+/**
  * Derives a cryptographic key from a password, salt, and purpose string.
  * Different purpose strings will produce different keys from the same password.
  *
