@@ -2,15 +2,18 @@
 
 ## Overview
 
-The Forge backend includes secure user authentication with email-based login and bcrypt password hashing. All data endpoints are protected and scoped to the authenticated user.
+The Forge backend implements a zero-knowledge authentication system where the server never sees user passwords. Authentication is based on client-side key derivation (PBKDF2) and server-side authkey verification (bcrypt). All data endpoints are protected and scoped to the authenticated user.
 
 ## Security Features
 
-- **Password Hashing**: Passwords are hashed using bcrypt with 10 salt rounds
+- **Zero-Knowledge Architecture**: Server never sees passwords, only derived authkeys
+- **Client-Side Key Derivation**: PBKDF2 with 100,000 iterations and SHA-256
+- **Authkey Hashing**: Derived authkeys are hashed using bcrypt with 10 salt rounds
 - **HTTP-Only Cookies**: Session tokens are stored in secure HTTP-only cookies
-- **Cookie Signing**: Session cookie values are HMAC-SHA256 signed using `COOKIE_SECRET` to prevent tampering
-- **User Isolation**: All goals and events are scoped to individual users
+- **Cookie Signing**: Session cookie values are HMAC-SHA256 signed using `COOKIE_SECRET`
+- **User Isolation**: All data is scoped to individual users
 - **Email as ID**: User email addresses serve as unique identifiers
+- **Cryptographic Salt**: Each user has a unique, client-generated salt stored server-side
 
 ## Authentication Flow
 
@@ -18,19 +21,40 @@ The Forge backend includes secure user authentication with email-based login and
 
 **Endpoint**: `POST /api/auth/register`
 
+**Client-Side Process**:
+
+```typescript
+// 1. Generate cryptographically secure random salt
+const salt = generateSalt(); // 32 bytes, base64-encoded
+
+// 2. Derive authkey from password + salt using PBKDF2
+const authKeyObj = await deriveKey(password, salt, "authentication");
+const authkey = await exportKeyToString(authKeyObj);
+
+// 3. Send to server
+const response = await fetch("/api/auth/register", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({ email, authkey, salt }),
+});
+```
+
 **Request Body**:
 
 ```json
 {
   "email": "user@example.com",
-  "password": "securepassword123"
+  "authkey": "base64EncodedDerivedAuthkey==",
+  "salt": "base64EncodedRandomSalt=="
 }
 ```
 
 **Requirements**:
 
 - Email must be valid format
-- Password must be at least 8 characters
+- Authkey must be provided (derived client-side from password)
+- Salt must be provided (32-byte base64 string)
 - Email must not already be registered
 
 **Response** (201 Created):
@@ -40,10 +64,19 @@ The Forge backend includes secure user authentication with email-based login and
   "message": "User registered successfully",
   "user": {
     "email": "user@example.com",
-    "createdAt": "2026-01-15T18:00:00.000Z"
+    "createdAt": "2026-04-12T19:00:00.000Z"
   }
 }
 ```
+
+**What Happens Server-Side**:
+
+1. Validates email format
+2. Checks if user already exists
+3. Hashes the authkey with bcrypt
+4. Creates User record with authkeyHash
+5. Creates UserSalt record with the client-provided salt
+6. Sets session cookie (auto-login)
 
 **Automatic Login**: Upon successful registration, a session cookie is automatically set.
 
@@ -51,12 +84,34 @@ The Forge backend includes secure user authentication with email-based login and
 
 **Endpoint**: `POST /api/auth/login`
 
+**Client-Side Process**:
+
+```typescript
+// 1. Fetch user's salt from public endpoint
+const saltResponse = await fetch(
+  `/api/salt?username=${encodeURIComponent(email)}`
+);
+const { salt } = await saltResponse.json();
+
+// 2. Derive authkey from password + salt using PBKDF2
+const authKeyObj = await deriveKey(password, salt, "authentication");
+const authkey = await exportKeyToString(authKeyObj);
+
+// 3. Send authkey to server
+const response = await fetch("/api/auth/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({ email, authkey }),
+});
+```
+
 **Request Body**:
 
 ```json
 {
   "email": "user@example.com",
-  "password": "securepassword123"
+  "authkey": "base64EncodedDerivedAuthkey=="
 }
 ```
 
@@ -67,7 +122,7 @@ The Forge backend includes secure user authentication with email-based login and
   "message": "Login successful",
   "user": {
     "email": "user@example.com",
-    "createdAt": "2026-01-15T18:00:00.000Z"
+    "createdAt": "2026-04-12T19:00:00.000Z"
   }
 }
 ```
@@ -76,11 +131,48 @@ The Forge backend includes secure user authentication with email-based login and
 
 ```json
 {
-  "error": "Invalid email or password"
+  "error": "Invalid email or authkey"
 }
 ```
 
-### 3. Logout
+**What Happens Server-Side**:
+
+1. Finds user by email
+2. Verifies authkey against stored authkeyHash using bcrypt
+3. Sets session cookie if valid
+4. Returns user info
+
+### 3. Get Salt (Public Endpoint)
+
+**Endpoint**: `GET /api/salt?username=<email>`
+
+**Purpose**: Allows clients to fetch a user's salt for key derivation during login.
+
+**Request**:
+
+```
+GET /api/salt?username=user@example.com
+```
+
+**Response** (200 OK):
+
+```json
+{
+  "salt": "base64EncodedSaltValue=="
+}
+```
+
+**Error Response** (404 Not Found):
+
+```json
+{
+  "error": "Salt not found"
+}
+```
+
+**Security Note**: Salt values are not sensitive data. They are required for the client to derive the correct authkey during login. This endpoint is intentionally public.
+
+### 4. Logout
 
 **Endpoint**: `POST /api/auth/logout`
 
@@ -94,7 +186,7 @@ The Forge backend includes secure user authentication with email-based login and
 }
 ```
 
-### 4. Get Current User
+### 5. Get Current User
 
 **Endpoint**: `GET /api/auth/me`
 
@@ -105,8 +197,8 @@ The Forge backend includes secure user authentication with email-based login and
 ```json
 {
   "email": "user@example.com",
-  "createdAt": "2026-01-15T18:00:00.000Z",
-  "updatedAt": "2026-01-15T18:00:00.000Z"
+  "createdAt": "2026-04-12T19:00:00.000Z",
+  "updatedAt": "2026-04-12T19:00:00.000Z"
 }
 ```
 
@@ -116,6 +208,74 @@ The Forge backend includes secure user authentication with email-based login and
 {
   "error": "Not authenticated"
 }
+```
+
+## Cryptographic Functions
+
+### Client-Side (`lib/crypto/client.tsx`)
+
+**`generateSalt(byteLength?: number): string`**
+
+Generates a cryptographically secure random salt using the Web Crypto API.
+
+```typescript
+const salt = generateSalt(); // Returns 32-byte base64-encoded salt
+const customSalt = generateSalt(64); // Returns 64-byte base64-encoded salt
+```
+
+**`deriveKey(password: string, salt: string, purpose: string, iterations?: number): Promise<CryptoKey>`**
+
+Derives a cryptographic key from a password and salt using PBKDF2.
+
+```typescript
+const authKey = await deriveKey(password, salt, "authentication", 100000);
+const encryptionKey = await deriveKey(password, salt, "encryption");
+```
+
+- Default iterations: 100,000
+- Hash algorithm: SHA-256
+- Output: AES-GCM 256-bit key
+
+**`exportKeyToString(key: CryptoKey): Promise<string>`**
+
+Exports a CryptoKey to a base64-encoded string for transmission.
+
+```typescript
+const authkey = await exportKeyToString(authKeyObj);
+```
+
+**`encrypt(key: CryptoKey, plaintext: string): Promise<string>`**
+
+Encrypts plaintext using AES-GCM encryption.
+
+```typescript
+const ciphertext = await encrypt(encryptionKey, "secret data");
+```
+
+**`decrypt(key: CryptoKey, ciphertext: string): Promise<string>`**
+
+Decrypts ciphertext that was encrypted with the encrypt function.
+
+```typescript
+const plaintext = await decrypt(encryptionKey, ciphertext);
+```
+
+### Server-Side (`lib/crypto/server.tsx`)
+
+**`hashAuthkey(authkey: string): Promise<string>`**
+
+Hashes an authkey using bcrypt with 10 rounds.
+
+```typescript
+const authkeyHash = await hashAuthkey(authkey);
+```
+
+**`verifyAuthkey(authkey: string, hash: string): Promise<boolean>`**
+
+Verifies an authkey against a bcrypt hash.
+
+```typescript
+const isValid = await verifyAuthkey(authkey, storedHash);
 ```
 
 ## Protected Endpoints
@@ -171,43 +331,57 @@ openssl rand -base64 32
 
 ## Testing Authentication
 
-### Using curl
-
-```bash
-# Register a new user
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}' \
-  -c cookies.txt
-
-# Login (saves session cookie)
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}' \
-  -c cookies.txt
-
-# Get current user (uses saved cookie)
-curl http://localhost:3000/api/auth/me -b cookies.txt
-
-# Fetch goals (authenticated)
-curl http://localhost:3000/api/goals -b cookies.txt
-
-# Create a goal (authenticated)
-curl -X POST http://localhost:3000/api/goals \
-  -H "Content-Type: application/json" \
-  -d '{"title":"My Goal","description":"Test goal","dueDate":null,"infoTags":[]}' \
-  -b cookies.txt
-
-# Logout
-curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
-```
-
 ### Test User Credentials
 
 The seed script creates a default test user:
 
 - **Email**: `test@example.com`
 - **Password**: `password123`
+
+The test user's authkey is derived from the password using a stored salt.
+
+### Using JavaScript/TypeScript
+
+```typescript
+// Get salt
+const saltRes = await fetch(
+  "http://localhost:3000/api/salt?username=test@example.com"
+);
+const { salt } = await saltRes.json();
+
+// Derive authkey
+const authKeyObj = await deriveKey("password123", salt, "authentication");
+const authkey = await exportKeyToString(authKeyObj);
+
+// Login
+const loginRes = await fetch("http://localhost:3000/api/auth/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({ email: "test@example.com", authkey }),
+});
+```
+
+### Using curl (Simplified)
+
+Note: curl examples require pre-computed authkeys. For actual implementation, use the client-side JavaScript functions.
+
+```bash
+# Get user's salt (public endpoint)
+curl http://localhost:3000/api/salt?username=test@example.com
+
+# Get current user (with cookie)
+curl http://localhost:3000/api/auth/me -b cookies.txt
+
+# Fetch goals (authenticated)
+curl http://localhost:3000/api/goals -b cookies.txt
+
+# Try without auth (should return 401)
+curl http://localhost:3000/api/goals
+
+# Logout
+curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
+```
 
 ## Error Responses
 
@@ -221,6 +395,14 @@ Returned when authentication is required but not provided:
 }
 ```
 
+Or when credentials are invalid:
+
+```json
+{
+  "error": "Invalid email or authkey"
+}
+```
+
 ### 404 Not Found
 
 Returned when trying to access another user's resource:
@@ -228,6 +410,14 @@ Returned when trying to access another user's resource:
 ```json
 {
   "error": "Goal not found"
+}
+```
+
+Or when salt is not found:
+
+```json
+{
+  "error": "Salt not found"
 }
 ```
 
@@ -247,7 +437,13 @@ Returned for validation errors:
 
 ```json
 {
-  "error": "Password must be at least 8 characters long"
+  "error": "Email, authkey, and salt are required"
+}
+```
+
+```json
+{
+  "error": "Invalid email format"
 }
 ```
 
@@ -258,7 +454,8 @@ Returned for validation errors:
 ```prisma
 model User {
   id            String          @id // email address
-  passwordHash  String
+  authkeyHash   String          // bcrypt hash of derived authkey
+  timezone      String          @default("UTC")
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -267,6 +464,23 @@ model User {
   providers        Provider[]
   chatHistories    ChatHistory[]
   icsSubscriptions IcsSubscription[]
+  memories         Memory[]
+  searchConfig     SearchConfig?
+  salts            UserSalt[]
+}
+```
+
+### UserSalt Table
+
+```prisma
+model UserSalt {
+  id        String   @id @default(uuid())
+  userId    String   @unique // One salt per user
+  salt      String   // Base64-encoded salt value
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 ```
 
@@ -278,7 +492,7 @@ model Goal {
   userId        String
   title         String
   description   String
-  dueDate       String?
+  dueDate       DateTime?
   chatHistoryId String?         @unique
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -300,10 +514,11 @@ model Event {
   userId          String
   goalId          String?  // nullable — links to Goal if it's a goal task
   title           String
-  start           String   // ISO datetime string
-  end             String   // ISO datetime string
+  start           DateTime // UTC datetime
+  end             DateTime // UTC datetime
   kind            String?  // 'task', 'break', 'ics', etc.
   completed       Boolean  @default(false)
+  confirmed       Boolean  @default(true)
   minutesEstimate Int?
   order           Int      @default(0)
   metadata        String?  // JSON string for extensibility
@@ -311,6 +526,7 @@ model Event {
   // ICS-specific fields (nullable for user-created events)
   subscriptionId   String?
   uid              String?
+  recurid          String   @default("")
   description      String?
   location         String?
   // ... additional ICS fields
@@ -319,7 +535,7 @@ model Event {
   goal             Goal?             @relation(fields: [goalId], references: [id], onDelete: Cascade)
   subscription     IcsSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
-  @@unique([subscriptionId, uid])
+  @@unique([subscriptionId, uid, recurid])
   @@index([userId])
   @@index([goalId])
   @@index([subscriptionId])
@@ -328,19 +544,49 @@ model Event {
 
 ## Implementation Details
 
-### Password Security
+### Zero-Knowledge Architecture
 
-- Uses bcryptjs library (v3.x) for secure password hashing
+The system implements a zero-knowledge architecture where:
+
+1. **Client generates salt** during registration (never known by server beforehand)
+2. **Client derives authkey** from password + salt using PBKDF2 (100,000 iterations)
+3. **Server stores authkeyHash** (bcrypt) and salt (plaintext)
+4. **Server never sees password** at any point
+
+This ensures that:
+
+- Server compromise doesn't reveal passwords
+- Server cannot derive encryption keys
+- Users can derive multiple keys for different purposes (encryption, signing, etc.)
+
+### Authkey Derivation
+
+```typescript
+// Purpose: "authentication" for login
+// Iterations: 100,000 (PBKDF2)
+// Hash: SHA-256
+// Output: 256-bit AES-GCM key
+
+const authKeyObj = await deriveKey(password, salt, "authentication", 100000);
+```
+
+Different purposes can be used to derive different keys from the same password:
+
+- `"authentication"` — For login authkey
+- `"encryption"` — For data encryption
+- `"signing"` — For digital signatures
+
+### Authkey Security
+
+- Uses bcryptjs library (v3.x) for secure authkey hashing
 - 10 salt rounds (2^10 = 1,024 iterations)
-- Passwords are never stored in plain text
-- Passwords are never returned in API responses
+- Authkeys are never stored in plain text
+- Authkeys are never returned in API responses
 
 ### Authentication Middleware
 
 Located in `lib/auth.ts`:
 
-- `hashPassword(password)` — Hashes a password
-- `verifyPassword(password, hash)` — Verifies a password against its hash
 - `setAuthCookie(email)` — Sets the session cookie
 - `clearAuthCookie()` — Clears the session cookie
 - `getCurrentUser()` — Gets the current authenticated user's email
@@ -371,35 +617,130 @@ export async function GET(req: Request) {
 
 1. **Set COOKIE_SECRET**: Generate a strong random secret (`openssl rand -base64 32`) and set it as the `COOKIE_SECRET` environment variable. The application will refuse to start without it.
 2. **Use HTTPS in Production**: Set `NODE_ENV=production` to enable secure cookies
-3. **Change Test Credentials**: Update the test user password in production
-4. **Implement Rate Limiting**: Add rate limiting to prevent brute force attacks
-5. **Add Password Requirements**: Consider enforcing stronger password policies
-6. **Implement Email Verification**: Add email verification for new registrations
-7. **Add Refresh Tokens**: Implement refresh tokens for longer sessions
+3. **Implement Rate Limiting**: Add rate limiting to prevent brute force attacks on login
+4. **Monitor Salt Endpoint**: While public, monitor for abuse (e.g., enumeration attacks)
+5. **Client-Side Validation**: Validate password strength before deriving authkey
+6. **Secure Salt Storage**: Ensure client stores salt securely during registration
+7. **Key Derivation Time**: Inform users that login may take a moment (PBKDF2 iterations)
 8. **Add 2FA**: Consider adding two-factor authentication for enhanced security
 
 ## Frontend Integration
 
-To integrate with your React frontend:
+### Registration Flow
 
-1. Create login/register forms
-2. Store authentication state in React context or global state
-3. Include credentials in fetch requests:
+```typescript
+import {
+  generateSalt,
+  deriveKey,
+  exportKeyToString,
+} from "@/lib/crypto/client";
 
-```javascript
-// Login
-const response = await fetch("/api/auth/login", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  credentials: "include", // Important: includes cookies
-  body: JSON.stringify({ email, password }),
-});
+async function register(email: string, password: string) {
+  // 1. Generate salt
+  const salt = generateSalt();
 
-// Fetch protected data
+  // 2. Derive authkey
+  const authKeyObj = await deriveKey(password, salt, "authentication");
+  const authkey = await exportKeyToString(authKeyObj);
+
+  // 3. Send to server
+  const response = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, authkey, salt }),
+  });
+
+  return response.json();
+}
+```
+
+### Login Flow
+
+```typescript
+import { deriveKey, exportKeyToString } from "@/lib/crypto/client";
+
+async function login(email: string, password: string) {
+  // 1. Fetch salt
+  const saltRes = await fetch(
+    `/api/salt?username=${encodeURIComponent(email)}`
+  );
+
+  if (!saltRes.ok) {
+    throw new Error("User not found");
+  }
+
+  const { salt } = await saltRes.json();
+
+  // 2. Derive authkey
+  const authKeyObj = await deriveKey(password, salt, "authentication");
+  const authkey = await exportKeyToString(authKeyObj);
+
+  // 3. Send to server
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, authkey }),
+  });
+
+  return response.json();
+}
+```
+
+### Fetch Protected Data
+
+```typescript
+// Always include credentials to send cookies
 const goals = await fetch("/api/goals", {
-  credentials: "include", // Important: includes cookies
+  credentials: "include",
 });
 ```
 
-4. Handle 401 errors by redirecting to login page
-5. Check authentication status on app load with `/api/auth/me`
+### Handle 401 Errors
+
+```typescript
+const response = await fetch("/api/goals", {
+  credentials: "include",
+});
+
+if (response.status === 401) {
+  // Redirect to login
+  window.location.href = "/login";
+}
+```
+
+### Check Authentication Status
+
+```typescript
+async function checkAuth() {
+  const response = await fetch("/api/auth/me", {
+    credentials: "include",
+  });
+
+  if (response.ok) {
+    const user = await response.json();
+    return user;
+  }
+
+  return null;
+}
+```
+
+## Performance Considerations
+
+- **PBKDF2 Computation**: Key derivation takes ~100-200ms on modern devices (intentional for security)
+- **Show Loading State**: Display loading indicators during login/registration
+- **Salt Caching**: Consider caching salt client-side after first fetch (only for UX, not security)
+- **Parallel Requests**: Salt fetch and UI prep can happen in parallel
+
+## Migration from Password-Based Auth
+
+If migrating from a password-based system:
+
+1. Create migration script to generate salts for existing users
+2. Derive authkeys from existing passwords (requires one-time password knowledge)
+3. Hash authkeys with bcrypt
+4. Store salts in UserSalt table
+5. Update User table schema (passwordHash → authkeyHash)
+6. Update client code to use new auth flow
