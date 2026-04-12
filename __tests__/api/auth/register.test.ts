@@ -2,10 +2,15 @@ import { POST } from "@/app/api/auth/register/route";
 import { prismaMock } from "@/__tests__/utils/prisma-mock";
 import { createMockRequest, mockUser } from "@/__tests__/utils/test-helpers";
 import * as auth from "@/lib/auth";
+import * as cryptoServer from "@/lib/crypto/server";
 
 jest.mock("@/lib/auth", () => ({
   hashPassword: jest.fn(),
   setAuthCookie: jest.fn(),
+}));
+
+jest.mock("@/lib/crypto/server", () => ({
+  generateSalt: jest.fn(),
 }));
 
 describe("POST /api/auth/register", () => {
@@ -13,13 +18,35 @@ describe("POST /api/auth/register", () => {
     jest.clearAllMocks();
   });
 
-  it("should register a new user successfully", async () => {
+  it("should register a new user successfully and create salts for all purposes", async () => {
     const mockHashedPassword = "$2a$10$hashedpassword";
+    const mockSalt = "mockGeneratedSalt123==";
+
     (auth.hashPassword as jest.Mock).mockResolvedValue(mockHashedPassword);
     (auth.setAuthCookie as jest.Mock).mockResolvedValue(undefined);
+    (cryptoServer.generateSalt as jest.Mock).mockReturnValue(mockSalt);
 
     prismaMock.user.findUnique.mockResolvedValue(null);
-    prismaMock.user.create.mockResolvedValue(mockUser);
+
+    // Mock transaction to execute the callback
+    prismaMock.$transaction.mockImplementation(async (callback) => {
+      const txMock = {
+        user: {
+          create: jest.fn().mockResolvedValue(mockUser),
+        },
+        userSalt: {
+          create: jest.fn().mockResolvedValue({
+            id: "salt-id",
+            userId: mockUser.id,
+            purpose: "authentication",
+            salt: mockSalt,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }),
+        },
+      };
+      return callback(txMock);
+    });
 
     const request = createMockRequest({
       method: "POST",
@@ -37,12 +64,12 @@ describe("POST /api/auth/register", () => {
     expect(data.user.email).toBe("test@example.com");
     expect(auth.hashPassword).toHaveBeenCalledWith("password123");
     expect(auth.setAuthCookie).toHaveBeenCalledWith("test@example.com");
-    expect(prismaMock.user.create).toHaveBeenCalledWith({
-      data: {
-        id: "test@example.com",
-        passwordHash: mockHashedPassword,
-      },
-    });
+
+    // Verify transaction was called
+    expect(prismaMock.$transaction).toHaveBeenCalled();
+
+    // Verify generateSalt was called for each purpose (authentication and apikey)
+    expect(cryptoServer.generateSalt).toHaveBeenCalledTimes(2);
   });
 
   it("should return 400 when email is missing", async () => {

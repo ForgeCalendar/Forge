@@ -25,6 +25,7 @@ model User {
   icsSubscriptions IcsSubscription[]
   memories         Memory[]
   searchConfig     SearchConfig?
+  salts            UserSalt[]
 }
 
 model SearchConfig {
@@ -155,6 +156,11 @@ enum ChatHistoryRole {
   TaskHelper
 }
 
+enum SaltPurpose {
+  authentication
+  apikey
+}
+
 model ChatHistory {
   id         String           @id @default(uuid())
   userId     String
@@ -213,5 +219,19 @@ model IcsSubscription {
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   events      Event[]
 
+  @@index([userId])
+}
+
+model UserSalt {
+  id        String      @id @default(uuid())
+  userId    String
+  purpose   SaltPurpose // Purpose identifier: authentication or apikey
+  salt      String      // The salt value (base64 or hex encoded)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, purpose]) // Each user can have only one salt per purpose
   @@index([userId])
 }

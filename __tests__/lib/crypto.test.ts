@@ -1,4 +1,4 @@
-import { deriveKey, encrypt, decrypt } from "@/lib/crypto";
+import { deriveKey, encrypt, decrypt } from "@/lib/crypto/client";
 
 describe("deriveKey", () => {
   const testPassword = "testPassword123";
