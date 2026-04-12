@@ -25,7 +25,7 @@ model User {
   icsSubscriptions IcsSubscription[]
   memories         Memory[]
   searchConfig     SearchConfig?
-  salts            UserSalt[]
+  salt             UserSalt?
 }
 
 model SearchConfig {
