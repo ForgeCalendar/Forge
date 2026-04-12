@@ -212,4 +212,3 @@ describe("POST /api/auth/register", () => {
     expect(data.error).toBe("Failed to register user");
   });
 });
-
