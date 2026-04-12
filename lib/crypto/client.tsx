@@ -1,4 +1,15 @@
 /**
+ * Generates a cryptographically secure random salt in the browser.
+ *
+ * @param byteLength - The length of the salt in bytes (default: 32 bytes = 256 bits)
+ * @returns A base64-encoded salt string
+ */
+export function generateSalt(byteLength: number = 32): string {
+  const salt = crypto.getRandomValues(new Uint8Array(byteLength));
+  return btoa(String.fromCharCode(...salt));
+}
+
+/**
  * Derives a cryptographic key from a password, salt, and purpose string.
  * Different purpose strings will produce different keys from the same password.
  *

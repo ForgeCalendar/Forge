@@ -1,4 +1,76 @@
-import { deriveKey, encrypt, decrypt } from "@/lib/crypto/client";
+import { generateSalt, deriveKey, encrypt, decrypt } from "@/lib/crypto/client";
+
+describe("generateSalt", () => {
+  it("should generate a salt", () => {
+    const salt = generateSalt();
+
+    expect(salt).toBeDefined();
+    expect(typeof salt).toBe("string");
+    expect(salt.length).toBeGreaterThan(0);
+  });
+
+  it("should generate a base64-encoded string", () => {
+    const salt = generateSalt();
+
+    // Should be valid base64
+    expect(() => atob(salt)).not.toThrow();
+
+    // Decode and check it's the right length (default 32 bytes)
+    const decoded = Uint8Array.from(atob(salt), (c) => c.charCodeAt(0));
+    expect(decoded.length).toBe(32);
+  });
+
+  it("should generate different salts each time", () => {
+    const salt1 = generateSalt();
+    const salt2 = generateSalt();
+    const salt3 = generateSalt();
+
+    expect(salt1).not.toBe(salt2);
+    expect(salt2).not.toBe(salt3);
+    expect(salt1).not.toBe(salt3);
+  });
+
+  it("should generate unique salts in a large batch", () => {
+    const salts = new Set<string>();
+    const count = 1000;
+
+    for (let i = 0; i < count; i++) {
+      salts.add(generateSalt());
+    }
+
+    // All salts should be unique
+    expect(salts.size).toBe(count);
+  });
+
+  it("should respect custom byte length", () => {
+    const salt16 = generateSalt(16);
+    const salt32 = generateSalt(32);
+    const salt64 = generateSalt(64);
+
+    const decoded16 = Uint8Array.from(atob(salt16), (c) => c.charCodeAt(0));
+    const decoded32 = Uint8Array.from(atob(salt32), (c) => c.charCodeAt(0));
+    const decoded64 = Uint8Array.from(atob(salt64), (c) => c.charCodeAt(0));
+
+    expect(decoded16.length).toBe(16);
+    expect(decoded32.length).toBe(32);
+    expect(decoded64.length).toBe(64);
+  });
+
+  it("should use default of 32 bytes when not specified", () => {
+    const saltDefault = generateSalt();
+    const saltExplicit = generateSalt(32);
+
+    const decodedDefault = Uint8Array.from(atob(saltDefault), (c) =>
+      c.charCodeAt(0)
+    );
+    const decodedExplicit = Uint8Array.from(atob(saltExplicit), (c) =>
+      c.charCodeAt(0)
+    );
+
+    expect(decodedDefault.length).toBe(32);
+    expect(decodedExplicit.length).toBe(32);
+  });
+});
 
 describe("deriveKey", () => {
   const testPassword = "testPassword123";

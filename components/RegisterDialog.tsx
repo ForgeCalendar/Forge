@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { useThemeTokens } from "@/lib/theme-tokens";
+import { generateSalt } from "@/lib/crypto/client";
 
 type RegisterDialogProps = {
   open: boolean;
@@ -39,12 +40,15 @@ export default function RegisterDialog({
     setIsLoading(true);
 
     try {
+      // Generate a cryptographically secure salt on the client
+      const salt = generateSalt();
+
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, salt }),
       });
 
       const data = await response.json();

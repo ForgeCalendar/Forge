@@ -2,15 +2,10 @@ import { POST } from "@/app/api/auth/register/route";
 import { prismaMock } from "@/__tests__/utils/prisma-mock";
 import { createMockRequest, mockUser } from "@/__tests__/utils/test-helpers";
 import * as auth from "@/lib/auth";
-import * as cryptoServer from "@/lib/crypto/server";
 
 jest.mock("@/lib/auth", () => ({
   hashPassword: jest.fn(),
   setAuthCookie: jest.fn(),
-}));
-
-jest.mock("@/lib/crypto/server", () => ({
-  generateSalt: jest.fn(),
 }));
 
 describe("POST /api/auth/register", () => {
@@ -18,13 +13,12 @@ describe("POST /api/auth/register", () => {
     jest.clearAllMocks();
   });
 
-  it("should register a new user successfully and create a salt", async () => {
+  it("should register a new user successfully with provided salt", async () => {
     const mockHashedPassword = "$2a$10$hashedpassword";
-    const mockSalt = "mockGeneratedSalt123==";
+    const mockSalt = "mockClientGeneratedSalt123==";
 
     (auth.hashPassword as jest.Mock).mockResolvedValue(mockHashedPassword);
     (auth.setAuthCookie as jest.Mock).mockResolvedValue(undefined);
-    (cryptoServer.generateSalt as jest.Mock).mockReturnValue(mockSalt);
 
     prismaMock.user.findUnique.mockResolvedValue(null);
 
@@ -52,6 +46,7 @@ describe("POST /api/auth/register", () => {
       body: {
         email: "test@example.com",
         password: "password123",
+        salt: mockSalt,
       },
     });
 
@@ -66,15 +61,45 @@ describe("POST /api/auth/register", () => {
 
     // Verify transaction was called
     expect(prismaMock.$transaction).toHaveBeenCalled();
-
-    // Verify generateSalt was called once
-    expect(cryptoServer.generateSalt).toHaveBeenCalledTimes(1);
   });
 
   it("should return 400 when email is missing", async () => {
     const request = createMockRequest({
       method: "POST",
       body: {
+        password: "password123",
+        salt: "someSalt==",
+      },
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe("Email, password, and salt are required");
+  });
+
+  it("should return 400 when password is missing", async () => {
+    const request = createMockRequest({
+      method: "POST",
+      body: {
+        email: "test@example.com",
+        salt: "someSalt==",
+      },
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe("Email, password, and salt are required");
+  });
+
+  it("should return 400 when salt is missing", async () => {
+    const request = createMockRequest({
+      method: "POST",
+      body: {
+        email: "test@example.com",
         password: "password123",
       },
     });
@@ -83,22 +108,7 @@ describe("POST /api/auth/register", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Email and password are required");
-  });
-
-  it("should return 400 when password is missing", async () => {
-    const request = createMockRequest({
-      method: "POST",
-      body: {
-        email: "test@example.com",
-      },
-    });
-
-    const response = await POST(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.error).toBe("Email and password are required");
+    expect(data.error).toBe("Email, password, and salt are required");
   });
 
   it("should return 400 when email format is invalid", async () => {
@@ -107,6 +117,7 @@ describe("POST /api/auth/register", () => {
       body: {
         email: "invalid-email",
         password: "password123",
+        salt: "someSalt==",
       },
     });
 
@@ -123,6 +134,7 @@ describe("POST /api/auth/register", () => {
       body: {
         email: "test@example.com",
         password: "short",
+        salt: "someSalt==",
       },
     });
 
@@ -141,6 +153,7 @@ describe("POST /api/auth/register", () => {
       body: {
         email: "test@example.com",
         password: "password123",
+        salt: "someSalt==",
       },
     });
 
@@ -159,6 +172,7 @@ describe("POST /api/auth/register", () => {
       body: {
         email: "test@example.com",
         password: "password123",
+        salt: "someSalt==",
       },
     });
 

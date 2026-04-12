@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setAuthCookie } from "@/lib/auth";
-import { generateSalt } from "@/lib/crypto/server";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { email, password, salt } = body;
 
     // Validate input
-    if (!email || !password) {
+    if (!email || !password || !salt) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Email, password, and salt are required" },
         { status: 400 }
       );
     }
@@ -60,7 +59,7 @@ export async function POST(req: Request) {
       await tx.userSalt.create({
         data: {
           userId: newUser.id,
-          salt: generateSalt(),
+          salt: salt,
         },
       });
 
