@@ -69,7 +69,9 @@ export default function ChatDemoPage() {
       },
       modelId,
       role: "Assistant",
-      systemPrompt: "You are a helpful AI assistant.",
+      systemPrompt: `You are a helpful AI assistant.
+
+When you use tools to retrieve information, you MUST always provide a text response to the user after getting the tool results. Never leave the user hanging after a tool call - always follow up with a helpful message that incorporates what you learned from the tool.`,
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -160,27 +162,50 @@ export default function ChatDemoPage() {
               p={4}
             >
               <VStack gap={3} align="stretch">
-                {messages.map((msg, idx) => (
-                  <Box
-                    key={idx}
-                    p={3}
-                    bg={msg.role === "user" ? "blue.50" : "gray.50"}
-                    _dark={{
-                      bg: msg.role === "user" ? "blue.900" : "gray.800",
-                    }}
-                    borderRadius="md"
-                  >
-                    <Text
-                      fontSize="xs"
-                      fontWeight="bold"
-                      mb={1}
-                      color={textMuted}
+                {messages.map((msg, idx) => {
+                  // Extract text content from message
+                  let content = "";
+                  if (typeof msg.content === "string") {
+                    content = msg.content;
+                  } else if (Array.isArray(msg.content)) {
+                    // Content is an array of parts (text, tool calls, etc.)
+                    content = msg.content
+                      .filter((part: any) => part.type === "text")
+                      .map((part: any) => part.text)
+                      .join("\n");
+                  }
+
+                  // Skip rendering if there's no text content
+                  if (!content && msg.role === "assistant") {
+                    return null;
+                  }
+
+                  return (
+                    <Box
+                      key={idx}
+                      p={3}
+                      bg={msg.role === "user" ? "blue.50" : "gray.50"}
+                      _dark={{
+                        bg: msg.role === "user" ? "blue.900" : "gray.800",
+                      }}
+                      borderRadius="md"
                     >
-                      {msg.role === "user" ? "You" : "Assistant"}
-                    </Text>
-                    <Text fontSize="sm">{msg.content}</Text>
-                  </Box>
-                ))}
+                      <Text
+                        fontSize="xs"
+                        fontWeight="bold"
+                        mb={1}
+                        color={textMuted}
+                      >
+                        {msg.role === "user"
+                          ? "You"
+                          : msg.role === "tool"
+                          ? "Tool Result"
+                          : "Assistant"}
+                      </Text>
+                      {content && <Text fontSize="sm">{content}</Text>}
+                    </Box>
+                  );
+                })}
 
                 {/* Current streaming message */}
                 {currentMessage && (

@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { streamText, CoreMessage, CoreTool } from "ai";
+import { streamText, CoreMessage, tool } from "ai";
 import {
   createClientModel,
   type ProviderType,
@@ -66,15 +66,15 @@ export function useChatClient({
   /**
    * Build tools for the AI based on role.
    */
-  const buildTools = useCallback((): Record<string, CoreTool> => {
+  const buildTools = useCallback(() => {
     const toolNames = getToolsForRole(role);
-    const tools: Record<string, CoreTool> = {};
+    const tools: Record<string, ReturnType<typeof tool>> = {};
 
     for (const toolName of toolNames) {
       const schema = toolSchemas[toolName];
-      tools[toolName] = {
+      tools[toolName] = tool({
         description: schema.description,
-        parameters: schema.inputSchema,
+        inputSchema: schema.inputSchema,
         execute: async (params: any) => {
           // Execute via backend API
           try {
@@ -106,7 +106,7 @@ export function useChatClient({
             };
           }
         },
-      };
+      });
     }
 
     return tools;
@@ -159,30 +159,85 @@ export function useChatClient({
         // Build tools
         const tools = buildTools();
 
-        // Start streaming
-        // TEMP: Disable tools to test basic chat
+        // Start streaming with tool support
+        setStatus("streaming");
+        setCurrentMessage("Thinking...");
+
         const result = await streamText({
           model,
           messages: conversationMessages,
           system: systemPrompt,
-          // tools, // Temporarily disabled
-          // maxSteps: 10, // Removed - only needed for tool calling
+          tools,
+          maxSteps: 10,
         });
 
-        // Stream the response
-        let assistantMessage = "";
-        for await (const chunk of result.textStream) {
-          assistantMessage += chunk;
-          setCurrentMessage(assistantMessage);
+        // Wait for the complete result (all tool calls and final response)
+        const finalResponse = await result.response;
+        const finalText = await result.text;
+
+        console.log("[useChatClient] Complete response:", {
+          messageCount: finalResponse.messages.length,
+          finalText,
+          finishReason: finalResponse.finishReason,
+          messages: finalResponse.messages.map((m: any) => ({
+            role: m.role,
+            content:
+              typeof m.content === "string"
+                ? m.content
+                : Array.isArray(m.content)
+                ? m.content.map((c: any) => c.type)
+                : "unknown",
+          })),
+        });
+
+        // Check if we need to force a text response after tool calls
+        const lastMessage =
+          finalResponse.messages[finalResponse.messages.length - 1];
+
+        // If the last message is a tool result, we need to continue to get assistant's response
+        if (lastMessage?.role === "tool") {
+          console.log(
+            "[useChatClient] Last message is tool result, continuing for assistant response..."
+          );
+
+          // Continue the conversation with tool results to get final response
+          const continuationMessages = [
+            ...conversationMessages,
+            ...finalResponse.messages,
+          ];
+
+          const continuationResult = await streamText({
+            model,
+            messages: continuationMessages,
+            system: systemPrompt,
+            tools, // Still provide tools in case AI needs more
+            maxSteps: 5, // Allow a few more steps if needed
+          });
+
+          // Wait for the continuation response
+          const continuationResponse = await continuationResult.response;
+          const continuationText = await continuationResult.text;
+
+          console.log("[useChatClient] Continuation response:", {
+            messageCount: continuationResponse.messages.length,
+            finalText: continuationText,
+          });
+
+          // Build final message history with all messages including continuation
+          const finalMessages = [
+            ...continuationMessages,
+            ...continuationResponse.messages,
+          ];
+          setMessages(finalMessages);
+        } else {
+          // Normal case - response already complete
+          const finalMessages = [
+            ...conversationMessages,
+            ...finalResponse.messages,
+          ];
+          setMessages(finalMessages);
         }
 
-        // Add assistant message to history
-        const newAssistantMessage: CoreMessage = {
-          role: "assistant",
-          content: assistantMessage,
-        };
-        const finalMessages = [...conversationMessages, newAssistantMessage];
-        setMessages(finalMessages);
         setCurrentMessage("");
         setStatus("complete");
 

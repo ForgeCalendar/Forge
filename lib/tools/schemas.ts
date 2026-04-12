@@ -43,7 +43,7 @@ export const toolSchemas = {
   listMemoryQuestions: {
     description:
       "IMPORTANT: This tool does not send any visible response to the user. You MUST include a text message when calling this tool. List all stored memory questions (keys) about the user, without their answers. Use this at the start of a conversation to quickly see what you already know about the user, then selectively fetch specific answers with searchMemoryAnswer.",
-    inputSchema: z.object({}).describe("No parameters required"),
+    inputSchema: z.object({}),
   },
 
   searchMemoryAnswer: {
@@ -95,13 +95,13 @@ export const toolSchemas = {
   listAllEvents: {
     description:
       "List all events related to this goal, including both confirmed and unconfirmed events. Use this to see the complete picture of what tasks exist for this goal.",
-    inputSchema: z.object({}).describe("No parameters required"),
+    inputSchema: z.object({}),
   },
 
   listSuggestedEvents: {
     description:
       "List all suggested (unconfirmed) events for this goal. Use this to see what events have been proposed but not yet confirmed by the user.",
-    inputSchema: z.object({}).describe("No parameters required"),
+    inputSchema: z.object({}),
   },
 
   modifySuggestedEvent: {
