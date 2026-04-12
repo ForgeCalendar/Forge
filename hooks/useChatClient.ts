@@ -161,7 +161,6 @@ export function useChatClient({
 
         // Start streaming with tool support
         setStatus("streaming");
-        setCurrentMessage("Thinking...");
 
         const result = await streamText({
           model,
@@ -171,23 +170,19 @@ export function useChatClient({
           maxSteps: 10,
         });
 
+        // Stream the initial response
+        let streamedText = "";
+        for await (const textPart of result.textStream) {
+          streamedText += textPart;
+          setCurrentMessage(streamedText);
+        }
+
         // Wait for the complete result (all tool calls and final response)
         const finalResponse = await result.response;
-        const finalText = await result.text;
 
         console.log("[useChatClient] Complete response:", {
           messageCount: finalResponse.messages.length,
-          finalText,
-          finishReason: finalResponse.finishReason,
-          messages: finalResponse.messages.map((m: any) => ({
-            role: m.role,
-            content:
-              typeof m.content === "string"
-                ? m.content
-                : Array.isArray(m.content)
-                ? m.content.map((c: any) => c.type)
-                : "unknown",
-          })),
+          streamedText,
         });
 
         // Check if we need to force a text response after tool calls
@@ -214,13 +209,19 @@ export function useChatClient({
             maxSteps: 5, // Allow a few more steps if needed
           });
 
-          // Wait for the continuation response
+          // Stream the continuation response
+          let continuationText = "";
+          for await (const textPart of continuationResult.textStream) {
+            continuationText += textPart;
+            setCurrentMessage(continuationText);
+          }
+
+          // Wait for continuation to complete
           const continuationResponse = await continuationResult.response;
-          const continuationText = await continuationResult.text;
 
           console.log("[useChatClient] Continuation response:", {
             messageCount: continuationResponse.messages.length,
-            finalText: continuationText,
+            continuationText,
           });
 
           // Build final message history with all messages including continuation
