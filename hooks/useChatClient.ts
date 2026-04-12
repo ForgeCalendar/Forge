@@ -131,7 +131,7 @@ export function useChatClient({
 
         if (!provider.apiKey) {
           setError(
-            `No API key found for provider "${provider.name}". Please add your API key in Settings (/settings).`
+            `No API key found for provider "${provider.name}". Please add your API key in Account Settings.`
           );
           setStatus("error");
           return;
@@ -217,7 +217,9 @@ export function useChatClient({
             "This provider does not support browser calls (CORS blocked). Please contact support."
           );
         } else if (err.statusCode === 401) {
-          setError("Invalid API key. Please check your API key in Settings.");
+          setError(
+            "Invalid API key. Please check your API key in Account Settings."
+          );
         } else {
           setError(err.message || "An error occurred during chat");
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Box,
   Container,
@@ -12,16 +12,12 @@ import {
   Text,
   Card,
   Link,
+  Select,
+  createListCollection,
 } from "@chakra-ui/react";
 import { useChatClient } from "@/hooks/useChatClient";
 import { useThemeTokens } from "@/lib/theme-tokens";
 import { useProviders } from "@/storage/secure/useProviders";
-import {
-  SelectRoot,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-} from "@chakra-ui/react";
 import { getDefaultModel } from "@/lib/ai/client";
 
 export default function ChatDemoPage() {
@@ -37,21 +33,24 @@ export default function ChatDemoPage() {
     [providers, selectedProviderId]
   );
 
+  // Create collection for Select component
+  const providerCollection = useMemo(
+    () =>
+      createListCollection({
+        items: providers.map((p) => ({
+          label: `${p.name} (${p.type})`,
+          value: p.id,
+        })),
+      }),
+    [providers]
+  );
+
   // Auto-select first provider if available
-  useMemo(() => {
+  useEffect(() => {
     if (providers.length > 0 && !selectedProviderId) {
       setSelectedProviderId(providers[0].id);
     }
   }, [providers, selectedProviderId]);
-
-  // Don't render until we have a selected provider
-  if (!selectedProvider && providers.length > 0) {
-    return (
-      <Container maxW="container.md" py={8}>
-        <Text>Loading...</Text>
-      </Container>
-    );
-  }
 
   // Get default model for selected provider
   const modelId = useMemo(() => {
@@ -59,6 +58,7 @@ export default function ChatDemoPage() {
     return getDefaultModel(selectedProvider.type);
   }, [selectedProvider]);
 
+  // Always call all hooks before any conditional returns
   const { messages, currentMessage, status, error, sendMessage } =
     useChatClient({
       provider: selectedProvider || {
@@ -80,7 +80,8 @@ export default function ChatDemoPage() {
     }
   };
 
-  if (loadingProviders) {
+  // Render loading state
+  if (loadingProviders || (!selectedProvider && providers.length > 0)) {
     return (
       <Container maxW="container.md" py={8}>
         <Text>Loading...</Text>
@@ -88,23 +89,22 @@ export default function ChatDemoPage() {
     );
   }
 
+  // Render no providers state
   if (providers.length === 0) {
     return (
       <Container maxW="container.md" py={8}>
         <VStack gap={4} align="stretch">
           <Heading size="lg">No Providers Found</Heading>
           <Text color={textMuted}>
-            Please add an AI provider in{" "}
-            <Link href="/settings" color="blue.500">
-              Settings
-            </Link>{" "}
-            before using the chat demo.
+            Please add an AI provider in Account Settings (Providers tab) before
+            using the chat demo.
           </Text>
         </VStack>
       </Container>
     );
   }
 
+  // Render main chat UI
   return (
     <Container maxW="container.md" py={8}>
       <VStack gap={6} align="stretch">
@@ -124,19 +124,25 @@ export default function ChatDemoPage() {
             Select Provider
           </Text>
           {selectedProvider && (
-            <SelectRoot
+            <Select.Root
+              collection={providerCollection}
               value={[selectedProviderId]}
               onValueChange={(e) => setSelectedProviderId(e.value[0])}
+              size="sm"
             >
-              <SelectTrigger>{selectedProvider.name}</SelectTrigger>
-              <SelectContent>
-                {providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.name} ({provider.type})
-                  </SelectItem>
+              <Select.Trigger>
+                <Select.ValueText>
+                  {selectedProvider.name} ({selectedProvider.type})
+                </Select.ValueText>
+              </Select.Trigger>
+              <Select.Content>
+                {providerCollection.items.map((option) => (
+                  <Select.Item key={option.value} item={option}>
+                    {option.label}
+                  </Select.Item>
                 ))}
-              </SelectContent>
-            </SelectRoot>
+              </Select.Content>
+            </Select.Root>
           )}
         </Box>
 

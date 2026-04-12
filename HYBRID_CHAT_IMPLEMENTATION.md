@@ -48,9 +48,9 @@ This document describes the implementation of the hybrid chat architecture where
 
 - **New Files:**
 
-  - `lib/crypto/storage.ts` - Encrypted API key storage in sessionStorage
-  - `components/settings/ApiKeyManager.tsx` - UI for managing API keys
-  - `app/settings/page.tsx` - Settings page
+  - `lib/crypto/storage.ts` - Password and salt storage in sessionStorage
+  - `storage/secure/useProviders.ts` - Secure provider management with encrypted server storage
+  - `components/AccountSettingsPane.tsx` - Updated to use encrypted provider storage
 
 - **How It Works:**
 
@@ -149,12 +149,12 @@ Frontend → Direct Provider API call (with encrypted key) → Stream to UI
 - System stores password and salt in sessionStorage
 - These credentials are used to derive the `chatapi` key on-demand for encrypting/decrypting API keys
 
-### 2. Add API Keys
+### 2. Add AI Providers
 
-- Navigate to `/settings`
-- Enter API key for desired provider (Anthropic, OpenAI, etc.)
-- Key is encrypted and stored in sessionStorage
-- Key persists until logout or browser close
+- Navigate to Account Settings (Providers tab)
+- Enter provider details: type, name, API key, and optional base URL
+- Provider data is encrypted client-side and stored on server
+- Only you can decrypt the provider data with your password
 
 ### 3. Start Chat
 
@@ -174,14 +174,15 @@ Frontend → Direct Provider API call (with encrypted key) → Stream to UI
 
 ## Security Considerations
 
-### API Key Storage
+### Provider Data Storage
 
-- ✅ Stored in sessionStorage (automatically cleared on browser close)
-- ✅ Encrypted with chatapi key (derived from password + salt)
+- ✅ Providers encrypted client-side with chatapi key (derived from password + salt)
+- ✅ Encrypted blob stored on server (server cannot decrypt without password)
+- ✅ Password and salt stored in sessionStorage (auto-cleared on browser close)
 - ✅ Explicitly cleared on logout
-- ✅ Never sent to backend
-- ✅ Available only while user is logged in
+- ✅ Only user with correct password can decrypt provider data
 - ⚠️ Vulnerable if user's device is compromised during active session
+- ⚠️ If user forgets password, provider data cannot be recovered
 
 ### Tool Execution
 
@@ -192,33 +193,35 @@ Frontend → Direct Provider API call (with encrypted key) → Stream to UI
 
 ## Files Modified/Created
 
-### New Files (14)
+### New Files (12)
 
-1. `lib/crypto/storage.ts` - API key encryption/storage
-2. `lib/tools/schemas.ts` - Tool definitions
-3. `lib/tools/executor.ts` - Tool execution logic
-4. `lib/ai/client.ts` - Client-side AI initialization
-5. `hooks/useChatClient.ts` - Client-side chat hook
-6. `components/settings/ApiKeyManager.tsx` - API key management UI
-7. `app/settings/page.tsx` - Settings page
-8. `app/api/tools/execute/route.ts` - Tool execution endpoint
-9. `app/api/chat-history/[id]/messages/route.ts` - Chat history save endpoint
-10. `app/chat-demo/page.tsx` - Demo page
+1. `lib/crypto/storage.ts` - Password/salt storage and chatapi key derivation
+2. `storage/secure/useProviders.ts` - Encrypted provider management
+3. `lib/tools/schemas.ts` - Tool definitions
+4. `lib/tools/executor.ts` - Tool execution logic
+5. `lib/ai/client.ts` - Client-side AI initialization
+6. `hooks/useChatClient.ts` - Client-side chat hook
+7. `app/api/tools/execute/route.ts` - Tool execution endpoint
+8. `app/api/chat-history/[id]/messages/route.ts` - Chat history save endpoint
+9. `app/chat-demo/page.tsx` - Demo page
+10. `prisma/migrations/20260412223958_provider_encrypted_data/` - Provider schema migration
 11. `HYBRID_CHAT_IMPLEMENTATION.md` - This documentation
 
-### Modified Files (6)
+### Modified Files (7)
 
-1. `components/RegisterDialog.tsx` - Derive chatapi key
-2. `components/LoginDialog.tsx` - Derive chatapi key
-3. `hooks/useAuth.tsx` - Clear API keys on logout
-4. `prisma/schema.prisma` - Remove apiKey column
-5. `app/api/providers/route.ts` - Remove apiKey from POST endpoint
-6. `app/api/providers/[id]/route.ts` - Remove apiKey from PUT endpoint
+1. `components/RegisterDialog.tsx` - Store password and salt in sessionStorage
+2. `components/LoginDialog.tsx` - Store password and salt in sessionStorage
+3. `hooks/useAuth.tsx` - Clear credentials on logout
+4. `prisma/schema.prisma` - Provider model now stores only encrypted data blob
+5. `app/api/providers/route.ts` - Updated to handle encryptedData
+6. `app/api/providers/[id]/route.ts` - Updated to handle encryptedData
+7. `components/AccountSettingsPane.tsx` - Integrated encrypted provider management
 
 ### Database Changes
 
-- Migration: `20260412214238_remove_provider_apikey`
-- Removed `Provider.apiKey` column
+- Migration: `20260412223958_provider_encrypted_data`
+- Provider model: `{ id, userId, encryptedData, createdAt, updatedAt }`
+- Server stores encrypted blob, cannot decrypt without user's password
 
 ## Testing Checklist
 
@@ -226,7 +229,8 @@ Frontend → Direct Provider API call (with encrypted key) → Stream to UI
 
 - [ ] Register new user → Check sessionStorage for `user_password` and `user_salt`
 - [ ] Login → Check sessionStorage for `user_password` and `user_salt`
-- [ ] Add API key in Settings → Verify encrypted storage
+- [ ] Add provider in Account Settings → Verify encrypted storage in database
+- [ ] Check database → Verify provider.encryptedData is stored (cannot decrypt without password)
 - [ ] Send chat message in demo → Verify AI responds
 - [ ] Call a tool (e.g., "remember my name is John") → Verify tool executes
 - [ ] Check database → Verify memory was saved
