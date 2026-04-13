@@ -1,21 +1,22 @@
 "use client";
 
-import { useMemo, useEffect, useRef, useState } from "react";
-import { AssistantRuntimeProvider } from "@assistant-ui/react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
-  useChatRuntime,
-  AssistantChatTransport,
-} from "@assistant-ui/react-ai-sdk";
-import { Thread } from "./assistant-ui/thread";
-import {
-  useProvidersQuery,
-  useDefaultProviderModel,
-} from "@/storage/useProvidersQuery";
-import { useChatHistoryQuery } from "@/storage/useChatHistoryQuery";
-import type { ProviderWithModels } from "@/storage/useProvidersQuery";
-import type { FC } from "react";
+  Box,
+  VStack,
+  HStack,
+  Button,
+  Textarea,
+  Text,
+  Select,
+  createListCollection,
+} from "@chakra-ui/react";
+import { useChatClient } from "@/hooks/useChatClient";
+import { useThemeTokens } from "@/lib/theme-tokens";
+import { useProviders } from "@/storage/secure/useProviders";
+import { getDefaultModel } from "@/lib/ai/client";
 import { ChatRoleBadge } from "./ChatRoleBadge";
-import { Box } from "@chakra-ui/react";
+import type { FC } from "react";
 
 type ChatboxProps = {
   name: string;
@@ -38,7 +39,7 @@ function ChatHeader({
 }: {
   title?: string;
   role?: string;
-  providers: ProviderWithModels[];
+  providers: Array<{ id: string; name: string; type: string }>;
   selectedProviderId: string;
   selectedModelId: string;
   onProviderChange: (providerId: string) => void;
@@ -76,16 +77,14 @@ function ChatHeader({
           )}
         </div>
         <div className="px-3 py-2 text-sm text-muted-foreground">
-          No providers configured.{" "}
-          <span className="font-medium">Go to Settings → Account</span> to add
-          one.
+          No providers configured. Please add an AI provider in Account
+          Settings.
         </div>
       </div>
     );
   }
 
   const selectedProvider = providers.find((p) => p.id === selectedProviderId);
-  const models = selectedProvider?.models ?? [];
 
   return (
     <div className="flex flex-col border-b border-border bg-background/50">
@@ -148,22 +147,7 @@ function ChatHeader({
         <label className="text-xs font-medium text-muted-foreground shrink-0 ml-1">
           Model
         </label>
-        <select
-          className="h-6 rounded-md border border-input bg-background px-1 text-xs outline-none focus:ring-1 focus:ring-ring min-w-0 flex-1"
-          value={selectedModelId}
-          onChange={(e) => onModelChange(e.target.value)}
-        >
-          {models.map((m) => (
-            <option key={m.id} value={m.modelId}>
-              {m.name}
-            </option>
-          ))}
-          {models.length === 0 && (
-            <option value="" disabled>
-              No models
-            </option>
-          )}
-        </select>
+        <div className="text-xs flex-1 px-1">{selectedModelId}</div>
       </div>
     </div>
   );
@@ -172,89 +156,101 @@ function ChatHeader({
 export function ChatboxComponent({
   name,
   chatHistoryId,
+  systemPrompt,
   extraParams,
+  initialMessage,
   onClose,
 }: ChatboxProps): React.ReactElement {
-  const { data: providers } = useProvidersQuery();
-  const defaultPM = useDefaultProviderModel();
-
-  const { data: historyData, isLoading: historyLoading } =
-    useChatHistoryQuery(chatHistoryId);
+  const { providers, loading: loadingProviders } = useProviders();
+  const { textMuted } = useThemeTokens();
 
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
-  const [selectedModelId, setSelectedModelId] = useState<string>("");
-  const initializedRef = useRef(false);
+  const [input, setInput] = useState("");
+  const [chatTitle, setChatTitle] = useState<string>(name);
+  const [chatRole, setChatRole] = useState<string | undefined>(undefined);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Auto-select first provider if available
   useEffect(() => {
-    if (initializedRef.current) return;
-
-    if (historyData?.providerId && historyData?.modelId) {
-      const providerExists = providers?.some(
-        (p: ProviderWithModels) => p.id === historyData.providerId
-      );
-      if (providerExists) {
-        setSelectedProviderId(historyData.providerId);
-        setSelectedModelId(historyData.modelId);
-        initializedRef.current = true;
-        return;
-      }
+    if (providers.length > 0 && !selectedProviderId) {
+      setSelectedProviderId(providers[0].id);
     }
+  }, [providers, selectedProviderId]);
 
-    if (defaultPM) {
-      setSelectedProviderId(defaultPM.providerId);
-      setSelectedModelId(defaultPM.modelId);
-      initializedRef.current = true;
-    }
-  }, [historyData, defaultPM, providers]);
+  // Get the selected provider
+  const selectedProvider = useMemo(
+    () => providers.find((p) => p.id === selectedProviderId),
+    [providers, selectedProviderId]
+  );
 
-  const handleProviderChange = (providerId: string): void => {
-    setSelectedProviderId(providerId);
-    const provider = providers?.find(
-      (p: ProviderWithModels) => p.id === providerId
-    );
-    if (provider && provider.models.length > 0) {
-      const defaultModel = provider.models.find(
-        (m: ProviderWithModels["models"][number]) => m.isDefault
-      );
-      setSelectedModelId(
-        defaultModel ? defaultModel.modelId : provider.models[0].modelId
-      );
-    } else {
-      setSelectedModelId("");
-    }
-  };
+  // Get default model for selected provider
+  const modelId = useMemo(() => {
+    if (!selectedProvider) return "";
+    return getDefaultModel(selectedProvider.type);
+  }, [selectedProvider]);
 
-  const handleModelChange = (modelId: string): void => {
-    setSelectedModelId(modelId);
-  };
+  // Extract role and goalId from extraParams
+  const role = useMemo(() => {
+    return (extraParams?.role || "Assistant") as
+      | "Assistant"
+      | "GoalPlanner"
+      | "TaskHelper";
+  }, [extraParams]);
 
-  const extraParamsKey = extraParams ? JSON.stringify(extraParams) : "";
-  const transport = useMemo(() => {
-    const params = new URLSearchParams();
-    if (selectedProviderId) params.set("providerId", selectedProviderId);
-    if (selectedModelId) params.set("modelId", selectedModelId);
-    if (chatHistoryId) params.set("chatHistoryId", chatHistoryId);
-    if (extraParams) {
-      for (const [key, value] of Object.entries(extraParams)) {
-        params.set(key, value);
-      }
-    }
+  const goalId = useMemo(() => {
+    return extraParams?.goalId;
+  }, [extraParams]);
 
-    return new AssistantChatTransport({
-      api: `/api/chat?${params.toString()}`,
+  // Use the chat client hook
+  const { messages, currentMessage, status, error, sendMessage } =
+    useChatClient({
+      provider: selectedProvider || {
+        id: "",
+        type: "anthropic",
+        name: "",
+        apiKey: "",
+      },
+      modelId,
+      chatHistoryId: chatHistoryId || undefined,
+      role,
+      goalId,
+      systemPrompt:
+        systemPrompt ||
+        `You are a helpful AI assistant.
+
+When you use tools to retrieve information, you MUST always provide a text response to the user after getting the tool results. Never leave the user hanging after a tool call - always follow up with a helpful message that incorporates what you learned from the tool.`,
     });
-  }, [extraParamsKey, selectedProviderId, selectedModelId, chatHistoryId]);
 
-  const initialMessages = historyData?.messages;
-  const hasHistory = initialMessages && initialMessages.length > 0;
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, currentMessage]);
 
-  const runtime = useChatRuntime({
-    transport,
-    ...(hasHistory ? { messages: initialMessages } : {}),
-  });
+  // Send initial message if provided
+  const initialMessageSent = useRef(false);
+  useEffect(() => {
+    if (
+      initialMessage &&
+      !initialMessageSent.current &&
+      selectedProvider &&
+      status === "complete"
+    ) {
+      initialMessageSent.current = true;
+      sendMessage(initialMessage);
+    }
+  }, [initialMessage, selectedProvider, status, sendMessage]);
 
-  const providerKey = `${name}-${extraParamsKey}-${chatHistoryId ?? "new"}`;
-  const role = historyData?.role;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.trim() && status !== "streaming" && selectedProvider) {
+      sendMessage(input.trim());
+      setInput("");
+    }
+  };
+
+  const handleProviderChange = (providerId: string) => {
+    setSelectedProviderId(providerId);
+  };
 
   // Map roles to their border colors (matching badge colors)
   const roleBorderColors: Record<string, { light: string; dark: string }> = {
@@ -263,10 +259,11 @@ export function ChatboxComponent({
     TaskHelper: { light: "green.400", dark: "green.600" },
   };
 
-  if (chatHistoryId && historyLoading) {
+  // Render loading state
+  if (loadingProviders || (!selectedProvider && providers.length > 0)) {
     return (
       <div className="flex flex-1 min-h-0 w-full items-center justify-center text-sm text-muted-foreground">
-        Loading conversation...
+        Loading providers...
       </div>
     );
   }
@@ -277,22 +274,145 @@ export function ChatboxComponent({
       aria-label={`Chat with ${name}`}
     >
       <ChatHeader
-        title={historyData?.title}
-        role={historyData?.role}
-        providers={providers ?? []}
+        title={chatTitle}
+        role={role}
+        providers={providers.map((p) => ({
+          id: p.id,
+          name: p.name,
+          type: p.type,
+        }))}
         selectedProviderId={selectedProviderId}
-        selectedModelId={selectedModelId}
+        selectedModelId={modelId}
         onProviderChange={handleProviderChange}
-        onModelChange={handleModelChange}
+        onModelChange={() => {}}
         onClose={onClose}
       />
-      <AssistantRuntimeProvider key={providerKey} runtime={runtime}>
-        <Thread />
-      </AssistantRuntimeProvider>
+
+      {/* Messages area */}
+      <Box
+        flex={1}
+        overflowY="auto"
+        p={4}
+        bg="background"
+        _dark={{ bg: "gray.900" }}
+      >
+        <VStack gap={3} align="stretch">
+          {messages.map((msg, idx) => {
+            // Extract text content from message
+            let content = "";
+            if (typeof msg.content === "string") {
+              content = msg.content;
+            } else if (Array.isArray(msg.content)) {
+              // Content is an array of parts (text, tool calls, etc.)
+              content = msg.content
+                .filter((part: any) => part.type === "text")
+                .map((part: any) => part.text)
+                .join("\n");
+            }
+
+            // Skip rendering if there's no text content
+            if (!content && msg.role === "assistant") {
+              return null;
+            }
+
+            return (
+              <Box
+                key={idx}
+                p={3}
+                bg={msg.role === "user" ? "blue.50" : "gray.50"}
+                _dark={{
+                  bg: msg.role === "user" ? "blue.900" : "gray.800",
+                }}
+                borderRadius="md"
+              >
+                <Text fontSize="xs" fontWeight="bold" mb={1} color={textMuted}>
+                  {msg.role === "user"
+                    ? "You"
+                    : msg.role === "tool"
+                    ? "Tool Result"
+                    : "Assistant"}
+                </Text>
+                {content && (
+                  <Text fontSize="sm" whiteSpace="pre-wrap">
+                    {content}
+                  </Text>
+                )}
+              </Box>
+            );
+          })}
+
+          {/* Current streaming message */}
+          {currentMessage && (
+            <Box
+              p={3}
+              bg="gray.50"
+              _dark={{ bg: "gray.800" }}
+              borderRadius="md"
+            >
+              <Text fontSize="xs" fontWeight="bold" mb={1} color={textMuted}>
+                Assistant
+              </Text>
+              <Text fontSize="sm" whiteSpace="pre-wrap">
+                {currentMessage}
+              </Text>
+            </Box>
+          )}
+
+          {/* Status indicators */}
+          {status === "streaming" && (
+            <Text fontSize="xs" color={textMuted}>
+              Streaming response...
+            </Text>
+          )}
+
+          {error && (
+            <Box p={3} bg="red.50" _dark={{ bg: "red.900" }} borderRadius="md">
+              <Text fontSize="sm" color="red.600" _dark={{ color: "red.400" }}>
+                Error: {error}
+              </Text>
+            </Box>
+          )}
+
+          <div ref={messagesEndRef} />
+        </VStack>
+      </Box>
+
+      {/* Input area */}
+      <Box borderTop="1px solid" borderColor="border" p={3} bg="background/50">
+        <form onSubmit={handleSubmit}>
+          <VStack gap={2} align="stretch">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your message..."
+              rows={3}
+              disabled={status === "streaming" || !selectedProvider}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+            <HStack justify="flex-end">
+              <Button
+                type="submit"
+                colorScheme="blue"
+                size="sm"
+                disabled={
+                  status === "streaming" || !input.trim() || !selectedProvider
+                }
+              >
+                {status === "streaming" ? "Sending..." : "Send"}
+              </Button>
+            </HStack>
+          </VStack>
+        </form>
+      </Box>
     </div>
   );
 
-  // Apply colored border box for all roles with defined colors
+  // Apply colored border box for roles with defined colors
   if (role && roleBorderColors[role]) {
     const colors = roleBorderColors[role];
     return (

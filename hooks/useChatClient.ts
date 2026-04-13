@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { streamText, CoreMessage, tool } from "ai";
+import { streamText, ModelMessage, tool } from "ai";
 import {
   createClientModel,
   type ProviderType,
@@ -22,7 +22,7 @@ type UseChatClientOptions = {
   role?: ChatRole;
   goalId?: string;
   systemPrompt?: string;
-  onFinish?: (messages: CoreMessage[]) => void;
+  onFinish?: (messages: ModelMessage[]) => void;
 };
 
 type MessageStatus = "pending" | "streaming" | "complete" | "error";
@@ -36,7 +36,7 @@ export function useChatClient({
   systemPrompt,
   onFinish,
 }: UseChatClientOptions) {
-  const [messages, setMessages] = useState<CoreMessage[]>([]);
+  const [messages, setMessages] = useState<ModelMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState<string>("");
   const [status, setStatus] = useState<MessageStatus>("complete");
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function useChatClient({
    */
   const buildTools = useCallback(() => {
     const toolNames = getToolsForRole(role);
-    const tools: Record<string, ReturnType<typeof tool>> = {};
+    const tools: Record<string, any> = {};
 
     for (const toolName of toolNames) {
       const schema = toolSchemas[toolName];
@@ -146,9 +146,9 @@ export function useChatClient({
         );
 
         // Build conversation history
-        const newUserMessage: CoreMessage = {
+        const newUserMessage: ModelMessage = {
           role: "user",
-          content: userMessage,
+          content: [{ type: "text", text: userMessage }],
         };
         const conversationMessages = [...messages, newUserMessage];
 
@@ -167,7 +167,6 @@ export function useChatClient({
           messages: conversationMessages,
           system: systemPrompt,
           tools,
-          maxSteps: 10,
         });
 
         // Stream the initial response
@@ -189,6 +188,8 @@ export function useChatClient({
         const lastMessage =
           finalResponse.messages[finalResponse.messages.length - 1];
 
+        let finalMessages: ModelMessage[];
+
         // If the last message is a tool result, we need to continue to get assistant's response
         if (lastMessage?.role === "tool") {
           console.log(
@@ -206,7 +207,6 @@ export function useChatClient({
             messages: continuationMessages,
             system: systemPrompt,
             tools, // Still provide tools in case AI needs more
-            maxSteps: 5, // Allow a few more steps if needed
           });
 
           // Stream the continuation response
@@ -225,17 +225,14 @@ export function useChatClient({
           });
 
           // Build final message history with all messages including continuation
-          const finalMessages = [
+          finalMessages = [
             ...continuationMessages,
             ...continuationResponse.messages,
           ];
           setMessages(finalMessages);
         } else {
           // Normal case - response already complete
-          const finalMessages = [
-            ...conversationMessages,
-            ...finalResponse.messages,
-          ];
+          finalMessages = [...conversationMessages, ...finalResponse.messages];
           setMessages(finalMessages);
         }
 
@@ -290,7 +287,7 @@ export function useChatClient({
    * Save chat history to server.
    */
   const saveChatHistory = useCallback(
-    async (messagesToSave: CoreMessage[]) => {
+    async (messagesToSave: ModelMessage[]) => {
       if (!chatHistoryId) return;
 
       try {

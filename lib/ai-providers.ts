@@ -1,9 +1,3 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createMistral } from "@ai-sdk/mistral";
-import type { Provider } from "@/lib/generated/prisma";
-
 export const PROVIDER_TYPES = [
   "anthropic",
   "openai",
@@ -43,31 +37,3 @@ export const KNOWN_MODELS: Record<
   ],
   "openai-compatible": [],
 };
-
-export function createLanguageModel(
-  provider: Pick<Provider, "type" | "apiKey" | "baseUrl">,
-  modelId: string
-) {
-  const opts = {
-    apiKey: provider.apiKey,
-    ...(provider.baseUrl ? { baseURL: provider.baseUrl } : {}),
-  };
-
-  switch (provider.type) {
-    case "anthropic":
-      return createAnthropic(opts)(modelId);
-
-    case "openai":
-    case "openai-compatible":
-      return createOpenAI(opts)(modelId);
-
-    case "google":
-      return createGoogleGenerativeAI(opts)(modelId);
-
-    case "mistral":
-      return createMistral(opts)(modelId);
-
-    default:
-      throw new Error(`Unsupported provider type: ${provider.type}`);
-  }
-}
