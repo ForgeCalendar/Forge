@@ -16,7 +16,9 @@ import { useThemeTokens } from "@/lib/theme-tokens";
 import { useProviders } from "@/storage/secure/useProviders";
 import { getDefaultModel } from "@/lib/ai/client";
 import { ChatRoleBadge } from "./ChatRoleBadge";
+import { buildSystemPrompt } from "@/lib/prompts/system-prompts";
 import type { FC } from "react";
+import type { Goal } from "@/lib/generated/prisma";
 
 type ChatboxProps = {
   name: string;
@@ -167,8 +169,40 @@ export function ChatboxComponent({
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [input, setInput] = useState("");
   const [chatTitle, setChatTitle] = useState<string>(name);
-  const [chatRole, setChatRole] = useState<string | undefined>(undefined);
+  const [loadedRole, setLoadedRole] = useState<string | undefined>(undefined);
+  const [loadedGoalId, setLoadedGoalId] = useState<string | undefined>(
+    undefined
+  );
+  const [loadedEventId, setLoadedEventId] = useState<string | undefined>(
+    undefined
+  );
+  const [timezone, setTimezone] = useState<string>("UTC");
+  const [goalData, setGoalData] = useState<Goal | null>(null);
+  const [eventTitle, setEventTitle] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load chat history data to get role, goalId, eventId
+  useEffect(() => {
+    if (!chatHistoryId) return;
+
+    const loadChatHistory = async () => {
+      try {
+        const response = await fetch(`/api/chat-history/${chatHistoryId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.role) setLoadedRole(data.role);
+          if (data.title) setChatTitle(data.title);
+          if (data.goalId) setLoadedGoalId(data.goalId);
+          if (data.eventId) setLoadedEventId(data.eventId);
+          if (data.eventTitle) setEventTitle(data.eventTitle);
+        }
+      } catch (err) {
+        console.error("Failed to load chat history:", err);
+      }
+    };
+
+    loadChatHistory();
+  }, [chatHistoryId]);
 
   // Auto-select first provider if available
   useEffect(() => {
@@ -189,17 +223,106 @@ export function ChatboxComponent({
     return getDefaultModel(selectedProvider.type);
   }, [selectedProvider]);
 
-  // Extract role and goalId from extraParams
+  // Determine role and IDs from loaded chat history or extraParams
   const role = useMemo(() => {
-    return (extraParams?.role || "Assistant") as
-      | "Assistant"
-      | "GoalPlanner"
-      | "TaskHelper";
-  }, [extraParams]);
+    // Prefer loaded role from chat history, fallback to extraParams
+    const effectiveRole = loadedRole || extraParams?.role || "Assistant";
+    return effectiveRole as "Assistant" | "GoalPlanner" | "TaskHelper";
+  }, [loadedRole, extraParams]);
 
   const goalId = useMemo(() => {
-    return extraParams?.goalId;
-  }, [extraParams]);
+    return loadedGoalId || extraParams?.goalId;
+  }, [loadedGoalId, extraParams]);
+
+  const eventId = useMemo(() => {
+    return loadedEventId || extraParams?.eventId;
+  }, [loadedEventId, extraParams]);
+
+  // Fetch user timezone
+  useEffect(() => {
+    const fetchTimezone = async () => {
+      try {
+        const response = await fetch("/api/user");
+        if (response.ok) {
+          const data = await response.json();
+          setTimezone(data.timezone || "UTC");
+        }
+      } catch (err) {
+        console.error("Failed to fetch timezone:", err);
+      }
+    };
+    fetchTimezone();
+  }, []);
+
+  // Fetch goal data for GoalPlanner role (if not already loaded from chat history)
+  useEffect(() => {
+    if (role !== "GoalPlanner" || !goalId || goalData) return;
+
+    const fetchGoal = async () => {
+      try {
+        const response = await fetch(`/api/goals/${goalId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setGoalData(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch goal:", err);
+      }
+    };
+    fetchGoal();
+  }, [role, goalId, goalData]);
+
+  // Fetch event data for TaskHelper role (if not already loaded from chat history)
+  useEffect(() => {
+    if (role !== "TaskHelper" || !eventId || eventTitle) return;
+
+    const fetchEvent = async () => {
+      try {
+        const response = await fetch(`/api/events/${eventId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setEventTitle(data.title);
+        }
+      } catch (err) {
+        console.error("Failed to fetch event:", err);
+      }
+    };
+    fetchEvent();
+  }, [role, eventId, eventTitle]);
+
+  // Build system prompt based on role
+  const computedSystemPrompt = useMemo(() => {
+    // If a custom system prompt is provided, use it
+    if (systemPrompt) return systemPrompt;
+
+    // Otherwise, build the appropriate system prompt based on role
+    try {
+      if (role === "GoalPlanner" && goalData) {
+        return buildSystemPrompt({
+          role: "GoalPlanner",
+          goal: goalData,
+          timezone,
+        });
+      } else if (role === "TaskHelper" && eventTitle) {
+        return buildSystemPrompt({
+          role: "TaskHelper",
+          eventTitle,
+          timezone,
+        });
+      } else {
+        return buildSystemPrompt({
+          role: "Assistant",
+          timezone,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to build system prompt:", err);
+      // Fallback to basic assistant prompt
+      return `You are a helpful AI assistant.
+
+When you use tools to retrieve information, you MUST always provide a text response to the user after getting the tool results. Never leave the user hanging after a tool call - always follow up with a helpful message that incorporates what you learned from the tool.`;
+    }
+  }, [systemPrompt, role, goalData, eventTitle, timezone]);
 
   // Use the chat client hook
   const { messages, currentMessage, status, error, sendMessage } =
@@ -214,11 +337,7 @@ export function ChatboxComponent({
       chatHistoryId: chatHistoryId || undefined,
       role,
       goalId,
-      systemPrompt:
-        systemPrompt ||
-        `You are a helpful AI assistant.
-
-When you use tools to retrieve information, you MUST always provide a text response to the user after getting the tool results. Never leave the user hanging after a tool call - always follow up with a helpful message that incorporates what you learned from the tool.`,
+      systemPrompt: computedSystemPrompt,
     });
 
   // Auto-scroll to bottom when messages change

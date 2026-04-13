@@ -52,8 +52,8 @@ export function useChatClient({
         const response = await fetch(`/api/chat-history/${chatHistoryId}`);
         if (response.ok) {
           const data = await response.json();
-          const parsed = data.messages.map((m: any) => JSON.parse(m.content));
-          setMessages(parsed);
+          // Messages are already parsed by the API endpoint
+          setMessages(data.messages || []);
         }
       } catch (err) {
         console.error("Failed to load chat history:", err);
@@ -239,6 +239,23 @@ export function useChatClient({
         setCurrentMessage("");
         setStatus("complete");
 
+        // Auto-save chat history if chatHistoryId is provided
+        if (chatHistoryId) {
+          try {
+            await fetch(`/api/chat-history/${chatHistoryId}/messages`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messages: finalMessages,
+                providerId: provider.id,
+                modelId,
+              }),
+            });
+          } catch (err) {
+            console.error("Failed to save chat history:", err);
+          }
+        }
+
         // Call onFinish callback
         if (onFinish) {
           onFinish(finalMessages);
@@ -280,7 +297,15 @@ export function useChatClient({
         setStatus("error");
       }
     },
-    [provider, modelId, messages, systemPrompt, buildTools, onFinish]
+    [
+      provider,
+      modelId,
+      messages,
+      systemPrompt,
+      buildTools,
+      onFinish,
+      chatHistoryId,
+    ]
   );
 
   /**

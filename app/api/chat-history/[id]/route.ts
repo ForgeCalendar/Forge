@@ -21,6 +21,8 @@ export async function GET(
         providerId: true,
         modelId: true,
         messages: { orderBy: { order: "asc" } },
+        goal: { select: { id: true } },
+        event: { select: { id: true, title: true } },
       },
     });
 
@@ -46,6 +48,9 @@ export async function GET(
       providerId: chatHistory.providerId,
       modelId: chatHistory.modelId,
       messages,
+      goalId: chatHistory.goal?.id,
+      eventId: chatHistory.event?.id,
+      eventTitle: chatHistory.event?.title,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
