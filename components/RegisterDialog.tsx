@@ -69,6 +69,10 @@ export default function RegisterDialog({
       }
 
       // Registration successful - user is automatically logged in by backend
+      // Store password and salt in sessionStorage for deriving chatapi key later
+      sessionStorage.setItem("user_password", password);
+      sessionStorage.setItem("user_salt", salt);
+
       onRegisterSuccess(data.user.email);
       setEmail("");
       setPassword("");

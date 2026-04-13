@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import {
-  isValidProviderType,
-  KNOWN_MODELS,
-  type ProviderType,
-} from "@/lib/ai-providers";
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -13,7 +8,12 @@ export async function GET(): Promise<NextResponse> {
 
     const providers = await prisma.provider.findMany({
       where: { userId },
-      include: { models: true },
+      select: {
+        id: true,
+        encryptedData: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: { createdAt: "desc" },
     });
 
@@ -37,58 +37,24 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     const userId = await requireAuth();
     const body = await req.json();
-    const { type, name, baseUrl, apiKey } = body;
+    const { encryptedData } = body;
 
-    if (!type || !apiKey || !name) {
+    if (!encryptedData) {
       return NextResponse.json(
-        { error: "type, name, and apiKey are required" },
+        { error: "encryptedData is required" },
         { status: 400 }
       );
     }
 
-    if (!isValidProviderType(type)) {
-      return NextResponse.json(
-        {
-          error: `Invalid provider type. Must be one of: ${[
-            "anthropic",
-            "openai",
-            "google",
-            "mistral",
-            "openai-compatible",
-          ].join(", ")}`,
-        },
-        { status: 400 }
-      );
-    }
-
+    // Server stores the encrypted blob without knowing its contents
     const provider = await prisma.provider.create({
       data: {
         userId,
-        type,
-        name,
-        baseUrl: baseUrl || null,
-        apiKey,
+        encryptedData,
       },
     });
 
-    const suggestions = KNOWN_MODELS[type as ProviderType] ?? [];
-    if (suggestions.length > 0) {
-      await prisma.aIModel.createMany({
-        data: suggestions.map((m, idx) => ({
-          providerId: provider.id,
-          modelId: m.modelId,
-          name: m.name,
-          isDefault: idx === 0,
-        })),
-      });
-    }
-
-    const result = await prisma.provider.findUnique({
-      where: { id: provider.id },
-      include: { models: true },
-    });
-
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json({ id: provider.id }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(

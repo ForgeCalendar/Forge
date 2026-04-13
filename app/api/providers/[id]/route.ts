@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { isValidProviderType } from "@/lib/ai-providers";
 import { verifyOwnership } from "@/lib/verify-ownership";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -17,7 +16,12 @@ export async function GET(
     const provider = await verifyOwnership(
       prisma.provider.findFirst({
         where: { id, userId },
-        include: { models: true },
+        select: {
+          id: true,
+          encryptedData: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
       "Provider not found"
     );
@@ -47,7 +51,14 @@ export async function PUT(
     const userId = await requireAuth();
     const { id } = await ctx.params;
     const body = await req.json();
-    const { type, name, baseUrl, apiKey } = body;
+    const { encryptedData } = body;
+
+    if (!encryptedData) {
+      return NextResponse.json(
+        { error: "encryptedData is required" },
+        { status: 400 }
+      );
+    }
 
     const existing = await verifyOwnership(
       prisma.provider.findFirst({ where: { id, userId } }),
@@ -55,34 +66,12 @@ export async function PUT(
     );
     if (existing instanceof NextResponse) return existing;
 
-    if (type !== undefined && !isValidProviderType(type)) {
-      return NextResponse.json(
-        {
-          error: `Invalid provider type. Must be one of: ${[
-            "anthropic",
-            "openai",
-            "google",
-            "mistral",
-            "openai-compatible",
-          ].join(", ")}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    const updateData: Record<string, unknown> = {};
-    if (type !== undefined) updateData.type = type;
-    if (name !== undefined) updateData.name = name;
-    if (baseUrl !== undefined) updateData.baseUrl = baseUrl || null;
-    if (apiKey !== undefined) updateData.apiKey = apiKey;
-
     const updated = await prisma.provider.update({
       where: { id },
-      data: updateData,
-      include: { models: true },
+      data: { encryptedData },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json({ id: updated.id });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(

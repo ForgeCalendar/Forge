@@ -12,13 +12,10 @@ import { useThemeTokens } from "@/lib/theme-tokens";
 import {
   useUserQuery,
   useUpdateUserMutation,
-  useProvidersQuery,
-  useCreateProviderMutation,
-  useUpdateProviderMutation,
-  useDeleteProviderMutation,
   useSearchConfigQuery,
   useUpdateSearchConfigMutation,
 } from "@/storage";
+import { useProviders, type ProviderType } from "@/storage/secure/useProviders";
 
 // Common IANA timezones grouped by region
 const TIMEZONE_OPTIONS = [
@@ -84,20 +81,6 @@ function formatTimezoneLabel(tz: string): string {
   }
 }
 
-type ProviderRecord = {
-  id: string;
-  type: string;
-  name: string;
-  baseUrl: string | null;
-  apiKey: string;
-  models: {
-    id: string;
-    modelId: string;
-    name: string;
-    isDefault: boolean;
-  }[];
-};
-
 type SearchConfigResponse = {
   hasTavilyApiKey: boolean;
 };
@@ -123,9 +106,9 @@ function providerTypeLabel(type: string): string {
   return labels[type] ?? type;
 }
 
-function maskKey(key: string): string {
+function maskApiKey(key: string): string {
   if (key.length <= 8) return "****";
-  return key.slice(0, 4) + "..." + key.slice(-4);
+  return `${key.slice(0, 4)}...${key.slice(-4)}`;
 }
 
 export default function AccountSettingsPane() {
@@ -162,24 +145,17 @@ export default function AccountSettingsPane() {
     }
   }
 
-  // TanStack Query hooks
-  const {
-    data: providers = [],
-    isLoading: loading,
-    error: queryError,
-  } = useProvidersQuery();
-  const createProviderMutation = useCreateProviderMutation();
-  const updateProviderMutation = useUpdateProviderMutation();
-  const deleteProviderMutation = useDeleteProviderMutation();
+  // Secure Providers (encrypted client-side)
+  const { providers, loading, createProvider, updateProvider, deleteProvider } =
+    useProviders();
 
   const { data: searchConfig, isLoading: searchLoading } =
     useSearchConfigQuery();
   const updateSearchConfigMutation = useUpdateSearchConfigMutation();
 
-  const error = queryError ? String(queryError) : null;
   const hasTavilyApiKey = searchConfig?.hasTavilyApiKey ?? false;
 
-  const [newType, setNewType] = useState<string[]>([]);
+  const [newType, setNewType] = useState<string[]>(["anthropic"]);
   const [newName, setNewName] = useState("");
   const [newApiKey, setNewApiKey] = useState("");
   const [newBaseUrl, setNewBaseUrl] = useState("");
@@ -190,433 +166,317 @@ export default function AccountSettingsPane() {
   const [editName, setEditName] = useState("");
   const [editApiKey, setEditApiKey] = useState("");
   const [editBaseUrl, setEditBaseUrl] = useState("");
+  const [status, setStatus] = useState<Record<string, string>>({});
 
-  const saving =
-    createProviderMutation.isPending || updateProviderMutation.isPending;
   const searchSaving = updateSearchConfigMutation.isPending;
 
   async function handleAdd() {
-    if (!newType[0] || !newApiKey.trim() || !newName.trim()) return;
-    createProviderMutation
-      .mutateAsync({
-        type: newType[0],
-        name: newName.trim(),
-        apiKey: newApiKey.trim(),
-        ...(newType[0] === "openai-compatible" && newBaseUrl.trim()
-          ? { baseUrl: newBaseUrl.trim() }
-          : {}),
-      })
-      .then(() => {
-        setNewType([]);
-        setNewName("");
-        setNewApiKey("");
-        setNewBaseUrl("");
-      });
+    if (!newType[0] || !newName.trim() || !newApiKey.trim()) return;
+
+    setStatus({ new: "Saving..." });
+    const result = await createProvider({
+      type: newType[0] as ProviderType,
+      name: newName.trim(),
+      apiKey: newApiKey.trim(),
+      baseUrl:
+        newType[0] === "openai-compatible" && newBaseUrl.trim()
+          ? newBaseUrl.trim()
+          : undefined,
+    });
+
+    if (result.success) {
+      setStatus({ new: "Saved!" });
+      setNewType(["anthropic"]);
+      setNewName("");
+      setNewApiKey("");
+      setNewBaseUrl("");
+      setTimeout(() => setStatus({}), 2000);
+    } else {
+      setStatus({ new: `Error: ${result.error}` });
+    }
   }
 
   async function handleUpdate(id: string) {
-    const input: Record<string, string> = {};
-    if (editName.trim()) input.name = editName.trim();
-    if (editApiKey.trim()) input.apiKey = editApiKey.trim();
     const provider = providers.find((p) => p.id === id);
-    if (provider?.type === "openai-compatible") {
-      input.baseUrl = editBaseUrl.trim();
-    }
+    if (!provider) return;
 
-    updateProviderMutation.mutateAsync({ id, input }).then(() => {
+    // Build updated data, keeping existing values if not changed
+    const updatedData = {
+      type: provider.type,
+      name: editName.trim() || provider.name,
+      apiKey: editApiKey.trim() || provider.apiKey,
+      baseUrl:
+        provider.type === "openai-compatible"
+          ? editBaseUrl.trim() || provider.baseUrl
+          : provider.baseUrl,
+    };
+
+    setStatus({ [id]: "Saving..." });
+    const result = await updateProvider(id, updatedData);
+
+    if (result.success) {
+      setStatus({ [id]: "Saved!" });
       setEditingId(null);
       setEditName("");
       setEditApiKey("");
       setEditBaseUrl("");
-    });
+      setTimeout(() => setStatus({}), 2000);
+    } else {
+      setStatus({ [id]: `Error: ${result.error}` });
+    }
   }
 
   async function handleDelete(id: string) {
-    deleteProviderMutation.mutateAsync(id);
+    if (!confirm("Delete this provider? This cannot be undone.")) return;
+
+    setStatus({ [id]: "Deleting..." });
+    const result = await deleteProvider(id);
+
+    if (result.success) {
+      setStatus({ [id]: "Deleted!" });
+      setTimeout(() => setStatus({}), 2000);
+    } else {
+      setStatus({ [id]: `Error: ${result.error}` });
+    }
   }
 
-  async function handleSaveSearchConfig() {
-    updateSearchConfigMutation
-      .mutateAsync({
-        tavilyApiKey: tavilyApiKeyInput.trim(),
-      })
-      .then(() => {
-        setSearchEditing(false);
-        setTavilyApiKeyInput("");
-      });
-  }
-
-  async function handleClearSearchConfig() {
-    updateSearchConfigMutation
-      .mutateAsync({
-        tavilyApiKey: "",
-      })
-      .then(() => {
-        setSearchEditing(true);
-      });
-  }
-
-  function startEditing(provider: ProviderRecord) {
+  function startEditing(provider: {
+    id: string;
+    name: string;
+    baseUrl?: string;
+  }) {
     setEditingId(provider.id);
     setEditName(provider.name);
     setEditApiKey("");
-    setEditBaseUrl(provider.baseUrl ?? "");
+    setEditBaseUrl(provider.baseUrl || "");
+  }
+
+  async function handleSearchUpdate() {
+    if (!tavilyApiKeyInput.trim()) return;
+    try {
+      await updateSearchConfigMutation.mutateAsync({
+        tavilyApiKey: tavilyApiKeyInput.trim(),
+      });
+      setSearchEditing(false);
+      setTavilyApiKeyInput("");
+    } catch (err) {
+      console.error("Failed to update search config:", err);
+    }
   }
 
   return (
     <Box>
-      <Text fontWeight="semibold">Account</Text>
-      <Text color={subtitleColor} mt={2}>
-        Manage your account settings.
-      </Text>
-
       {/* Timezone Setting */}
       <Box
-        mt={4}
-        p={3}
+        p={4}
+        borderRadius="md"
         borderWidth="1px"
         borderColor={cardBorder}
-        borderRadius="md"
         bg={cardBg}
+        mb={4}
       >
         <Text fontWeight="medium" fontSize="sm" mb={2}>
           Timezone
         </Text>
-        <Text color={subtitleColor} fontSize="xs" mb={3}>
-          Set your local timezone for accurate event scheduling.
-        </Text>
-        <Box maxW="300px">
-          <Select.Root
-            collection={timezoneOptions}
-            value={[timezone]}
-            onValueChange={(e) => handleTimezoneChange(e.value)}
-            size="sm"
-            disabled={timezoneLoading || timezoneSaving}
-          >
-            <Select.Trigger>
-              <Select.ValueText placeholder="Select timezone" />
-            </Select.Trigger>
-            <Select.Positioner>
-              <Select.Content maxH="300px" overflowY="auto">
-                {timezoneOptions.items.map((opt) => (
-                  <Select.Item item={opt} key={opt.value}>
-                    {opt.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Positioner>
-          </Select.Root>
-        </Box>
+        <Select.Root
+          collection={timezoneOptions}
+          value={[timezone]}
+          onValueChange={(e) => handleTimezoneChange(e.value)}
+          size="sm"
+          disabled={timezoneLoading || timezoneSaving}
+        >
+          <Select.Trigger>
+            <Select.ValueText placeholder="Select timezone">
+              {formatTimezoneLabel(timezone)}
+            </Select.ValueText>
+          </Select.Trigger>
+          <Select.Content>
+            {timezoneOptions.items.map((option) => (
+              <Select.Item key={option.value} item={option}>
+                {option.label}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Root>
       </Box>
 
-      {/* AI Providers Section */}
-      <Text fontWeight="medium" fontSize="sm" mt={6} mb={2}>
-        AI Providers
-      </Text>
-
-      {error && (
-        <Text color="red.500" mt={2} fontSize="sm">
-          {error}
-        </Text>
-      )}
-
-      <Box mt={4}>
-        {loading ? (
-          <Text color={subtitleColor} fontSize="sm">
-            Loading...
-          </Text>
-        ) : providers.length === 0 ? (
-          <Text color={subtitleColor} fontSize="sm">
-            No providers configured. Add one below.
-          </Text>
-        ) : (
-          providers.map((provider) => (
-            <Box
-              key={provider.id}
-              p={3}
-              mb={2}
-              bg={cardBg}
-              borderWidth="1px"
-              borderColor={cardBorder}
-              borderRadius="md"
-            >
-              {editingId === provider.id ? (
-                <Box>
-                  <Flex gap={2} mb={2}>
-                    <Box flex={1}>
-                      <Text fontSize="xs" mb={1}>
-                        Name
-                      </Text>
-                      <Input
-                        size="sm"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                      />
-                    </Box>
-                    <Box flex={1}>
-                      <Text fontSize="xs" mb={1}>
-                        API Key
-                      </Text>
-                      <Input
-                        size="sm"
-                        type="password"
-                        placeholder="Leave blank to keep current"
-                        value={editApiKey}
-                        onChange={(e) => setEditApiKey(e.target.value)}
-                      />
-                    </Box>
-                  </Flex>
-                  {provider.type === "openai-compatible" && (
-                    <Box mb={2}>
-                      <Text fontSize="xs" mb={1}>
-                        Base URL
-                      </Text>
-                      <Input
-                        size="sm"
-                        placeholder="https://your-server.com/v1"
-                        value={editBaseUrl}
-                        onChange={(e) => setEditBaseUrl(e.target.value)}
-                      />
-                    </Box>
-                  )}
-                  <Flex gap={2}>
-                    <Button
-                      size="sm"
-                      onClick={() => handleUpdate(provider.id)}
-                      disabled={saving}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditingId(null);
-                        setEditName("");
-                        setEditApiKey("");
-                        setEditBaseUrl("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </Flex>
-                </Box>
-              ) : (
-                <Flex justify="space-between" align="center">
-                  <Box>
-                    <Text fontWeight="medium" fontSize="sm">
-                      {provider.name}
-                    </Text>
-                    <Text fontSize="xs" color={subtitleColor}>
-                      {providerTypeLabel(provider.type)} &middot;{" "}
-                      {maskKey(provider.apiKey)} &middot;{" "}
-                      {provider.models.length} model
-                      {provider.models.length !== 1 ? "s" : ""}
-                    </Text>
-                  </Box>
-                  <Flex gap={2}>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => startEditing(provider)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      colorPalette="red"
-                      onClick={() => handleDelete(provider.id)}
-                    >
-                      Delete
-                    </Button>
-                  </Flex>
-                </Flex>
-              )}
-            </Box>
-          ))
-        )}
-      </Box>
-
+      {/* Search Configuration */}
       <Box
-        mt={4}
-        p={3}
+        p={4}
+        borderRadius="md"
         borderWidth="1px"
         borderColor={cardBorder}
-        borderRadius="md"
+        bg={cardBg}
+        mb={4}
       >
         <Text fontWeight="medium" fontSize="sm" mb={2}>
-          Add Provider
+          Online Search (Tavily)
         </Text>
-        <Flex gap={2} flexWrap="wrap" align="flex-end">
-          <Box flex={1} minW="140px">
-            <Text fontSize="xs" mb={1}>
-              Type
+        {!searchEditing ? (
+          <Box>
+            <Text fontSize="xs" color={subtitleColor} mb={2}>
+              {hasTavilyApiKey
+                ? "API key configured ✓"
+                : "No API key configured"}
             </Text>
-            <Select.Root
-              collection={providerTypeOptions}
-              value={newType}
-              onValueChange={(e) => setNewType(e.value)}
+            <Button
               size="sm"
+              onClick={() => setSearchEditing(true)}
+              variant="outline"
             >
-              <Select.Trigger>
-                <Select.ValueText placeholder="Select type" />
-              </Select.Trigger>
-              <Select.Positioner>
-                <Select.Content>
-                  {providerTypeOptions.items.map((opt) => (
-                    <Select.Item item={opt} key={opt.value}>
-                      {opt.label}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Positioner>
-            </Select.Root>
+              {hasTavilyApiKey ? "Update Key" : "Add Key"}
+            </Button>
           </Box>
-          <Box flex={1} minW="120px">
-            <Text fontSize="xs" mb={1}>
-              Name
-            </Text>
-            <Input
-              size="sm"
-              placeholder="My Anthropic"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-          </Box>
-          <Box flex={2} minW="160px">
-            <Text fontSize="xs" mb={1}>
-              API Key
-            </Text>
+        ) : (
+          <Box>
             <Input
               size="sm"
               type="password"
-              placeholder="sk-..."
-              value={newApiKey}
-              onChange={(e) => setNewApiKey(e.target.value)}
+              placeholder="tvly-..."
+              value={tavilyApiKeyInput}
+              onChange={(e) => setTavilyApiKeyInput(e.target.value)}
+              mb={2}
             />
-          </Box>
-        </Flex>
-        {newType[0] === "openai-compatible" && (
-          <Box mt={2}>
-            <Text fontSize="xs" mb={1}>
-              Base URL
-            </Text>
-            <Input
-              size="sm"
-              placeholder="https://your-server.com/v1"
-              value={newBaseUrl}
-              onChange={(e) => setNewBaseUrl(e.target.value)}
-            />
+            <Flex gap={2}>
+              <Button
+                size="sm"
+                onClick={handleSearchUpdate}
+                disabled={searchSaving || !tavilyApiKeyInput.trim()}
+              >
+                {searchSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSearchEditing(false);
+                  setTavilyApiKeyInput("");
+                }}
+              >
+                Cancel
+              </Button>
+            </Flex>
           </Box>
         )}
-        <Button
-          size="sm"
-          mt={3}
-          onClick={handleAdd}
-          disabled={
-            saving || !newType[0] || !newName.trim() || !newApiKey.trim()
-          }
-        >
-          Add
-        </Button>
       </Box>
 
+      {/* AI Providers */}
       <Box
-        mt={4}
-        p={3}
+        p={4}
+        borderRadius="md"
         borderWidth="1px"
         borderColor={cardBorder}
-        borderRadius="md"
+        bg={cardBg}
+        mb={4}
       >
         <Text fontWeight="medium" fontSize="sm" mb={2}>
-          Search API
+          AI Providers
         </Text>
-        <Text color={subtitleColor} fontSize="xs" mb={2}>
-          allow AI agents to search.
-        </Text>
-        <Text color={subtitleColor} fontSize="xs" mb={2}>
-          Tavily is built for AI agents to search the web and fetch up-to-date
-          information during chat.
+        <Text fontSize="xs" color={subtitleColor} mb={3}>
+          All API keys are encrypted and stored on the server. Only you can
+          decrypt them.
         </Text>
 
-        {searchLoading ? (
-          <Text color={subtitleColor} fontSize="sm">
-            Loading search config...
-          </Text>
-        ) : (
+        {loading && <Text fontSize="xs">Loading providers...</Text>}
+
+        {/* Existing Providers */}
+        {providers.map((provider) => (
           <Box
+            key={provider.id}
             p={3}
-            bg={cardBg}
+            mb={2}
+            borderRadius="md"
             borderWidth="1px"
             borderColor={cardBorder}
-            borderRadius="md"
           >
-            {searchEditing ? (
+            {editingId === provider.id ? (
               <Box>
-                <Text fontSize="xs" mb={1}>
-                  Tavily API Key{" "}
-                  {hasTavilyApiKey ? "(configured)" : "(not set)"}
-                </Text>
-                <Input
-                  size="sm"
-                  type="password"
-                  placeholder={
-                    hasTavilyApiKey ? "Enter new key to replace" : "tvly-..."
-                  }
-                  value={tavilyApiKeyInput}
-                  onChange={(e) => setTavilyApiKeyInput(e.target.value)}
-                />
-
-                <Flex gap={2} mt={3}>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveSearchConfig}
-                    disabled={searchSaving || !tavilyApiKeyInput.trim()}
-                  >
+                <Flex gap={2} mb={2}>
+                  <Box flex={1}>
+                    <Text fontSize="xs" mb={1}>
+                      Name
+                    </Text>
+                    <Input
+                      size="sm"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder={provider.name}
+                    />
+                  </Box>
+                  <Box flex={1}>
+                    <Text fontSize="xs" mb={1}>
+                      API Key
+                    </Text>
+                    <Input
+                      size="sm"
+                      type="password"
+                      placeholder="Leave blank to keep current"
+                      value={editApiKey}
+                      onChange={(e) => setEditApiKey(e.target.value)}
+                    />
+                  </Box>
+                </Flex>
+                {provider.type === "openai-compatible" && (
+                  <Box mb={2}>
+                    <Text fontSize="xs" mb={1}>
+                      Base URL
+                    </Text>
+                    <Input
+                      size="sm"
+                      value={editBaseUrl}
+                      onChange={(e) => setEditBaseUrl(e.target.value)}
+                      placeholder="https://api.example.com/v1"
+                    />
+                  </Box>
+                )}
+                <Flex gap={2}>
+                  <Button size="sm" onClick={() => handleUpdate(provider.id)}>
                     Save
                   </Button>
-                  {hasTavilyApiKey && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setSearchEditing(false);
-                        setTavilyApiKeyInput("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingId(null);
+                      setEditName("");
+                      setEditApiKey("");
+                      setEditBaseUrl("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
                 </Flex>
+                {status[provider.id] && (
+                  <Text fontSize="xs" color={subtitleColor} mt={2}>
+                    {status[provider.id]}
+                  </Text>
+                )}
               </Box>
             ) : (
-              <Flex justify="space-between" align="center" gap={3}>
+              <Flex justify="space-between" align="center">
                 <Box>
                   <Text fontWeight="medium" fontSize="sm">
-                    Tavily Search
+                    {provider.name}
                   </Text>
                   <Text fontSize="xs" color={subtitleColor}>
-                    {hasTavilyApiKey ? "Configured" : "Not configured"}
+                    {providerTypeLabel(provider.type)} &middot;{" "}
+                    {maskApiKey(provider.apiKey)}
+                    {provider.baseUrl && ` • ${provider.baseUrl}`}
                   </Text>
                 </Box>
                 <Flex gap={2}>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setSearchEditing(true);
-                      setTavilyApiKeyInput("");
-                    }}
+                    variant="ghost"
+                    onClick={() => startEditing(provider)}
                   >
                     Edit
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
-                    colorPalette="red"
-                    onClick={handleClearSearchConfig}
-                    disabled={!hasTavilyApiKey}
+                    variant="ghost"
+                    colorScheme="red"
+                    onClick={() => handleDelete(provider.id)}
                   >
                     Delete
                   </Button>
@@ -624,7 +484,87 @@ export default function AccountSettingsPane() {
               </Flex>
             )}
           </Box>
-        )}
+        ))}
+
+        {/* Add New Provider */}
+        <Box mt={4}>
+          <Text fontWeight="medium" fontSize="sm" mb={2}>
+            Add Provider
+          </Text>
+          <Flex gap={2} flexWrap="wrap" align="flex-end">
+            <Box flex={1} minW="140px">
+              <Text fontSize="xs" mb={1}>
+                Provider Type
+              </Text>
+              <Select.Root
+                collection={providerTypeOptions}
+                value={newType}
+                onValueChange={(e) => setNewType(e.value)}
+                size="sm"
+              >
+                <Select.Trigger>
+                  <Select.ValueText placeholder="Select type" />
+                </Select.Trigger>
+                <Select.Content>
+                  {providerTypeOptions.items.map((option) => (
+                    <Select.Item key={option.value} item={option}>
+                      {option.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Box>
+            <Box flex={2} minW="160px">
+              <Text fontSize="xs" mb={1}>
+                Name
+              </Text>
+              <Input
+                size="sm"
+                placeholder="My Provider"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </Box>
+            <Box flex={2} minW="160px">
+              <Text fontSize="xs" mb={1}>
+                API Key
+              </Text>
+              <Input
+                size="sm"
+                type="password"
+                placeholder="sk-..."
+                value={newApiKey}
+                onChange={(e) => setNewApiKey(e.target.value)}
+              />
+            </Box>
+          </Flex>
+          {newType[0] === "openai-compatible" && (
+            <Box mt={2}>
+              <Text fontSize="xs" mb={1}>
+                Base URL
+              </Text>
+              <Input
+                size="sm"
+                placeholder="https://api.example.com/v1"
+                value={newBaseUrl}
+                onChange={(e) => setNewBaseUrl(e.target.value)}
+              />
+            </Box>
+          )}
+          <Button
+            size="sm"
+            mt={3}
+            onClick={handleAdd}
+            disabled={!newType[0] || !newName.trim() || !newApiKey.trim()}
+          >
+            Add
+          </Button>
+          {status.new && (
+            <Text fontSize="xs" color={subtitleColor} mt={2}>
+              {status.new}
+            </Text>
+          )}
+        </Box>
       </Box>
     </Box>
   );

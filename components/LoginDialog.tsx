@@ -75,6 +75,10 @@ export default function LoginDialog({
       }
 
       // Login successful
+      // Store password and salt in sessionStorage for deriving chatapi key later
+      sessionStorage.setItem("user_password", password);
+      sessionStorage.setItem("user_salt", salt);
+
       onLoginSuccess(data.user.email);
       setEmail("");
       setPassword("");
