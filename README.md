@@ -1,6 +1,6 @@
 # Forge
 
-Forge is being rebuilt in Rust. The current repository contains the architecture proposal only; product behavior and UI design are still to be decided.
+Forge is being rebuilt in Rust. The repository now has a [calendar storage crate](crates/forge-storage/README.md); the server, client API, and UI designs are still to be decided.
 
 Start with [the architecture document](docs/ARCHITECTURE.md). It records the current boundaries, their dependency direction, the shared client contract, and the questions to settle before implementation.
 

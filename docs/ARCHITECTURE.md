@@ -20,6 +20,8 @@ A Rust crate owns persistence and exposes contents scoped to a user. A deploymen
 
 The public API should require an authenticated user identity or a user-scoped handle for every read and write. The storage implementation must enforce ownership in its queries and transactions. No caller should need to write SQL or know which database is active.
 
+The initial implementation stores calendars, event definitions, recurrence rules, and per-instance exceptions. Events belong to a calendar, and calendar ownership supplies the user boundary. Timed events use UTC instants plus an IANA time zone; all-day events use dates with an exclusive end. A recurring series stores its original local start, while an exception is keyed by the original occurrence start even when that instance is moved. Recurrence expansion and ICS import remain future work.
+
 ### Server: `forge-server`
 
 The server exposes storage operations over a versioned network protocol. It authenticates remote callers, associates each request with a user, validates input, calls the storage layer, and maps failures to stable protocol errors. Its HTTP handlers should contain no product-specific persistence logic.
@@ -62,7 +64,7 @@ The client contract should describe operations in product terms, once those term
 
 ## Decisions still needed
 
-- The product entities and operations: what “stored contents” includes.
+- Which additional product entities and operations belong beside the initial calendar model.
 - Whether a local embedded deployment has one user or multiple users, and how local identity is selected.
 - Authentication and session behavior for remote deployments.
 - Whether offline work must later synchronize with a server. Embedded and remote parity alone does not provide synchronization.

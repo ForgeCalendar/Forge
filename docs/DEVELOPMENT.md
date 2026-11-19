@@ -22,10 +22,12 @@ Start the local PostgreSQL service when you need to test its storage backend:
 devenv up
 ```
 
-It creates a `forge` database and listens on `127.0.0.1:55432`. Its state stays under `.devenv/`. Use `psql forge` from the devenv shell; the service config supplies the local PostgreSQL environment variables. The app's eventual database selection and connection variable will be defined with the storage crate.
+It creates a `forge` database and listens on `127.0.0.1:55432`. Its state stays under `.devenv/`. Use `psql forge` from the devenv shell; the service config supplies the local PostgreSQL environment variables. Pass a SQLite or PostgreSQL URL to `Storage::connect`; the crate applies its embedded migrations on connection.
 
 ## Graphify
 
 Run `graphify` inside the shell. The wrapper uses the pinned `graphifyy` package through uv. The first invocation downloads it into uv's cache. The project-scoped Codex integration is in `.codex/skills/graphify` and `AGENTS.md`; see [the Graphify workflow](GRAPHIFY.md).
 
-The repository currently has design documents only. Document extraction needs a configured LLM backend or the Codex skill's extraction workflow. Once Rust code exists, Graphify can extract its structure locally without an API key.
+Graphify can extract the Rust workspace's code structure locally without an API key. Document extraction needs a configured LLM backend or the Codex skill's extraction workflow.
+
+The Cargo workspace starts with `crates/forge-storage`. Use `cargo fmt --all`, `cargo clippy --workspace --all-targets`, and `cargo test --workspace` from the devenv shell. The storage tests use SQLite by default; set `FORGE_TEST_POSTGRES_URL` to a PostgreSQL test database URL to run the same calendar contract against PostgreSQL.
