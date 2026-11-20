@@ -4,6 +4,8 @@
 //! and their exceptions; recurrence expansion belongs to a later calendar
 //! service, so a listed event represents its stored definition.
 
+mod entity;
+mod migration;
 mod model;
 mod storage;
 

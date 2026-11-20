@@ -28,10 +28,12 @@ storage.close().await;
 ## Stored model
 
 - `calendars` has a user owner, a name, and an IANA time zone.
-- `events` has a calendar parent and either UTC instants plus a time zone or all-day dates. Ends are exclusive.
-- `event_recurrence` holds an RRULE and the original local start of its series.
-- `event_exceptions` holds cancellations or complete replacement events, keyed by the original occurrence start. Deleting a calendar or series cascades to its children.
+- `events` stores the calendar parent and descriptive fields. Its required one-to-one `event_times` row stores either UTC instants plus an IANA time zone or all-day dates. Ends are exclusive.
+- `event_recurrence` holds an RRULE and a typed local start or start date.
+- `event_exceptions` holds cancellations or replacement details, keyed by a typed original occurrence start. A replacement has a one-to-one `event_exception_times` row. Deleting a calendar or series cascades to its children.
 
-`Storage::connect` accepts `sqlite:`, `postgres:`, or `postgresql:` URLs and applies embedded SQL migrations. SQLite file URLs need `?mode=rwc` to create a missing file; `sqlite::memory:` is supported. Timed instants have millisecond precision. Rule strings are stored as supplied after a nonempty check. The crate stores series definitions and exceptions but does not expand recurring instances or import ICS feeds yet.
+SeaORM manages persistence and versioned Rust migrations. There are no database `CHECK` constraints: Rust validates writes and checks the shape of rows it reads. Related rows are written in transactions. `Storage::connect` accepts `sqlite:`, `postgres:`, or `postgresql:` URLs. SQLite file URLs need `?mode=rwc` to create a missing file; `sqlite::memory:` is supported. Timed instants have millisecond precision. Rule strings are stored as supplied after a nonempty check. The crate stores series definitions and exceptions but does not expand recurring instances or import ICS feeds yet.
+
+The SeaORM schema replaces the earlier draft SQLx schema. Existing draft databases need to be recreated; this project has no data migration for that draft.
 
 Run `cargo test -p forge-storage`. To test PostgreSQL too, start `devenv up -d`, set `FORGE_TEST_POSTGRES_URL` to a test database URL, and rerun the tests.

@@ -22,7 +22,7 @@ Start the local PostgreSQL service when you need to test its storage backend:
 devenv up
 ```
 
-It creates a `forge` database and listens on `127.0.0.1:55432`. Its state stays under `.devenv/`. Use `psql forge` from the devenv shell; the service config supplies the local PostgreSQL environment variables. Pass a SQLite or PostgreSQL URL to `Storage::connect`; the crate applies its embedded migrations on connection.
+It creates a `forge` database and listens on `127.0.0.1:55432`. Its state stays under `.devenv/`. Use `psql forge` from the devenv shell; the service config supplies the local PostgreSQL environment variables. Pass a SQLite or PostgreSQL URL to `Storage::connect`; the crate applies its SeaORM Rust migrations on connection. The earlier SQLx draft schema is not migrated automatically, so recreate any local database that still has it.
 
 ## Graphify
 

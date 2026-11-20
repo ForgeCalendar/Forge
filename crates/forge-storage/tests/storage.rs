@@ -155,6 +155,25 @@ async fn shared_calendar_contract(storage: &Storage) {
     owner.put_exception(&event.id, moved.clone()).await.unwrap();
     assert_eq!(
         owner.list_exceptions(&event.id).await.unwrap(),
+        vec![cancelled.clone(), moved.clone()]
+    );
+    owner
+        .put_exception(
+            &event.id,
+            EventException {
+                original_start: moved.original_start.clone(),
+                replacement: None,
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        owner.list_exceptions(&event.id).await.unwrap()[1].replacement,
+        None
+    );
+    owner.put_exception(&event.id, moved.clone()).await.unwrap();
+    assert_eq!(
+        owner.list_exceptions(&event.id).await.unwrap(),
         vec![cancelled, moved]
     );
     assert!(matches!(
@@ -247,6 +266,15 @@ async fn rejects_invalid_time_and_identity() {
         user.create_event(&calendar.id, invalid).await,
         Err(StorageError::InvalidTimeRange)
     ));
+    let mut invalid_all_day = timed_event();
+    invalid_all_day.time = EventTime::AllDay {
+        start: date(2026, 11, 20),
+        end_exclusive: date(2026, 11, 20),
+    };
+    assert!(matches!(
+        user.create_event(&calendar.id, invalid_all_day).await,
+        Err(StorageError::InvalidTimeRange)
+    ));
     let mut submillisecond = timed_event();
     submillisecond.time = EventTime::Timed {
         start: utc(2026, 11, 19, 14).with_nanosecond(1).unwrap(),
@@ -273,6 +301,23 @@ async fn rejects_invalid_time_and_identity() {
         Err(StorageError::NotRecurring)
     ));
     user.set_recurrence(&event.id, "FREQ=WEEKLY").await.unwrap();
+    assert!(matches!(
+        user.put_exception(
+            &event.id,
+            EventException {
+                original_start: RecurrenceId::Timed(
+                    date(2026, 11, 26)
+                        .and_hms_opt(9, 0, 0)
+                        .unwrap()
+                        .with_nanosecond(1)
+                        .unwrap(),
+                ),
+                replacement: None,
+            },
+        )
+        .await,
+        Err(StorageError::UnsupportedTimePrecision)
+    ));
     assert!(matches!(
         user.put_exception(
             &event.id,

@@ -20,7 +20,7 @@ A Rust crate owns persistence and exposes contents scoped to a user. A deploymen
 
 The public API should require an authenticated user identity or a user-scoped handle for every read and write. The storage implementation must enforce ownership in its queries and transactions. No caller should need to write SQL or know which database is active.
 
-The initial implementation stores calendars, event definitions, recurrence rules, and per-instance exceptions. Events belong to a calendar, and calendar ownership supplies the user boundary. Timed events use UTC instants plus an IANA time zone; all-day events use dates with an exclusive end. A recurring series stores its original local start, while an exception is keyed by the original occurrence start even when that instance is moved. Recurrence expansion and ICS import remain future work.
+The initial implementation uses SeaORM to store calendars, event definitions, recurrence rules, and per-instance exceptions. Events belong to a calendar, and calendar ownership supplies the user boundary. Each event has a separate one-to-one time row. Timed events use UTC instants plus an IANA time zone; all-day events use dates with an exclusive end. A recurring series stores its typed original local start, while an exception is keyed by its original occurrence start even when that instance is moved. Replacement exceptions have their own time row. The database has no `CHECK` constraints; the storage crate validates writes and decodes rows into typed Rust values. Recurrence expansion and ICS import remain future work.
 
 ### Server: `forge-server`
 
